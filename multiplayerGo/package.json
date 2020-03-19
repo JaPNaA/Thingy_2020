@@ -1,0 +1,15 @@
+{
+  "name": "go-multiplayer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./server/build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "JaPNaA",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^13.9.2"
+  }
+}
