@@ -2,10 +2,10 @@
   "name": "go-multiplayer",
   "version": "1.0.0",
   "description": "",
-  "main": "./server/build/index.js",
+  "main": "scripts/main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "buildw": "tsc -b tsconfigs/tsconfig.client.json tsconfigs/tsconfig.server.json tsconfigs/tsconfig.shared.json -w"
+    "buildw": "node scripts/buildw.js"
   },
   "keywords": [],
   "author": "JaPNaA",
