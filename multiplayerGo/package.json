@@ -10,6 +10,8 @@
   "author": "JaPNaA",
   "license": "ISC",
   "dependencies": {
-    "@types/node": "^13.9.2"
+    "@types/node": "^13.9.2",
+    "@types/websocket": "^1.0.0",
+    "websocket": "^1.0.31"
   }
 }

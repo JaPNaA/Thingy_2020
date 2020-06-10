@@ -1,7 +1,5 @@
-import http from "http";
+import GoServer from "./GoServer";
 
-const server = http.createServer(function(req, res) {
-    res.end(req.url);
-});
+const server = new GoServer();
 
-server.listen(8081);
+console.log(server);
