@@ -1,6 +1,7 @@
-function works(): number {
-    console.log("it works!");
-    return 2;
-}
+import App from "./App";
+import GameView from "./views/GameView/GameView";
 
-console.log(works());
+const app = new App();
+app.openView(new GameView());
+
+console.log(app);
