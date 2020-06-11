@@ -1,15 +1,13 @@
 import View from "../../View";
 import Board from "./Board";
-import Server from "./websocket/Server";
+import GoServer from "./websocket/GoServer";
 
 class GameView extends View {
     private board: Board = new Board();
-    private server: Server = new Server();
+    private server: GoServer = new GoServer();
 
     constructor() {
         super();
-
-        console.log("a");
     }
 
     protected onOpen() {

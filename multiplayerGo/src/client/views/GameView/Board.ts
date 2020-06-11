@@ -1,5 +1,5 @@
 import GoBoard from "../../../shared/logic/GoBoard";
-import Stones from "../../../shared/logic/Stones";
+import Stone from "../../../shared/logic/Stone";
 
 class Board {
     public cellSize: number = Board.CELL_SIZE;
@@ -41,26 +41,28 @@ class Board {
         return X;
     }
 
-    private initStones(): (Stone | null)[][] {
-        const stonesArr = [];
+    private setup(): void {
+        this.canvas.addEventListener("click", e => {
+            this.goBoardLogic.putStone(
+                (this.turn = !this.turn) ?
+                    Stone.white : Stone.black,
+                Math.floor(e.offsetX / this.cellSize - Board.PADDING),
+                Math.floor(e.offsetY / this.cellSize - Board.PADDING)
+            );
 
-        for (let y = 0; y < Board.HEIGHT; y++) {
-            const row = [];
-
-            for (let x = 0; x < Board.WIDTH; x++) {
-                row.push(null);
-            }
-
-            stonesArr.push(row);
-        }
-
-        return stonesArr;
+            this.draw();
+        });
     }
 
     private draw(): void {
         this.X.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawGrid();
+        this._debugDrawOwner();
         this.drawStones();
+    }
+
+    private _debugDrawOwner() {
+        // 
     }
 
     private drawGrid(): void {
@@ -96,11 +98,11 @@ class Board {
         for (let y = 0; y < Board.HEIGHT; y++) {
             for (let x = 0; x < Board.WIDTH; x++) {
                 const stone = stones[y][x];
-                if (stone === Stones.none) { continue; }
+                if (stone === Stone.none) { continue; }
 
-                if (stone === Stones.black) {
+                if (stone === Stone.black) {
                     this.X.fillStyle = "#2e2e2e";
-                } else if (stone === Stones.white) {
+                } else if (stone === Stone.white) {
                     this.X.fillStyle = "#adadad";
                 }
 
