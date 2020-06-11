@@ -1,4 +1,5 @@
-import Stone from "./Stone";
+import GoBoard from "../../../shared/logic/GoBoard";
+import Stones from "../../../shared/logic/Stones";
 
 class Board {
     public cellSize: number = Board.CELL_SIZE;
@@ -11,25 +12,20 @@ class Board {
     private canvas: HTMLCanvasElement;
     private X: CanvasRenderingContext2D;
 
-    private stones: (Stone | null)[][];
+    private goBoardLogic: GoBoard = new GoBoard();
+
+    private turn: boolean = false;
 
     constructor() {
         this.canvas = this.createCanvas();
         this.X = this.getCanvasContext();
 
-        this.stones = this.initStones();
-
-        this.putStone(0, 4, 15);
-
+        this.setup();
         this.draw();
     }
 
     public appendTo(elm: HTMLElement): void {
         elm.appendChild(this.canvas);
-    }
-
-    public putStone(type: number, x: number, y: number) {
-        this.stones[y][x] = new Stone(this, this.X);
     }
 
     private createCanvas(): HTMLCanvasElement {
@@ -62,6 +58,7 @@ class Board {
     }
 
     private draw(): void {
+        this.X.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawGrid();
         this.drawStones();
     }
@@ -94,19 +91,24 @@ class Board {
     private drawStones(): void {
         this.X.save();
 
+        const stones = this.goBoardLogic.getStones();
+
         for (let y = 0; y < Board.HEIGHT; y++) {
             for (let x = 0; x < Board.WIDTH; x++) {
-                const stone = this.stones[y][x];
-                if (stone === null) { continue; }
+                const stone = stones[y][x];
+                if (stone === Stones.none) { continue; }
 
-                this.X.translate(
+                if (stone === Stones.black) {
+                    this.X.fillStyle = "#2e2e2e";
+                } else if (stone === Stones.white) {
+                    this.X.fillStyle = "#adadad";
+                }
+
+                this.X.fillRect(
                     (x + Board.PADDING) * this.cellSize,
-                    (y + Board.PADDING) * this.cellSize
+                    (y + Board.PADDING) * this.cellSize,
+                    this.cellSize, this.cellSize
                 );
-
-                stone.draw(this);
-
-                this.X.restore();
             }
         }
     }
