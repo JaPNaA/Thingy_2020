@@ -99,28 +99,35 @@ class GoBoard {
         return x >= 0 && x < GoBoard.WIDTH && y >= 0 && y < GoBoard.HEIGHT;
     }
 
-    private ownerOfSquare(x: number, y: number): Stone {
+    public ownerOfSquare(originX: number, originY: number): Stone {
         const range = 3;
-        const range2 = range * 2;
 
-        const startX = Math.min(Math.max(x - range, 0), GoBoard.WIDTH - range2);
-        const startY = Math.min(Math.max(x - range, 0), GoBoard.HEIGHT - range2);
+        if (this.stones[originY][originX] !== Stone.none) {
+            return this.stones[originY][originX];
+        }
 
         let blackScore = 0;
         let whiteScore = 0;
 
-        for (let relY = 0; relY < range2; relY++) {
-            for (let relX = 0; relX < range2; relX++) {
-                const stone = this.stones[startY + relY][startX + relX];
+        for (let y = -range; y <= range; y++) {
+            for (let x = -range; x <= range; x++) {
+                const currX = x + originX;
+                const currY = y + originY;
+                if (!this.isValidPosition(currX, currY)) { continue; }
+
+                const stone = this.stones[currY][currX];
+                const thisScore = 1 / 2 ** (Math.abs(x) + Math.abs(y));
                 if (stone === Stone.white) {
-                    whiteScore++;
+                    whiteScore += thisScore;
                 } else if (stone === Stone.black) {
-                    blackScore++;
+                    blackScore += thisScore;
                 }
             }
         }
 
-        return blackScore > whiteScore ? Stone.black : Stone.white;
+        if (blackScore === whiteScore) { return Stone.none; }
+        if (blackScore > whiteScore) { return Stone.black; }
+        else { return Stone.white; }
     }
 }
 
