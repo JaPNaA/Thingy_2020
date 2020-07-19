@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="drill.css" type="text/css" media="screen">
+  <link href="https://fonts.googleapis.com/css?family=Amaranth" rel="stylesheet">
+  <script type="text/ecmascript" src="jquery-3.1.1.min.js"></script>
+  <script type="text/ecmascript" src="rules.js"></script>
+  <script type="text/ecmascript" src="drill.js"></script>
+  <script src="wanakana.min.js"></script>
+  <title>Don's Japanese Conjugation Drill (modified by JaPNaA)</title>
+</head>
+
+<body>
+
+  <div id="splash">
+
+    <h1>
+      Don's Japanese Conjugation Drill<br>
+      <sup title="Modifications: using wanakana for IME input, redoing questions you got wrong, auto-showing the explaination, simplified explaination page, showing the explaination button even if you got it right, strong visual indicator of wrong and right in history, changed the default settings, removed the question mark on the questions, and added this.">
+        Modified by JaPNaA
+      </sup>
+    </h1>
+
+    <div>
+      <span>Number of Questions</span>
+      <input id="numQuestions" value="10">
+      <button id="go">Go</button>
+    </div>
+
+    <div>Question pool size: <span id="questionCount">...</span></div>
+
+    <div class="options">
+      <div>
+        <h2>Conjugation types</h2>
+        <ul>
+          <li><label><input type="checkbox" id="plain" checked> Plain</label></li>
+          <li><label><input type="checkbox" id="polite" checked> Polite</label></li>
+          <li><label><input type="checkbox" id="negative" checked> Negative</label></li>
+          <li><label><input type="checkbox" id="past" checked> Past</label></li>
+          <li><label><input type="checkbox" id="te-form" checked> て form</label></li>
+          <li><label><input type="checkbox" id="progressive" checked> Progressive</label></li>
+          <li><label><input type="checkbox" id="desire" checked> Desire</label></li>
+          <li><label><input type="checkbox" id="volitional" checked> Volitional</label></li>
+          <li><label><input type="checkbox" id="potential"checked > Potential</label></li>
+          <li><label><input type="checkbox" id="imperative" checked> Imperative</label></li>
+          <li><label><input type="checkbox" id="passive" checked> Passive</label></li>
+          <li><label><input type="checkbox" id="causative" checked> Causative</label></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Verb classes</h2>
+        <ul>
+          <li><label><input type="checkbox" id="godan" checked> Group 1 verbs</label></li>
+          <li><label><input type="checkbox" id="ichidan" checked> Group 2 verbs</label></li>
+          <div class="specials">Special cases</div>
+          <li><label><input type="checkbox" id="iku" checked> 行く verb</label></li>
+          <li><label><input type="checkbox" id="kuru" checked> 来る verb</label></li>
+          <li><label><input type="checkbox" id="suru" checked> する verbs</label></li>
+        </ul>
+      </div>
+
+      <div>
+        <h2>Adjective classes</h2>
+        <ul>
+          <li><label><input type="checkbox" id="i-adjective" checked> い adjectives</label></li>
+          <li><label><input type="checkbox" id="na-adjective" checked> な adjectives</label></li>
+          <div class="specials">Special cases</div>
+          <li><label><input type="checkbox" id="ii" checked> いい adjective</label></li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <div>
+        <label><input type="checkbox" id="trick"> Trick questions (answers may be the same as the given form)</label>
+      </div>
+      <div>
+        <label><input type="checkbox" id="kana"> Use hiragana throughout the test (no kanji)</label>
+      </div>
+      <div>
+        <label><input type="checkbox" id="furigana_always" checked> Always show furigana on questions</label>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="scoreSection">
+
+    <div id="scoreSectionTitle"></div>
+
+    <div id="history">
+    </div>
+
+    <button id="backToStart">Back to Start</button>
+
+  </div>
+
+  <div id="quizSection">
+
+    <div class="questionOuter">
+      <div id="question"></div>
+    </div>
+
+    <div id="input">
+      <form action="javascript:processAnswer()">
+        <input placeholder="答え" autocomplete="off" id="answer">
+      </form>
+    </div>
+
+    <div id="proceed">
+
+      <form style="float: right" action="javascript:proceed()">
+        <button>
+
+            <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 48 48">
+              <metadata> Svg Vector Icons : http://www.onlinewebfonts.com/icon </metadata>
+              <g transform="scale(0.03)"><path d="M762.1,441.8L354.4,34.1C322.2,2,270.1,2,237.9,34.1c-32.2,32.2-32.2,84.3,0,116.5L587.4,500L237.9,849.4c-32.2,32.2-32.2,84.3,0,116.5s84.3,32.2,116.5,0l407.6-407.6c16.1-16.1,24.1-37.2,24.1-58.2S778.1,457.8,762.1,441.8z"></path></g>
+            </svg>
+          </button>
+      </form>
+
+      <div id="response">
+      </div>
+
+      <div id="message">
+      </div>
+
+    </div>
+
+    <div style="display: none" id="explanation">
+
+      <h2>Explanation</h2>
+
+
+      <p><span id="explain-given"></span> is the <span id="explain-given-tags"></span> form of the <span id="explain-group"></span> <span class="explain-given-dictionary"></span>.</p>
+
+
+      <div class="explain-answer-single">
+        <p class="explain-no-trick">The answer is the <span class="explain-answer-tags"></span> form of the word because the question asked for the <span class="highlight"><span class="explain-transform"></span></span> version.</p>
+        <p class="explain-trick">The question asked for the <span class="highlight"><span class="explain-transform"></span></span> version. However, this was already the case and so it was a trick question.</p>
+      </div>
+
+      <div class="explain-answer-multiple">
+        <p class="explain-no-trick">The answers are the <span class="explain-answer-tags"></span> forms of the word because the question asked for a <span class="highlight"><span class="explain-transform"></span></span> version.</p>
+        <p class="explain-trick">The question asked for a <span class="highlight"><span class="explain-transform"></span></span> form of the word. However, this was already the case and so it was a trick question.</p>
+      </div>
+
+
+      <p class="explain-answer-single">The correct answer is the
+        <span class="explain-answer-tags2"></span> form: <span class="explain-answer"></span>
+      </p>
+
+      <div class="explain-answer-multiple">
+        <p>
+          The possible correct answers are the <span class="explain-answer-tags2"></span> forms:
+        </p>
+        <ul class="explain-answer-as-list"></ul>
+      </div>
+
+      <button id="explain-proceed-button" class="centre" onclick="javascript:proceed()">OK, next question</button>
+    </div>
+
+  </div>
+</body>
+
+</html>

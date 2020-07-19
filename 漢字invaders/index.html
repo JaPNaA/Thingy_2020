@@ -1,0 +1,67 @@
+<html>
+<!-- Kanji Invaders By Michael Herring (modified by JaPNaA) -->
+<!-- Canonical Online Version at Khakionion.com -->
+
+<head>
+	<title>Kanji Invaders</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="viewport" content="initial-scale=0.75, minimum-scale=0.75, maximum-scale=1.0, width=1024">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<!-- Styling parameters for game/page elements. -->
+	<!-- This now uses CSS3 transforms for special effects on modern browsers. -->
+	<link rel="stylesheet" href="style.css">
+</head>
+<!-- Finally, the actual document. -->
+
+<body onorientationchange="updateOrientation();">
+	<div id="tutorial">
+		<div id="gametitle">Michael Herring's Kanji Invaders (modified by JaPNaA), ようこそ！</div>
+		<ul id="howtoplay">
+			<li>Type the readings of the falling Japanese words!</li>
+			<li>Kanji will transform into hiragana after a while.</li>
+			<li>Get the best score possible by typing quickly!</li>
+			<li>Kanji Invaders uses romaji input.
+				<a class="helpanchor" onclick="whatIsRomaji()">[?]</a> <!-- NONDOWNLOAD -->
+			</li>
+		</ul>
+		<div id="configuration">
+			JLPT Level
+			<a class="helpanchor" onclick="whatIsJLPT()">[?]</a> <!-- NONDOWNLOAD -->
+			Selection:
+			<input type="checkbox" name="jlpt" value="1" checked="yes" />N5
+			<input type="checkbox" name="jlpt" value="2" checked="yes"/>N4
+			<input type="checkbox" name="jlpt" value="4" />N3 and up
+		</div>
+		<br /><input type="button" height="50" onclick="dismissTutorial()" value="Let's Start! / 始めましょう！" />
+		<div id="hintstring">Need Help? Click any of the <a class="helpanchor">[?]</a> marks you see.</div> <!-- NONDOWNLOAD -->
+		<div id="versionstring">Version 1.2.0 (9 May 2011)</div>
+	</div>
+	<div id="romajipopup" class="helppopup">
+		<p>Romaji is simply writing Japanese with Roman characters. Kanji Invaders reads Romaji input and converts it to Kana. This is done for maximum compatibility; normal English keyboard input is Romaji.</p>
+		<p> If a certain romaji letter doesn't seem to work for you, let me know and I'll fix it! </p>
+		<p>Japanese input methods require a special Romaji mode: </p><br /><br /><input type="button" onclick="hideHelp()" value="Okay, got it! / 分かりました！" />
+	</div> <!-- NONDOWNLOAD -->
+	<div id="jlptpopup" class="helppopup">
+		<p>The Japanese Language Proficiency Test (JLPT) is an internationally recognized test of Japanese ability. JLPT defines five levels (N5-N1) of competency, with N1 being most advanced. </p>
+		<p>I've tagged the Kanji Invaders dictionary with approximate JLPT level information, so that you can study for a particular exam, or just select them all if you want lots of Japanese typing practice.</p>
+		<p>To change which kanji you're using, simply reload the game.</p>
+		<p>Kanji Invaders' JLPT and English definitions certainly wouldn't be complete without <a href="http://www.kodansha-intl.com/">Kodansha</a> dictionaries, and occasional lookups in Peter van der Woode's <a href="http://www.spurrymoses.com/jlpt/">JLPT Study Page</a> and Jim Breen's <a href="http://www.csse.monash.edu.au/~jwb/wwwjdic.html">WWWJDIC</a>.</p><br /><input type="button" onclick="hideHelp()" value="Okay, got it! / 分かりました！" />
+	</div> <!-- NONDOWNLOAD -->
+	<div id="panel">
+		<div id="output">
+			Score: <span id="streak">&nbsp;</span><br />
+			Input: <input id="wanakanaIME"><br />
+			<span id="feedback">&nbsp;</span>
+		</div>
+    <div id="about">See <a href="http://www.khakionion.com">Khakionion.com</a> for the original creator.<br>See the <a href="http://kanji.khakionion.com/"> original game </a> </div>
+	</div>
+	<div id="debug">&nbsp;</div>
+	<div id="ui_hacks"><input type="text" name="ios_text" id="ios_text_input" autocorrect="off" autocapitalize="off" /></div>
+
+	<script src="datatables.js"></script>
+	<script src="wanakana.min.js"></script>
+	<script src="script.js"></script>
+</body>
+
+</html>
