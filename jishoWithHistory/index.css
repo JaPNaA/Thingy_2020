@@ -1,0 +1,67 @@
+body {
+    margin: 0;
+}
+
+.lookups {
+    width: 100%;
+    max-width: 464px;
+    padding: 8px;
+}
+
+.lookupResult {
+    padding: 8px;
+    border: 1px solid #0000000d;
+    border-radius: 8px;
+    position: relative;
+    margin-bottom: 24px;
+    box-shadow: 0px 2px 4px #0000002e, 0px 0px 8px #00000005;
+}
+
+.lookupResult.common {
+    background: #d5ffce;
+    border-color: #26ff0042;
+}
+
+.lookupResult .top {
+    display: block;
+    width: 100%;
+}
+
+.lookupResult .word {
+    display: inline-block;
+    width: auto;
+}
+
+.lookupResult .word .title {
+    font-size: 2em;
+}
+
+.lookupResult .tags {
+    display: flex;
+    flex-wrap: wrap-reverse;
+    flex-direction: column;
+    gap: 8px;
+
+    position: absolute;
+    top: 0;
+    right: 0;
+
+    vertical-align: top;
+    padding: 8px;
+    width: auto;
+    height: 84px;
+}
+
+.lookupResult .tag {
+    display: inline-block;
+    text-align: center;
+    padding: 4px 12px;
+}
+
+.lookupResult .senses {
+    padding-left: 1.5em;
+}
+
+.lookupResult .sense {
+    margin-bottom: 8px;
+}
