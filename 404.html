@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404</title>
+</head>
+
+<body>
+    (404) Redirecting...
+
+    <script>
+        var a = location.pathname.split(/\\|\//g);
+
+        if (!a[0]) a.shift();
+
+        location.replace("https://github.com/JaPNaA/" + a[0] + "/tree/master/" + a[1]);
+    </script>
+</body>
+
+</html>
