@@ -2,6 +2,8 @@ body {
     margin: 0;
     overflow-x: hidden;
     overflow-y: scroll;
+    margin-top: 4px;
+    margin-bottom: calc(100vh - 96px);
 }
 
 .main {
@@ -25,16 +27,18 @@ body {
     outline: none;
 }
 
-.lookup .input:focus {
-    border-color: #699dff;
+.lookupResults:empty::after {
+    content: "No results found";
+    font-style: italic;
 }
 
 .lookupResult {
+    position: relative;
+    text-align: left;
     padding: 8px;
     border-radius: 8px;
-    position: relative;
     margin-bottom: 24px;
-    text-align: left;
+    outline: none;
 }
 
 .lookupResult.clickable {
@@ -44,6 +48,10 @@ body {
 .lookupResult.clickable.common {
     background: #d5ffce;
     border-color: #26ff0042;
+}
+
+.lookup .input:focus, .lookupResult.clickable:focus {
+    border-color: #699dff;
 }
 
 .lookupResult .top {

@@ -1,10 +1,4 @@
 import { Elm, Component } from "./elements.js";
-import { result as exampleResult } from "./exampleResult.js";
-
-//* Nice for debugging
-
-addEventListener("keydown", e => e.key === "r" && e.ctrlKey && location.reload());
-
 
 /**
  * @typedef {Object} JishoApiData
@@ -76,11 +70,13 @@ class Lookup extends Component {
         super("lookup");
 
         this.input = this._createInput();
+
         /** @type {LookupReturnHandler} */
         this.returnHandler = null;
-        this.append(this.input);
+        /** @type {Elm} */
+        this.lastLookupResults = null;
 
-        this.inputValue = "";
+        this.append(this.input);
     }
 
     /**
@@ -92,6 +88,8 @@ class Lookup extends Component {
 
     focus() {
         this.input.elm.focus();
+        scrollTo(0, document.body.scrollHeight);
+        scrollBy(0, -1); // prevent browser scrolling back
     }
 
     _createInput() {
@@ -105,24 +103,24 @@ class Lookup extends Component {
         /** @type {HTMLInputElement} */
         // @ts-ignore
         const input = this.input.elm;
-
         this.inputValue = input.value;
-        this.input.class("hidden");
-        this.input.attribute("disabled");
-
+        this._removeLastLookup();
         this._makeLookup();
     }
 
+    _removeLastLookup() {
+        if (this.lastLookupResults) {
+            this.lastLookupResults.remove();
+        }
+    }
+
     async _makeLookup() {
-        // const encodedInputValue = encodeURIComponent(this.inputValue);
-        // const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
+        const encodedInputValue = encodeURIComponent(this.inputValue);
+        const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
 
-        // /** @type {JishoApiData} */
-        // const result = await fetch(url).then(e => e.json());
-        // if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
-
-        //* debug
-        const result = exampleResult;
+        /** @type {JishoApiData} */
+        const result = await fetch(url).then(e => e.json());
+        if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
 
         const lookupResults = new Elm().class("lookupResults").appendTo(this);
 
@@ -131,6 +129,8 @@ class Lookup extends Component {
                 .appendTo(lookupResults)
                 .setClickHandler(() => this._resultSelectedHandler(item));
         }
+
+        this.lastLookupResults = lookupResults;
 
         console.log(result);
     }
@@ -164,6 +164,7 @@ class LookupResult extends Component {
     setClickHandler(handler) {
         this.clickHandler = handler;
         this.class("clickable", "shadow");
+        this.attribute("tabindex", "0");
     }
 
     _setup() {
@@ -190,7 +191,10 @@ class LookupResult extends Component {
             new Elm("ol").class("senses").append(
                 new Elm().withSelf(self => this._addDefinitionsTo(self))
             )
-        ).on("click", () => this._onSelected());
+        );
+
+        this.elm.addEventListener("keydown", e => this._clickByKeyboardHandler(e));
+        this.on("click", () => this._onSelected());
 
         if (this.data.is_common) {
             this.class("common");
@@ -232,6 +236,15 @@ class LookupResult extends Component {
         return new Elm().class("tag").append(text);
     }
 
+    /**
+     * @param {KeyboardEvent} e 
+     */
+    _clickByKeyboardHandler(e) {
+        if (e.keyCode === 13 || e.keyCode === 32) { // enter or space
+            this._onSelected();
+        }
+    }
+
     _onSelected() {
         if (this.clickHandler) {
             this.clickHandler();
@@ -243,3 +256,5 @@ class LookupResult extends Component {
 const main = new Main();
 main.appendTo(document.body);
 console.log(main);
+
+history.scrollRestoration = "manual";

@@ -1,4 +1,3 @@
-const electron = require("electron");
 const { BrowserWindow, app } = require("electron");
 
 function createWindow() {
