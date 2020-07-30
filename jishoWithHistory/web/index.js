@@ -38,59 +38,108 @@ addEventListener("keydown", e => e.key === "r" && e.ctrlKey && location.reload()
 class Main extends Component {
     constructor() {
         super("main");
-        new Lookup().appendTo(this);
+
+        /** @type {Elm} */
+        this.historyElm = null;
+
+        this._setup();
+    }
+
+    _setup() {
+        this.append(
+            this.historyElm = new Elm().class("history"),
+            new Elm().class("lookupContainer")
+        );
+
+        this._createLookup();
+    }
+
+    _createLookup() {
+        const lookup = new Lookup().appendTo(this);
+        lookup.focus();
+
+        lookup.setReturnHandler(a => {
+            console.log(a);
+            lookup.remove();
+            this.historyElm.append(new LookupResult(a));
+            this._createLookup();
+        });
     }
 }
 
 class Lookup extends Component {
+    /**
+     * @typedef {(ret: JishoData) => any} LookupReturnHandler
+     */
+
     constructor() {
         super("lookup");
 
         this.input = this._createInput();
-        this.elm.appendChild(this.input);
+        /** @type {LookupReturnHandler} */
+        this.returnHandler = null;
+        this.append(this.input);
 
         this.inputValue = "";
     }
 
-    _createInput() {
-        const input = document.createElement("input");
-        input.classList.add("input");
-        input.addEventListener("change", () => this._inputChangeHandler(input));
-        //* debug
-        input.value = "おは";
-        setTimeout(() => {
-            input.dispatchEvent(new Event("change"));
-        }, 100);
-        return input;
+    /**
+     * @param {LookupReturnHandler} handler 
+     */
+    setReturnHandler(handler) {
+        this.returnHandler = handler;
     }
 
-    /** @param {HTMLInputElement} input */
-    _inputChangeHandler(input) {
+    focus() {
+        this.input.elm.focus();
+    }
+
+    _createInput() {
+        return new Elm("input")
+            .class("input", "shadow")
+            .attribute("autofocus")
+            .on("change", () => this._inputChangeHandler());
+    }
+
+    _inputChangeHandler() {
+        /** @type {HTMLInputElement} */
+        // @ts-ignore
+        const input = this.input.elm;
+
         this.inputValue = input.value;
-        input.disabled = true;
-        input.classList.add("hidden");
+        this.input.class("hidden");
+        this.input.attribute("disabled");
+
         this._makeLookup();
     }
 
     async _makeLookup() {
         // const encodedInputValue = encodeURIComponent(this.inputValue);
         // const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
-        // const corsProxy = "http://localhost:8081/";
 
         // /** @type {JishoApiData} */
-        // const result = await fetch(corsProxy + url).then(e => e.json());
+        // const result = await fetch(url).then(e => e.json());
         // if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
 
         //* debug
         const result = exampleResult;
 
-        const lookups = new Elm().class("lookups").appendTo(this);
+        const lookupResults = new Elm().class("lookupResults").appendTo(this);
 
         for (const item of result.data) {
-            new LookupResult(item).appendTo(lookups);
+            new LookupResult(item)
+                .appendTo(lookupResults)
+                .setClickHandler(() => this._resultSelectedHandler(item));
         }
 
         console.log(result);
+    }
+
+    /**
+     * @param {JishoData} item
+     */
+    _resultSelectedHandler(item) {
+        this.returnHandler(item);
     }
 }
 
@@ -100,9 +149,21 @@ class LookupResult extends Component {
      */
     constructor(data) {
         super("lookupResult");
+
         this.data = data;
 
+        /** @type {function} */
+        this.clickHandler = null;
+
         this._setup();
+    }
+
+    /**
+     * @param {function} handler 
+     */
+    setClickHandler(handler) {
+        this.clickHandler = handler;
+        this.class("clickable", "shadow");
     }
 
     _setup() {
@@ -129,7 +190,7 @@ class LookupResult extends Component {
             new Elm("ol").class("senses").append(
                 new Elm().withSelf(self => this._addDefinitionsTo(self))
             )
-        );
+        ).on("click", () => this._onSelected());
 
         if (this.data.is_common) {
             this.class("common");
@@ -169,6 +230,12 @@ class LookupResult extends Component {
      */
     _createTagElm(text) {
         return new Elm().class("tag").append(text);
+    }
+
+    _onSelected() {
+        if (this.clickHandler) {
+            this.clickHandler();
+        }
     }
 }
 

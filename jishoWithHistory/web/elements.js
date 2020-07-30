@@ -58,6 +58,31 @@ class Elm {
         }
         return this;
     }
+
+    remove() {
+        const parent = this.elm.parentElement;
+        if (parent) {
+            parent.removeChild(this.elm);
+        }
+    }
+
+    /**
+     * @param {string} event
+     * @param {(this: HTMLElement, ev: Event) => any} handler
+     */
+    on(event, handler) {
+        this.elm.addEventListener(event, handler);
+        return this;
+    }
+
+    /**
+     * @param {string} key
+     * @param {string} [value]
+     */
+    attribute(key, value) {
+        this.elm.setAttribute(key, value || "true");
+        return this;
+    }
 }
 
 class Component extends Elm {
