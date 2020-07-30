@@ -1,6 +1,11 @@
 import { Elm, Component } from "./elements.js";
 import { result as exampleResult } from "./exampleResult.js";
 
+//* Nice for debugging
+
+addEventListener("keydown", e => e.key === "r" && e.ctrlKey && location.reload());
+
+
 /**
  * @typedef {Object} JishoApiData
  * @property {JishoData[]} data
