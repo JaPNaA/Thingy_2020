@@ -1,9 +1,11 @@
 :root {
     --light-highlight: #ffffff;
     --focus-color: #367cffbd;
+    --danger-color: #e81616d4;
 }
 
 body {
+    font-family: Roboto, Arial, Helvetica, sans-serif;
     margin: 0;
     overflow-x: hidden;
     overflow-y: scroll;
@@ -18,11 +20,29 @@ body {
     align-items: center;
 }
 
-.lookup, .history {
+.lookup, .history, .clearAllButton {
     width: 100%;
     max-width: 464px;
     padding: 8px;
-    text-align: center;
+    text-align: left;
+}
+
+.clearAllButton .button {
+    background-color: transparent;
+    font-family: inherit;
+    text-transform: uppercase;
+    font-weight: bold;
+    color: var(--danger-color);
+    outline: none;
+    padding: 4px 8px;
+}
+
+.clearAllButton.hidden {
+    display: none;
+}
+
+.button:active, .button:focus {
+    border-color: var(--focus-color);
 }
 
 .lookup .input {
@@ -141,8 +161,8 @@ body {
     transform: translateX(0px);
 }
 
-.lookupResultRemoveButton .img {
-    background-color: #e81616d4;
+.deleteButtonImg {
+    background-color: var(--danger-color);
     -webkit-mask: url(delete_outline-24px.svg) no-repeat center;
     mask: url(delete_outline-24px.svg) no-repeat center;
     width: 24px;

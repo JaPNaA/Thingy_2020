@@ -35,12 +35,19 @@ class Main extends Component {
 
         /** @type {Elm} */
         this.historyElm = null;
+        /** @type {ClearAllButton} */
+        this.clearButton = null;
 
         this._setup();
     }
 
     _setup() {
         this.append(
+            this.clearButton = new ClearAllButton() // @ts-ignore
+                .withSelf(/** @param {ClearAllButton} self */ self => {
+                    self.setClickHandler(() => this.historyElm.clear());
+                    self.hide();
+                }),
             this.historyElm = new Elm().class("history"),
             new Elm().class("lookupContainer")
         );
@@ -62,8 +69,42 @@ class Main extends Component {
                             .appendTo(e)
                     )
             );
+            this.clearButton.show();
             this._createLookup();
         });
+    }
+}
+
+class ClearAllButton extends Component {
+    constructor() {
+        super("clearAllButton");
+        /** @type {function} */
+        this.clickHandler = null;
+
+        this.append(
+            new Elm("button").class("button", "shadow").append("Clear All")
+                .on("click", () => {
+                    if (this.clickHandler) {
+                        this.clickHandler();
+                    }
+                    this.hide();
+                })
+        );
+    }
+
+    /**
+     * @param {function} handler 
+     */
+    setClickHandler(handler) {
+        this.clickHandler = handler;
+    }
+
+    hide() {
+        this.class("hidden");
+    }
+
+    show() {
+        this.removeClass("hidden");
     }
 }
 
@@ -275,7 +316,7 @@ class LookupResultRemoveButton extends Component {
                 .on("click", () => this._onClick())
                 .append(
                     new Elm().class("imgContainer", "shadow").append(
-                        new Elm().class("img")
+                        new Elm().class("deleteButtonImg")
                     )
                 )
         );

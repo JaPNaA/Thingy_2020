@@ -32,6 +32,13 @@ class Elm {
     }
 
     /**
+     * @param {string} className 
+     */
+    removeClass(className) {
+        this.elm.classList.remove(className);
+    }
+
+    /**
      * @param {...HTMLElement | Elm | string} elms
      */
     append(...elms) {
@@ -57,6 +64,12 @@ class Elm {
             parent.appendChild(this.elm);
         }
         return this;
+    }
+
+    clear() {
+        while (this.elm.firstChild) {
+            this.elm.removeChild(this.elm.firstChild);
+        }
     }
 
     remove() {
