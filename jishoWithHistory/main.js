@@ -1,4 +1,4 @@
-const { BrowserWindow, app } = require("electron");
+const { BrowserWindow, app, session } = require("electron");
 
 function createWindow() {
     const window = new BrowserWindow({
@@ -15,4 +15,13 @@ function createWindow() {
     window.loadFile("web/index.html");
 }
 
+function cleanUp() {
+    session.defaultSession.clearStorageData();
+    session.defaultSession.clearCache();
+}
+
 app.whenReady().then(createWindow);
+app.on("window-all-closed", () => {
+    cleanUp();
+    app.quit();
+});
