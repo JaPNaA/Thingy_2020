@@ -103,9 +103,8 @@ class Lookup extends Component {
         /** @type {HTMLInputElement} */
         // @ts-ignore
         const input = this.input.elm;
-        this.inputValue = input.value;
         this._removeLastLookup();
-        this._makeLookup();
+        this._makeLookup(input.value);
     }
 
     _removeLastLookup() {
@@ -114,8 +113,9 @@ class Lookup extends Component {
         }
     }
 
-    async _makeLookup() {
-        const encodedInputValue = encodeURIComponent(this.inputValue);
+    async _makeLookup(inputValue) {
+        if (!inputValue) { return; }
+        const encodedInputValue = encodeURIComponent(inputValue);
         const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
 
         /** @type {JishoApiData} */
@@ -258,3 +258,14 @@ main.appendTo(document.body);
 console.log(main);
 
 history.scrollRestoration = "manual";
+
+if (/\sElectron\//.test(navigator.userAgent) && window.require) {
+    addEventListener("keydown", e => {
+        if (e.keyCode === 82 && e.ctrlKey) {
+            location.reload();
+        } else if (e.keyCode === 73 && e.ctrlKey && e.shiftKey) {
+            require("electron").remote.getCurrentWindow().webContents.openDevTools();
+        }
+    });
+}
+
