@@ -1,9 +1,15 @@
+:root {
+    --light-highlight: #ffffff;
+    --focus-color: #367cffbd;
+}
+
 body {
     margin: 0;
     overflow-x: hidden;
     overflow-y: scroll;
     margin-top: 4px;
     margin-bottom: calc(100vh - 96px);
+    background-color: #fff;
 }
 
 .main {
@@ -37,13 +43,14 @@ body {
     text-align: left;
     padding: 8px;
     border-radius: 8px;
+    border: 1px solid transparent;
     margin-bottom: 24px;
     outline: none;
 }
 
 .lookupResult.clickable {
     cursor: pointer;
-    background-color: #ffffff17;
+    background-color: var(--light-highlight);
 }
 
 .lookupResult.clickable.common {
@@ -51,8 +58,8 @@ body {
     border-color: #26ff0036;
 }
 
-.lookup .input:focus, .lookupResult.clickable:focus {
-    border-color: #367cffbd;
+.lookup .input:focus, .lookupResult:focus, .lookupResult.lookupResult:focus {
+    border-color: var(--focus-color);
 }
 
 .lookupResult .top {
@@ -82,13 +89,14 @@ body {
     vertical-align: top;
     padding: 8px;
     width: auto;
-    height: 84px;
+    height: 76px;
 }
 
 .lookupResult .tag {
     display: inline-block;
     text-align: center;
     padding: 4px 12px;
+    font-size: 0.8em;
 }
 
 .lookupResult .senses {
@@ -99,6 +107,49 @@ body {
     margin-bottom: 8px;
 }
 
+.lookupResultRemoveButton {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: auto;
+    height: auto;
+    padding: 8px;
+
+}
+
+.lookupResultRemoveButton .hitbox {
+    outline: none;
+}
+
+.lookupResultRemoveButton .imgContainer {
+    background-color: var(--light-highlight);
+    padding: 4px;
+
+    transition: 0.25s ease;
+    opacity: 0;
+    transform: translateX(8px);
+}
+
+.lookupResultRemoveButton .hitbox:focus .imgContainer {
+    border-color: var(--focus-color);
+}
+
+.lookupResult:focus .lookupResultRemoveButton .imgContainer,
+.lookupResult:hover .lookupResultRemoveButton .imgContainer,
+.lookupResultRemoveButton .hitbox:focus .imgContainer {
+    opacity: 1;
+    transform: translateX(0px);
+}
+
+.lookupResultRemoveButton .img {
+    background-color: #e81616d4;
+    -webkit-mask: url(delete_outline-24px.svg) no-repeat center;
+    mask: url(delete_outline-24px.svg) no-repeat center;
+    width: 24px;
+    height: 24px;
+}
+
+
 /* --- Util --- */
 
 .shadow {
@@ -108,6 +159,10 @@ body {
 
 
 @media (prefers-color-scheme: dark) {
+    :root {
+        --light-highlight: #171717;
+    }
+
     body {
         background-color: #000;
         color: #bbbbbb;
