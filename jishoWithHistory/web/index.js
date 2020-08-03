@@ -33,24 +33,39 @@ class Main extends Component {
     constructor() {
         super("main");
 
-        /** @type {Elm} */
-        this.historyElm = null;
-        /** @type {ClearAllButton} */
-        this.clearButton = null;
+        this.lookupHistory = new LookupHistory();
+        this.actionsBar = new ActionsBar(this);
         /** @type {Elm} */
         this.lookupContainer = null;
 
         this._setup();
     }
 
+    clearAll() {
+        this.lookupHistory.clear();
+    }
+
+    getHistory() {
+        return this.lookupHistory.getData();
+    }
+
+    /**
+     * @param {JishoData} item 
+     */
+    addItemToHistory(item) {
+        const lookupElm = new LookupResult(item);
+
+        new LookupResultRemoveButton(lookupElm)
+            .appendTo(lookupElm)
+            .setClickHandler(() => this.lookupHistory.removeLookup(lookupElm));
+
+        this.lookupHistory.addLookup(lookupElm);
+    }
+
     _setup() {
         this.append(
-            this.clearButton = new ClearAllButton() // @ts-ignore
-                .withSelf(/** @param {ClearAllButton} self */ self => {
-                    self.setClickHandler(() => this.historyElm.clear());
-                    self.hide();
-                }),
-            this.historyElm = new Elm().class("history"),
+            this.actionsBar,
+            this.lookupHistory,
             this.lookupContainer = new Elm().class("lookupContainer")
         );
 
@@ -64,49 +79,68 @@ class Main extends Component {
         lookup.setReturnHandler(a => {
             console.log(a);
             lookup.remove();
-            this.historyElm.append(
-                new LookupResult(a)
-                    .withSelf(e => // @ts-ignore
-                        new LookupResultRemoveButton(e)
-                            .appendTo(e)
-                    )
-            );
-            this.clearButton.show();
+            this.addItemToHistory(a);
             this._createLookup();
         });
     }
 }
 
-class ClearAllButton extends Component {
+class LookupHistory extends Component {
     constructor() {
-        super("clearAllButton");
-        /** @type {function} */
-        this.clickHandler = null;
-
-        this.append(
-            new Elm("button").class("button", "shadow").append("Clear All")
-                .on("click", () => {
-                    if (this.clickHandler) {
-                        this.clickHandler();
-                    }
-                    this.hide();
-                })
-        );
+        super("lookupHistory");
+        /** @type {LookupResult[]} */
+        this.lookups = [];
     }
 
     /**
-     * @param {function} handler 
+     * @param {LookupResult} lookup 
      */
-    setClickHandler(handler) {
-        this.clickHandler = handler;
+    addLookup(lookup) {
+        this.lookups.push(lookup);
+        this.append(lookup);
     }
 
-    hide() {
-        this.class("hidden");
+    /**
+     * @param {LookupResult} lookup
+     */
+    removeLookup(lookup) {
+        this.lookups.splice(this.lookups.indexOf(lookup), 1);
+        lookup.remove();
     }
 
-    show() {
-        this.removeClass("hidden");
+    getData() {
+        return this.lookups.map(e => e.data);
+    }
+}
+
+class ActionsBar extends Component {
+    /**
+     * @param {Main} main
+     */
+    constructor(main) {
+        super("buttonsBar");
+
+        this.parentMain = main;
+
+        this.append(
+            new Elm("button").class("clearAllButton", "shadow").append("Clear All")
+                .on("click", () => this.parentMain.clearAll()),
+
+            new Elm("button").class("exportButton", "shadow").append("Export")
+                .on("click", () => {
+                    alert(JSON.stringify(this.parentMain.getHistory()));
+                }),
+
+            new Elm("button").class("importButton", "shadow").append("Import")
+                .on("click", () => {
+                    const data = prompt("Import JSON...");
+                    if (!data) { return; }
+                    const obj = JSON.parse(data);
+                    for (const item of obj) {
+                        this.parentMain.addItemToHistory(item);
+                    }
+                })
+        );
     }
 }
 
@@ -395,7 +429,14 @@ class LookupResultRemoveButton extends Component {
     constructor(lookupResult) {
         super("lookupResultRemoveButton");
         this.lookupResult = lookupResult;
+        /** @type {function} */
+        this.clickHandler = null;
         this._setup();
+    }
+
+    /** @param {function} handler */
+    setClickHandler(handler) {
+        this.clickHandler = handler;
     }
 
     _setup() {
@@ -411,7 +452,7 @@ class LookupResultRemoveButton extends Component {
     }
 
     _onClick() {
-        this.lookupResult.remove();
+        if (this.clickHandler) { this.clickHandler(); }
     }
 }
 

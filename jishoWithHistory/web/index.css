@@ -20,14 +20,14 @@ body {
     align-items: center;
 }
 
-.lookupContainer, .history, .clearAllButton {
+.lookupContainer, .lookupHistory, .buttonsBar {
     width: 100%;
     max-width: 464px;
     padding: 8px;
     text-align: left;
 }
 
-.clearAllButton .button {
+.buttonsBar .clearAllButton {
     background-color: transparent;
     font-family: inherit;
     text-transform: uppercase;
@@ -37,12 +37,13 @@ body {
     padding: 4px 8px;
 }
 
-.clearAllButton.hidden {
-    display: none;
+.buttonsBar .clearAllButton:active,
+.buttonsBar .clearAllButton:focus {
+    border-color: var(--focus-color);
 }
 
-.button:active, .button:focus {
-    border-color: var(--focus-color);
+.buttonsBar .exportButton {
+    color: blue;
 }
 
 .lookup .input {
