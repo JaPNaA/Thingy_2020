@@ -20,7 +20,7 @@ body {
     align-items: center;
 }
 
-.lookup, .history, .clearAllButton {
+.lookupContainer, .history, .clearAllButton {
     width: 100%;
     max-width: 464px;
     padding: 8px;

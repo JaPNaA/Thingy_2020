@@ -37,6 +37,8 @@ class Main extends Component {
         this.historyElm = null;
         /** @type {ClearAllButton} */
         this.clearButton = null;
+        /** @type {Elm} */
+        this.lookupContainer = null;
 
         this._setup();
     }
@@ -49,14 +51,14 @@ class Main extends Component {
                     self.hide();
                 }),
             this.historyElm = new Elm().class("history"),
-            new Elm().class("lookupContainer")
+            this.lookupContainer = new Elm().class("lookupContainer")
         );
 
         this._createLookup();
     }
 
     _createLookup() {
-        const lookup = new Lookup().appendTo(this);
+        const lookup = new Lookup().appendTo(this.lookupContainer);
         lookup.focus();
 
         lookup.setReturnHandler(a => {
@@ -289,6 +291,7 @@ class LookupResult extends Component {
     _clickByKeyboardHandler(e) {
         if (e.keyCode === 13 || e.keyCode === 32) { // enter or space
             this._onSelected();
+            e.preventDefault();
         }
     }
 

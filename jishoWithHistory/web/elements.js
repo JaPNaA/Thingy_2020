@@ -39,7 +39,7 @@ class Elm {
     }
 
     /**
-     * @param {...HTMLElement | Elm | string} elms
+     * @param {...any} elms
      */
     append(...elms) {
         for (const elm of elms) {
@@ -47,8 +47,10 @@ class Elm {
                 elm.appendTo(this.elm);
             } else if (typeof elm === "string") {
                 this.elm.appendChild(document.createTextNode(elm));
-            } else {
+            } else if (elm instanceof Node) {
                 this.elm.appendChild(elm);
+            } else {
+                this.elm.appendChild(document.createTextNode(elm && elm.toString() || ""));
             }
         }
         return this;
