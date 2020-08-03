@@ -6,4 +6,4 @@ The site is wonderful, but the problem is that I'll end up opening dozens of tab
 
 The goal is to stop me from open 50+ tabs whenever I read something.
 
-[Click to go to the web app](/web/)
+[Click to go to the web app](web/)
