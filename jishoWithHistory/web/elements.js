@@ -82,8 +82,8 @@ class Elm {
     }
 
     /**
-     * @param {string} event
-     * @param {(this: HTMLElement, ev: Event) => any} handler
+     * @param {keyof HTMLElementEventMap} event
+     * @param {(this: HTMLElement, ev: any) => any} handler
      */
     on(event, handler) {
         this.elm.addEventListener(event, handler);

@@ -125,6 +125,8 @@ class Lookup extends Component {
         /** @type {Elm} */
         this.lastLookupResults = null;
 
+        this.hasProxyWarning = false;
+
         this.append(this.input);
     }
 
@@ -163,13 +165,16 @@ class Lookup extends Component {
         }
     }
 
+    /**
+     * @param {string} inputValue
+     */
     async _makeLookup(inputValue) {
         if (!inputValue) { return; }
         const encodedInputValue = encodeURIComponent(inputValue);
         const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
 
         /** @type {JishoApiData} */
-        const result = await fetch(url).then(e => e.json());
+        const result = await this._requestMaybeUsingProxy(url).then(e => e.json());
         if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
 
         const lookupResults = new Elm().class("lookupResults").appendTo(this);
@@ -186,10 +191,91 @@ class Lookup extends Component {
     }
 
     /**
+     * @param {string} url 
+     */
+    async _requestMaybeUsingProxy(url) {
+        if (Lookup.useProxy) {
+            this._showProxyWarning();
+            return fetch(Lookup.getProxyUrl(url));
+        }
+
+        try {
+            return await fetch(url);
+        } catch (err) {
+            if (err.name !== "TypeError") {
+                throw err;
+            }
+
+            Lookup.useProxy = true;
+            this._showProxyWarning();
+            return fetch(Lookup.getProxyUrl(url));
+        }
+    }
+
+    _showProxyWarning() {
+        if (this.hasProxyWarning) { return; }
+        this.append(new ProxyWarning());
+        this.hasProxyWarning = true;
+    }
+
+    /**
      * @param {JishoData} item
      */
     _resultSelectedHandler(item) {
         this.returnHandler(item);
+    }
+}
+
+Lookup.useProxy = false;
+
+/**
+ * Converts url to a url that passes though a proxy,
+ * allowing bypass of CORS
+ * @param {string} url 
+ */
+Lookup.getProxyUrl = function (url) {
+    return "https://cors-anywhere.herokuapp.com/" + url;
+};
+
+class ProxyWarning extends Component {
+    constructor() {
+        super("proxyWarning");
+
+        /** @type {Elm} */
+        this.tooltipElm = null;
+
+        this._setup();
+    }
+
+    _setup() {
+        this.append(
+            new Elm().class("badge")
+                .attribute("tabindex", "0")
+                .append(
+                    new Elm("span").class("triangle").append("\u25b2"),
+                    new Elm("span").append("Proxy")
+                )
+                .on("click", () => this._showTooltip())
+                .on("mouseover", () => this._showTooltip())
+                .on("mouseout", () => this._hideTooltip())
+                .on("focus", () => this._showTooltip())
+                .on("blur", () => this._hideTooltip()),
+
+            this.tooltipElm = new Elm().class("tooltip", "shadow")
+                .append(
+                    new Elm().append("Requests to jisho.org are being passed though a third party proxy (" + Lookup.getProxyUrl("") + ")."),
+                    new Elm().append("Searches will be slower."),
+                    new Elm().append("Use electron-based desktop app to avoid using a proxy.")
+                )
+        );
+    }
+
+    _showTooltip() {
+        this.tooltipElm.class("show");
+    }
+
+    _hideTooltip() {
+        this.tooltipElm.removeClass("show");
     }
 }
 
