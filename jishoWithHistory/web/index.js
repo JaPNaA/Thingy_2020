@@ -42,7 +42,7 @@ class Main extends Component {
     }
 
     clearAll() {
-        this.lookupHistory.clear();
+        this.lookupHistory.clearLookups();
     }
 
     getHistory() {
@@ -69,7 +69,8 @@ class Main extends Component {
             this.lookupContainer = new Elm().class("lookupContainer")
         );
 
-        this._createLookup();
+        const firstLookup = this._createLookup();
+        setTimeout(() => firstLookup.focus(), 1);
     }
 
     _createLookup() {
@@ -82,6 +83,8 @@ class Main extends Component {
             this.addItemToHistory(a);
             this._createLookup();
         });
+
+        return lookup;
     }
 }
 
@@ -106,6 +109,11 @@ class LookupHistory extends Component {
     removeLookup(lookup) {
         this.lookups.splice(this.lookups.indexOf(lookup), 1);
         lookup.remove();
+    }
+
+    clearLookups() {
+        this.clear();
+        this.lookups.length = 0;
     }
 
     getData() {
@@ -175,6 +183,7 @@ class Lookup extends Component {
         this.input.elm.focus();
         scrollTo(0, document.body.scrollHeight);
         scrollBy(0, -1); // prevent browser scrolling back
+        scrollBy(0, 1);
     }
 
     _createInput() {
