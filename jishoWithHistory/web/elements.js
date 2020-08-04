@@ -106,6 +106,22 @@ class Elm {
     }
 
     /**
+     * By click or keyboard
+     * @param {(this: HTMLElement, ev: any) => any} handler
+     */
+    onActivate(handler) {
+        this.on("click", handler);
+        this.elm.addEventListener("keydown", e => {
+            if (e.target !== this.elm) { return; }
+            if (e.keyCode === 13 || e.keyCode === 32) { // enter or space
+                handler.call(this.elm);
+                e.preventDefault();
+            }
+        });
+        return this;
+    }
+
+    /**
      * @param {string} key
      * @param {string} [value]
      */

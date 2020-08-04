@@ -359,8 +359,7 @@ class LookupResult extends Component {
             )
         );
 
-        this.elm.addEventListener("keydown", e => this._clickByKeyboardHandler(e));
-        this.on("click", () => this._onSelected());
+        this.onActivate(() => this._onSelected());
 
         if (this.data.is_common) {
             this.class("common");
@@ -479,16 +478,6 @@ class LookupResult extends Component {
         return new Elm().class("tag").append(text);
     }
 
-    /**
-     * @param {KeyboardEvent} e 
-     */
-    _clickByKeyboardHandler(e) {
-        if (e.keyCode === 13 || e.keyCode === 32) { // enter or space
-            this._onSelected();
-            e.preventDefault();
-        }
-    }
-
     _onSelected() {
         if (this.clickHandler) {
             this.clickHandler();
@@ -544,7 +533,7 @@ class LookupResultRemoveButton extends Component {
     _setup() {
         this.append(
             new Elm().class("hitbox").attribute("tabindex", "0")
-                .on("click", () => this._onClick())
+                .onActivate(() => this._onClick())
                 .append(
                     new Elm().class("imgContainer", "shadow").append(
                         new Elm().class("deleteButtonImg")
