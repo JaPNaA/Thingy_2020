@@ -346,22 +346,10 @@ class LookupResult extends Component {
     }
 
     _setup() {
-        let title = "";
-        let reading = "";
-
-        const firstJapanese = this.data.japanese[0];
-        if (firstJapanese.word) {
-            title = firstJapanese.word;
-            reading = firstJapanese.reading;
-        } else {
-            title = firstJapanese.reading;
-        }
-
         this.attribute("tabindex", "0").append(
             new Elm().class("top").append(
-                new Elm().class("word").append(
-                    new Elm().class("reading").append(reading),
-                    new Elm().class("title").append(title),
+                new Elm("h1").class("word").append(
+                    new Furigana(this.data.japanese[0])
                 ),
 
                 new Elm().class("tags").withSelf(self => this._addTagsTo(self))
@@ -398,12 +386,89 @@ class LookupResult extends Component {
      * @param {Elm} elm 
      */
     _addDefinitionsTo(elm) {
+        /** @type {{ restrictions: string[], senses: Sense[] }[]} */
+        const groups = [];
+
         for (const sense of this.data.senses) {
-            elm.append(
-                new Elm("li").class("sense").append(
-                    sense.english_definitions.join("; ")
-                )
-            );
+            let thisGroup = null;
+            for (const group of groups) {
+                if (arrayEquals(group.restrictions, sense.restrictions)) {
+                    thisGroup = group;
+                    break;
+                }
+            }
+
+            if (thisGroup === null) {
+                thisGroup = {
+                    restrictions: sense.restrictions,
+                    /** @type {Sense[]} */
+                    senses: []
+                };
+                groups.push(thisGroup);
+            }
+
+            thisGroup.senses.push(sense);
+        }
+
+        /** @type {Map<string, Japanese>} */
+        const wordWithReadingMap = new Map();
+        for (const word of this.data.japanese) {
+            wordWithReadingMap.set(word.word || word.reading, word);
+        }
+
+        for (const group of groups) {
+            const groupElm = new Elm().class("group");
+
+            if (this.data.japanese.length > 1) {
+                const groupHeading = new Elm("h3").class("groupHeading").appendTo(groupElm);
+
+                /** @type {Japanese[]} */
+                const restrictionsJapanese =
+                    group.restrictions.length > 0 ?
+                        group.restrictions.map(e => wordWithReadingMap.get(e) || { reading: e }) :
+                        this.data.japanese;
+
+                const groupHeadingText = new Elm().class("text").appendTo(groupHeading);
+
+                for (const restrictionJapanese of restrictionsJapanese) {
+                    const furigana = new Furigana(restrictionJapanese);
+                    groupHeadingText.append(
+                        furigana,
+                        new Elm("span").class("separator").append("\u30FB")
+                    );
+
+                    if (restrictionJapanese.reading === this.data.japanese[0].reading) {
+                        furigana.hideReading();
+                    }
+                }
+            }
+
+            for (const sense of group.senses) {
+                const elm = new Elm("li").class("sense");
+
+                new Elm("span").class("definitions")
+                    .append(sense.english_definitions.join("; "))
+                    .appendTo(elm);
+
+                if (sense.tags.length > 0) {
+                    const tags = new Elm().class("tags").appendTo(elm);
+                    for (const tag of sense.tags) {
+                        if (tag === "Usually written using kana alone") {
+                            tags.unshiftElement(
+                                this._createTagElm("u.kana")
+                                    .attribute("title", tag)
+                                    .class("ukana")
+                            );
+                        } else {
+                            tags.append(this._createTagElm(tag));
+                        }
+                    }
+                }
+
+                groupElm.append(elm);
+            }
+
+            elm.append(groupElm);
         }
     }
 
@@ -428,6 +493,34 @@ class LookupResult extends Component {
         if (this.clickHandler) {
             this.clickHandler();
         }
+    }
+}
+
+class Furigana extends Component {
+    /**
+     * @param {Japanese} item 
+     */
+    constructor(item) {
+        super("furigana");
+        if (item.word) {
+            this.append(
+                new Elm("ruby").class("word")
+                    .append(
+                        item.word,
+                        new Elm("rp").class("reading").append("("),
+                        new Elm("rt").class("reading").append(item.reading),
+                        new Elm("rp").class("reading").append(")")
+                    )
+            );
+        } else {
+            this.append(
+                new Elm("span").class("word").append(item.reading)
+            );
+        }
+    }
+
+    hideReading() {
+        this.class("hideReading");
     }
 }
 
@@ -465,6 +558,21 @@ class LookupResultRemoveButton extends Component {
     }
 }
 
+/**
+ * @template T
+ * @param {T[]} arr1
+ * @param {T[]} arr2
+ * @return {boolean}
+ */
+function arrayEquals(arr1, arr2) {
+    if (arr1.length !== arr2.length) { return false; }
+
+    for (let i = 0; i < arr1.length; i++) {
+        if (arr1[i] !== arr2[i]) { return false; }
+    }
+
+    return true;
+}
 
 const main = new Main();
 main.appendTo(document.body);

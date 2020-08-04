@@ -2,6 +2,7 @@
     --light-highlight: #ffffff;
     --focus-color: #367cffbd;
     --danger-color: #e81616d4;
+    --emphasis-color: #298b18e3;
 }
 
 body {
@@ -12,6 +13,12 @@ body {
     margin-top: 4px;
     margin-bottom: calc(100vh - 96px);
     background-color: #fff;
+}
+
+h1, h2, h3 {
+    font-weight: normal;
+    margin-top: 0;
+    margin-bottom: 0;
 }
 
 .main {
@@ -146,41 +153,69 @@ body {
     border-color: var(--focus-color);
 }
 
-.lookupResult .top {
+.lookupResult > .top {
     display: block;
     width: 100%;
 }
 
-.lookupResult .word {
+.lookupResult > .top > .word {
     display: inline-block;
+    margin-top: 8px;
     width: auto;
 }
 
-.lookupResult .word .title {
-    font-size: 2em;
+.lookupResult > .top > .word > .furigana .reading {
+    transform: translateY(-2px);
 }
 
-.lookupResult .tags {
+.lookupResult > .top > .tags {
     display: flex;
     flex-wrap: wrap-reverse;
     flex-direction: column;
     gap: 8px;
-
+    opacity: 0.8;
     position: absolute;
     top: 0;
     right: 0;
-
     vertical-align: top;
     padding: 8px;
     width: auto;
-    height: 76px;
+    height: 64px;
 }
 
-.lookupResult .tag {
+.lookupResult > .top > .tags > .tag {
     display: inline-block;
     text-align: center;
-    padding: 4px 12px;
+    padding: 2px 4px;
     font-size: 0.8em;
+}
+
+.lookupResult .group > .groupHeading {
+    display: flex;
+    align-items: center;
+    position: relative;
+    margin-left: -1.5em;
+    margin-bottom: 8px;
+    font-size: 1.1em;
+    flex-direction: row;
+}
+
+.lookupResult .group > .groupHeading > .text {
+    flex-grow: 0;
+}
+
+.lookupResult .group > .groupHeading > .text > .separator:last-child {
+    display: none;
+}
+
+.lookupResult .group > .groupHeading::after {
+    content: ' ';
+    display: block;
+    background-color: #88888859;
+    width: auto;
+    height: 1px;
+    flex-grow: 1;
+    margin-left: 0.5em;
 }
 
 .lookupResult .senses {
@@ -189,6 +224,20 @@ body {
 
 .lookupResult .sense {
     margin-bottom: 8px;
+}
+
+.lookupResult .sense > .tags {
+    opacity: 0.8;
+    font-size: 0.75em;
+}
+
+.lookupResult .sense > .tags > .tag {
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.lookupResult .sense > .tags > .tag.ukana {
+    color: var(--emphasis-color);
 }
 
 .lookupResultRemoveButton {
@@ -240,6 +289,20 @@ body {
     border: 1px solid #0000000d;
     box-shadow: 0px 2px 4px #0000002e, 0px 0px 8px #00000005;
 }
+ 
+.furigana {
+    display: inline;
+}
+
+.furigana .reading {
+    opacity: 0.4;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.furigana.hideReading .reading {
+    display: none;
+}
 
 
 @media (prefers-color-scheme: dark) {
@@ -260,6 +323,10 @@ body {
     .shadow {
         border: 1px solid #ffffff2e;
         box-shadow: none;
+    }
+
+    .furigana .reading {
+        opacity: 0.6;
     }
 
     ::-webkit-scrollbar {

@@ -43,17 +43,32 @@ class Elm {
      */
     append(...elms) {
         for (const elm of elms) {
-            if (elm instanceof Elm) {
-                elm.appendTo(this.elm);
-            } else if (typeof elm === "string") {
-                this.elm.appendChild(document.createTextNode(elm));
-            } else if (elm instanceof Node) {
-                this.elm.appendChild(elm);
-            } else {
-                this.elm.appendChild(document.createTextNode(elm && elm.toString() || ""));
-            }
+            this.elm.appendChild(this._anyToNode(elm));
         }
         return this;
+    }
+
+    /**
+     * @param {any} elm 
+     */
+    unshiftElement(elm) {
+        this.elm.insertBefore(this._anyToNode(elm), this.elm.firstChild);
+    }
+
+    /**
+     * @param {any} any 
+     * @return {Node}
+     */
+    _anyToNode(any) {
+        if (any instanceof Elm) {
+            return any.elm;
+        } else if (typeof any === "string") {
+            return document.createTextNode(any);
+        } else if (any instanceof Node) {
+            return any;
+        } else {
+            return document.createTextNode(any && any.toString() || "");
+        }
     }
 
     /**
