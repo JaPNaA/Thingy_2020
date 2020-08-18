@@ -34,7 +34,7 @@ class Main extends Component {
         super("main");
 
         this.lookupHistory = new LookupHistory();
-        this.actionsBar = new ActionsBar(this);
+        this.actionsBar = new ActionsBar(this.lookupHistory);
         /** @type {Elm} */
         this.lookupContainer = null;
 
@@ -93,6 +93,8 @@ class LookupHistory extends Component {
         super("lookupHistory");
         /** @type {LookupResult[]} */
         this.lookups = [];
+        /** @type {function[]} */
+        this.changeHandlers = [];
     }
 
     /**
@@ -101,6 +103,7 @@ class LookupHistory extends Component {
     addLookup(lookup) {
         this.lookups.push(lookup);
         this.append(lookup);
+        this._dispatchChangeHandlers();
     }
 
     /**
@@ -109,11 +112,24 @@ class LookupHistory extends Component {
     removeLookup(lookup) {
         this.lookups.splice(this.lookups.indexOf(lookup), 1);
         lookup.remove();
+        this._dispatchChangeHandlers();
     }
 
     clearLookups() {
         this.clear();
         this.lookups.length = 0;
+        this._dispatchChangeHandlers();
+    }
+
+    /** @param {function} handler */
+    addChangeHandler(handler) {
+        this.changeHandlers.push(handler);
+    }
+
+    _dispatchChangeHandlers() {
+        for (const handler of this.changeHandlers) {
+            handler();
+        }
     }
 
     getData() {
@@ -123,20 +139,20 @@ class LookupHistory extends Component {
 
 class ActionsBar extends Component {
     /**
-     * @param {Main} main
+     * @param {LookupHistory} history
      */
-    constructor(main) {
-        super("buttonsBar");
+    constructor(history) {
+        super("actionsBar");
 
-        this.parentMain = main;
+        this.history = history;
 
         this.append(
-            new Elm("button").class("clearAllButton", "shadow").append("Clear All")
-                .on("click", () => this.parentMain.clearAll()),
+            this.clearAllButton = new Elm("button").class("clearAllButton", "shadow")
+                .on("click", () => this.history.clearLookups()),
 
             new Elm("button").class("exportButton", "shadow").append("Export")
                 .on("click", () => {
-                    alert(JSON.stringify(this.parentMain.getHistory()));
+                    alert(JSON.stringify(this.history.getData()));
                 }),
 
             new Elm("button").class("importButton", "shadow").append("Import")
@@ -145,10 +161,24 @@ class ActionsBar extends Component {
                     if (!data) { return; }
                     const obj = JSON.parse(data);
                     for (const item of obj) {
-                        this.parentMain.addItemToHistory(item);
+                        this.history.addLookup(item);
                     }
                 })
         );
+
+        this.updateHistoryCount();
+        this.history.addChangeHandler(() => this.updateHistoryCount(this.history.getData().length));
+    }
+
+    /**
+     * @param {number} [count]
+     */
+    updateHistoryCount(count) {
+        if (count) {
+            this.clearAllButton.elm.innerHTML = "Clear all (" + count + ")";
+        } else {
+            this.clearAllButton.elm.innerHTML = "Clear all"
+        }
     }
 }
 

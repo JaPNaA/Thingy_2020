@@ -31,14 +31,14 @@ h3 {
 
 .lookupContainer,
 .lookupHistory,
-.buttonsBar {
+.actionsBar {
     width: 100%;
     max-width: 464px;
     padding: 8px;
     text-align: left;
 }
 
-.buttonsBar .clearAllButton {
+.actionsBar .clearAllButton {
     background-color: transparent;
     font-family: inherit;
     text-transform: uppercase;
@@ -48,12 +48,12 @@ h3 {
     padding: 4px 8px;
 }
 
-.buttonsBar .clearAllButton:active,
-.buttonsBar .clearAllButton:focus {
+.actionsBar .clearAllButton:active,
+.actionsBar .clearAllButton:focus {
     border-color: var(--focus-color);
 }
 
-.buttonsBar .exportButton {
+.actionsBar .exportButton {
     color: blue;
 }
 
