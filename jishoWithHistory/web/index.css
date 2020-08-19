@@ -38,23 +38,44 @@ h3 {
     text-align: left;
 }
 
-.actionsBar .clearAllButton {
-    background-color: transparent;
-    font-family: inherit;
-    text-transform: uppercase;
-    font-weight: bold;
-    color: var(--danger-color);
-    outline: none;
-    padding: 4px 8px;
+.actionsBar {
+    display: flex;
+    flex-direction: row;
 }
 
-.actionsBar .clearAllButton:active,
-.actionsBar .clearAllButton:focus {
+.actionsBar > .left {
+    text-align: left;
+    flex-grow: 0;
+}
+
+.actionsBar > .right {
+    text-align: right;
+    flex-grow: 1;
+}
+
+.actionsBar button {
+    background-color: transparent;
+    font-family: inherit;
+    font-weight: 500;
+    text-transform: uppercase;
+    outline: none;
+    padding: 6px 12px;
+    color: inherit;
+    margin-right: 16px;
+}
+
+.actionsBar button:last-child {
+    margin-right: 0;
+}
+
+.actionsBar button:active,
+.actionsBar button:focus {
     border-color: var(--focus-color);
 }
 
-.actionsBar .exportButton {
-    color: blue;
+.actionsBar .clearAllButton {
+    background-color: var(--danger-color);
+    color: #ffffff;
 }
 
 .lookup .input {

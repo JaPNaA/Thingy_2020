@@ -147,23 +147,27 @@ class ActionsBar extends Component {
         this.history = history;
 
         this.append(
-            this.clearAllButton = new Elm("button").class("clearAllButton", "shadow")
-                .on("click", () => this.history.clearLookups()),
+            new Elm().class("left").append(
+                this.clearAllButton = new Elm("button").class("clearAllButton", "shadow")
+                    .on("click", () => this.history.clearLookups())
+            ),
 
-            new Elm("button").class("exportButton", "shadow").append("Export")
-                .on("click", () => {
-                    alert(JSON.stringify(this.history.getData()));
-                }),
+            new Elm().class("right").append(
+                new Elm("button").class("exportButton", "shadow").append("Export")
+                    .on("click", () => {
+                        alert(JSON.stringify(this.history.getData()));
+                    }),
 
-            new Elm("button").class("importButton", "shadow").append("Import")
-                .on("click", () => {
-                    const data = prompt("Import JSON...");
-                    if (!data) { return; }
-                    const obj = JSON.parse(data);
-                    for (const item of obj) {
-                        this.history.addLookup(item);
-                    }
-                })
+                new Elm("button").class("importButton", "shadow").append("Import")
+                    .on("click", () => {
+                        const data = prompt("Import JSON...");
+                        if (!data) { return; }
+                        const obj = JSON.parse(data);
+                        for (const item of obj) {
+                            this.history.addLookup(item);
+                        }
+                    })
+            )
         );
 
         this.updateHistoryCount();
