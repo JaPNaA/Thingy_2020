@@ -49,19 +49,6 @@ class Main extends Component {
         return this.lookupHistory.getData();
     }
 
-    /**
-     * @param {JishoData} item 
-     */
-    addItemToHistory(item) {
-        const lookupElm = new LookupResult(item);
-
-        new LookupResultRemoveButton(lookupElm)
-            .appendTo(lookupElm)
-            .setClickHandler(() => this.lookupHistory.removeLookup(lookupElm));
-
-        this.lookupHistory.addLookup(lookupElm);
-    }
-
     _setup() {
         this.append(
             this.actionsBar,
@@ -80,7 +67,7 @@ class Main extends Component {
         lookup.setReturnHandler(a => {
             console.log(a);
             lookup.remove();
-            this.addItemToHistory(a);
+            this.lookupHistory.addLookup(a);
             this._createLookup();
         });
 
@@ -98,11 +85,17 @@ class LookupHistory extends Component {
     }
 
     /**
-     * @param {LookupResult} lookup 
+     * @param {JishoData} lookup 
      */
     addLookup(lookup) {
-        this.lookups.push(lookup);
-        this.append(lookup);
+        const lookupElm = new LookupResult(lookup);
+
+        new LookupResultRemoveButton(lookupElm)
+            .appendTo(lookupElm)
+            .setClickHandler(() => this.removeLookup(lookupElm));
+
+        this.lookups.push(lookupElm);
+        this.append(lookupElm);
         this._dispatchChangeHandlers();
     }
 
