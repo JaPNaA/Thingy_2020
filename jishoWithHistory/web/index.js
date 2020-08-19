@@ -148,17 +148,35 @@ class ActionsBar extends Component {
             new Elm().class("right").append(
                 new Elm("button").class("exportButton", "shadow").append("Export")
                     .on("click", () => {
-                        alert(JSON.stringify(this.history.getData()));
+                        const modal = new Modal();
+                        modal.appendContent(
+                            new Elm("textarea")
+                                .attribute("readonly") // @ts-ignore
+                                .on("click", function () { this.select(); })
+                                .append(JSON.stringify(this.history.getData()))
+                        );
+                        modal.show();
                     }),
 
                 new Elm("button").class("importButton", "shadow").append("Import")
                     .on("click", () => {
-                        const data = prompt("Import JSON...");
-                        if (!data) { return; }
-                        const obj = JSON.parse(data);
-                        for (const item of obj) {
-                            this.history.addLookup(item);
-                        }
+                        const modal = new Modal();
+                        const textarea = new Elm("textarea")
+                            .attribute("placeholder", "Import JSON...");
+                        modal.appendContent(textarea);
+                        modal.addButton(new Elm("button").append("Import")
+                            .on("click", () => {
+                                /** @type {string} */
+                                // @ts-ignore
+                                const data = textarea.elm.value;
+                                if (!data) { return; }
+                                const obj = JSON.parse(data);
+                                for (const item of obj) {
+                                    this.history.addLookup(item);
+                                }
+                            })
+                        );
+                        modal.show();
                     })
             )
         );
@@ -512,34 +530,6 @@ class LookupResult extends Component {
     }
 }
 
-class Furigana extends Component {
-    /**
-     * @param {Japanese} item 
-     */
-    constructor(item) {
-        super("furigana");
-        if (item.word) {
-            this.append(
-                new Elm("ruby").class("word")
-                    .append(
-                        item.word,
-                        new Elm("rp").class("reading").append("("),
-                        new Elm("rt").class("reading").append(item.reading),
-                        new Elm("rp").class("reading").append(")")
-                    )
-            );
-        } else {
-            this.append(
-                new Elm("span").class("word").append(item.reading)
-            );
-        }
-    }
-
-    hideReading() {
-        this.class("hideReading");
-    }
-}
-
 class LookupResultRemoveButton extends Component {
     /**
      * @param {LookupResult} lookupResult lookupResult to add button to
@@ -571,6 +561,71 @@ class LookupResultRemoveButton extends Component {
 
     _onClick() {
         if (this.clickHandler) { this.clickHandler(); }
+    }
+}
+
+class Furigana extends Component {
+    /**
+     * @param {Japanese} item 
+     */
+    constructor(item) {
+        super("furigana");
+        if (item.word) {
+            this.append(
+                new Elm("ruby").class("word")
+                    .append(
+                        item.word,
+                        new Elm("rp").class("reading").append("("),
+                        new Elm("rt").class("reading").append(item.reading),
+                        new Elm("rp").class("reading").append(")")
+                    )
+            );
+        } else {
+            this.append(
+                new Elm("span").class("word").append(item.reading)
+            );
+        }
+    }
+
+    hideReading() {
+        this.class("hideReading");
+    }
+}
+
+class Modal extends Component {
+    constructor() {
+        super("modal");
+
+        this.append(
+            new Elm().class("dialogue").append(
+                this.content = new Elm().class("content"),
+
+                this.buttons = new Elm().class("buttons").append(
+                    this.closeButton = new Elm("button").class("close").append("Close")
+                        .on("click", () => this.remove())
+                )
+            )
+        );
+    }
+
+    /**
+     * @param {any} content 
+     */
+    appendContent(content) {
+        this.content.append(content);
+    }
+
+    /**
+     * @param {Elm} button
+     */
+    addButton(button) {
+        button.appendTo(this.buttons);
+        button.on("click", () => this.remove());
+        this.closeButton.elm.innerHTML = "Cancel";
+    }
+
+    show() {
+        this.appendTo(document.body);
     }
 }
 
