@@ -60,8 +60,9 @@ class Main extends Component {
         setTimeout(() => firstLookup.focus(), 1);
     }
 
-    _createLookup() {
-        const lookup = new Lookup().appendTo(this.lookupContainer);
+    /** @param {string} [presetSearch] */
+    _createLookup(presetSearch) {
+        const lookup = new Lookup(presetSearch).appendTo(this.lookupContainer);
         lookup.focus();
 
         lookup.setReturnHandler(a => {
@@ -205,20 +206,31 @@ class Lookup extends Component {
      * @typedef {(ret: JishoData) => any} LookupReturnHandler
      */
 
-    constructor() {
+    /** @param {string} [searchString] */
+    constructor(searchString) {
         super("lookup");
+
+        this.presetSearch = searchString;
 
         this.input = this._createInput();
         this.lastInputValue = null;
 
         /** @type {LookupReturnHandler} */
         this.returnHandler = null;
+
         /** @type {Elm} */
         this.lastLookupResults = null;
 
         this.hasProxyWarning = false;
 
         this.append(this.input);
+
+        if (searchString) {
+            /** @type {HTMLInputElement} */ // @ts-ignore
+            const input = this.input.elm;
+            input.value = searchString;
+            this._makeLookup(searchString);
+        }
     }
 
     /**
@@ -247,8 +259,7 @@ class Lookup extends Component {
      * @param {KeyboardEvent} e 
      */
     _inputEnterHandler(e) {
-        /** @type {HTMLInputElement} */
-        // @ts-ignore
+        /** @type {HTMLInputElement} */ // @ts-ignore
         const input = this.input.elm;
         console.log(e);
 
@@ -258,8 +269,6 @@ class Lookup extends Component {
         ) {
             return;
         }
-
-        this.lastInputValue = input.value;
 
         this._removeLastLookup();
         this._makeLookup(input.value);
@@ -288,10 +297,11 @@ class Lookup extends Component {
         for (const item of result.data) {
             new LookupResult(item)
                 .appendTo(lookupResults)
-                .setClickHandler(() => this._resultSelectedHandler(item));
+                .setClickHandler(() => this.returnHandler(item));
         }
 
         this.lastLookupResults = lookupResults;
+        this.lastInputValue = inputValue;
 
         console.log(result);
     }
@@ -322,13 +332,6 @@ class Lookup extends Component {
         if (this.hasProxyWarning) { return; }
         this.append(new ProxyWarning());
         this.hasProxyWarning = true;
-    }
-
-    /**
-     * @param {JishoData} item
-     */
-    _resultSelectedHandler(item) {
-        this.returnHandler(item);
     }
 }
 
@@ -542,6 +545,10 @@ class LookupResult extends Component {
             .append(sense.english_definitions.join("; "))
             .appendTo(senseElm);
 
+        if (sense.see_also.length > 0) {
+            this._createSeeAlsoElm(sense.see_also).appendTo(senseElm);
+        }
+
         if (sense.tags.length > 0) { // has tags?
             const tags = new Elm().class("tags").appendTo(senseElm);
 
@@ -559,6 +566,31 @@ class LookupResult extends Component {
         }
 
         return senseElm;
+    }
+
+    /** @param {string[]} seeAlsos */
+    _createSeeAlsoElm(seeAlsos) {
+        const seeAlsosElm = new Elm().class("seeAlsos");
+
+        for (const seeAlso of seeAlsos) {
+            new Elm().class("seeAlso")
+                .append(seeAlso)
+                .on("click", e => {
+                    const modal = new Modal();
+                    const lookup = new Lookup(seeAlso);
+                    lookup.setReturnHandler(result => {
+                        main.lookupHistory.addLookup(result)
+                        modal.remove();
+                    });
+
+                    modal.appendContent(lookup);
+                    modal.show();
+                    e.stopPropagation();
+                })
+                .appendTo(seeAlsosElm);
+        }
+
+        return seeAlsosElm;
     }
 
     /**

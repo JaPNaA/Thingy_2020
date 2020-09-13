@@ -179,6 +179,7 @@ textarea {
     border: 1px solid transparent;
     margin-bottom: 24px;
     outline: none;
+    min-width: 300px;
 }
 
 .lookupResult.clickable {
@@ -268,7 +269,24 @@ textarea {
 }
 
 .lookupResult .sense {
+    position: relative;
     margin-bottom: 8px;
+}
+
+.lookupResult .sense > .seeAlsos {
+    top: 0;
+    right: 0;
+    font-size: 0.8em;
+    position: absolute;
+}
+
+.lookupResult .sense > .seeAlsos > .seeAlso {
+    cursor: pointer;
+}
+
+.lookupResult .sense > .seeAlsos > .seeAlso::before {
+    content: "➡ ";
+    opacity: 0.8;
 }
 
 .lookupResult .sense > .tags {
