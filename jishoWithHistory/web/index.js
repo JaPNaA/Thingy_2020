@@ -163,6 +163,7 @@ class ActionsBar extends Component {
                         const modal = new Modal();
                         const textarea = new Elm("textarea")
                             .attribute("placeholder", "Import JSON...");
+
                         modal.appendContent(textarea);
                         modal.addButton(new Elm("button").append("Import")
                             .on("click", () => {
@@ -176,7 +177,9 @@ class ActionsBar extends Component {
                                 }
                             })
                         );
+
                         modal.show();
+                        textarea.elm.focus();
                     })
             )
         );
@@ -502,58 +505,58 @@ class LookupResult extends Component {
             wordToJapaneseMap.set(word.word || word.reading, word);
         }
         return wordToJapaneseMap;
-        }
+    }
 
     /** @param {RestrictionGroup} group */
     _createGroupHeading(group) {
         const groupHeading = new Elm("h3").class("groupHeading");
 
-                /** @type {Japanese[]} */
+        /** @type {Japanese[]} */
         const restrictions =
-                    group.restrictions.length > 0 ?
+            group.restrictions.length > 0 ?
                 group.restrictions.map(e => this.wordToJapaneseMap.get(e) || { reading: e }) :
-                        this.data.japanese;
+                this.data.japanese;
 
-                const groupHeadingText = new Elm().class("text").appendTo(groupHeading);
+        const groupHeadingText = new Elm().class("text").appendTo(groupHeading);
 
         for (const restrictionJapanese of restrictions) {
-                    const furigana = new Furigana(restrictionJapanese);
-                    groupHeadingText.append(
-                        furigana,
-                        new Elm("span").class("separator").append("\u30FB")
-                    );
+            const furigana = new Furigana(restrictionJapanese);
+            groupHeadingText.append(
+                furigana,
+                new Elm("span").class("separator").append("\u30FB")
+            );
 
-                    if (restrictionJapanese.reading === this.data.japanese[0].reading) {
-                        furigana.hideReading();
-                    }
-                }
+            if (restrictionJapanese.reading === this.data.japanese[0].reading) {
+                furigana.hideReading();
+            }
+        }
 
         return groupHeading;
-            }
+    }
 
     /** @param {Sense} sense */
     _createSenseListItem(sense) {
         const senseElm = new Elm("li").class("sense");
 
-                new Elm("span").class("definitions")
-                    .append(sense.english_definitions.join("; "))
+        new Elm("span").class("definitions")
+            .append(sense.english_definitions.join("; "))
             .appendTo(senseElm);
 
         if (sense.tags.length > 0) { // has tags?
             const tags = new Elm().class("tags").appendTo(senseElm);
 
-                    for (const tag of sense.tags) {
-                        if (tag === "Usually written using kana alone") {
+            for (const tag of sense.tags) {
+                if (tag === "Usually written using kana alone") {
                     tags.appendAsFirst(
-                                this._createTagElm("u.kana")
-                                    .attribute("title", tag)
-                                    .class("ukana")
-                            );
-                        } else {
-                            tags.append(this._createTagElm(tag));
-                        }
-                    }
+                        this._createTagElm("u.kana")
+                            .attribute("title", tag)
+                            .class("ukana")
+                    );
+                } else {
+                    tags.append(this._createTagElm(tag));
                 }
+            }
+        }
 
         return senseElm;
     }
