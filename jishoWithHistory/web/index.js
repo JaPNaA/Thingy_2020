@@ -206,6 +206,7 @@ class Lookup extends Component {
         super("lookup");
 
         this.input = this._createInput();
+        this.lastInputValue = null;
 
         /** @type {LookupReturnHandler} */
         this.returnHandler = null;
@@ -236,13 +237,27 @@ class Lookup extends Component {
             .class("input", "shadow")
             .attribute("autofocus")
             .attribute("placeholder", "Search...")
-            .on("change", () => this._inputChangeHandler());
+            .on("keydown", e => this._inputEnterHandler(e));
     }
 
-    _inputChangeHandler() {
+    /**
+     * @param {KeyboardEvent} e 
+     */
+    _inputEnterHandler(e) {
         /** @type {HTMLInputElement} */
         // @ts-ignore
         const input = this.input.elm;
+        console.log(e);
+
+        if (
+            !(e.keyCode === 13 || e.key === "Enter") ||
+            this.lastInputValue === input.value
+        ) {
+            return;
+        }
+
+        this.lastInputValue = input.value;
+
         this._removeLastLookup();
         this._makeLookup(input.value);
     }
