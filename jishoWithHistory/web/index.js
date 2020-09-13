@@ -390,11 +390,12 @@ class LookupResult extends Component {
         super("lookupResult");
 
         this.data = data;
+        this.wordToJapaneseMap = this._getWordToJapaneseMap();
 
         /** @type {function} */
         this.clickHandler = null;
 
-        this._setup();
+        this._setupElm();
     }
 
     /**
@@ -405,7 +406,7 @@ class LookupResult extends Component {
         this.class("clickable", "shadow");
     }
 
-    _setup() {
+    _setupElm() {
         this.attribute("tabindex", "0").append(
             new Elm().class("top").append(
                 new Elm("h1").class("word").append(
@@ -445,7 +446,29 @@ class LookupResult extends Component {
      * @param {Elm} elm 
      */
     _addDefinitionsTo(elm) {
-        /** @type {{ restrictions: string[], senses: Sense[] }[]} */
+        const groups = this._getSensesGroupedByRestrictions();
+
+        for (const group of groups) {
+            const groupElm = new Elm().class("group");
+
+            if (this.data.japanese.length > 1) { // more than one form?
+                this._createGroupHeading(group).appendTo(groupElm);
+            }
+
+            for (const sense of group.senses) {
+                this._createSenseListItem(sense).appendTo(groupElm)
+            }
+
+            elm.append(groupElm);
+        }
+    }
+
+    /**
+     * @typedef {{ restrictions: string[], senses: Sense[] }} RestrictionGroup
+     */
+
+    /** @returns {RestrictionGroup[]} */
+    _getSensesGroupedByRestrictions() {
         const groups = [];
 
         for (const sense of this.data.senses) {
@@ -469,27 +492,31 @@ class LookupResult extends Component {
             thisGroup.senses.push(sense);
         }
 
-        /** @type {Map<string, Japanese>} */
-        const wordWithReadingMap = new Map();
+        return groups;
+    }
+
+    /** @returns {Map<string, Japanese>} */
+    _getWordToJapaneseMap() {
+        const wordToJapaneseMap = new Map();
         for (const word of this.data.japanese) {
-            wordWithReadingMap.set(word.word || word.reading, word);
+            wordToJapaneseMap.set(word.word || word.reading, word);
+        }
+        return wordToJapaneseMap;
         }
 
-        for (const group of groups) {
-            const groupElm = new Elm().class("group");
-
-            if (this.data.japanese.length > 1) {
-                const groupHeading = new Elm("h3").class("groupHeading").appendTo(groupElm);
+    /** @param {RestrictionGroup} group */
+    _createGroupHeading(group) {
+        const groupHeading = new Elm("h3").class("groupHeading");
 
                 /** @type {Japanese[]} */
-                const restrictionsJapanese =
+        const restrictions =
                     group.restrictions.length > 0 ?
-                        group.restrictions.map(e => wordWithReadingMap.get(e) || { reading: e }) :
+                group.restrictions.map(e => this.wordToJapaneseMap.get(e) || { reading: e }) :
                         this.data.japanese;
 
                 const groupHeadingText = new Elm().class("text").appendTo(groupHeading);
 
-                for (const restrictionJapanese of restrictionsJapanese) {
+        for (const restrictionJapanese of restrictions) {
                     const furigana = new Furigana(restrictionJapanese);
                     groupHeadingText.append(
                         furigana,
@@ -500,20 +527,24 @@ class LookupResult extends Component {
                         furigana.hideReading();
                     }
                 }
+
+        return groupHeading;
             }
 
-            for (const sense of group.senses) {
-                const elm = new Elm("li").class("sense");
+    /** @param {Sense} sense */
+    _createSenseListItem(sense) {
+        const senseElm = new Elm("li").class("sense");
 
                 new Elm("span").class("definitions")
                     .append(sense.english_definitions.join("; "))
-                    .appendTo(elm);
+            .appendTo(senseElm);
 
-                if (sense.tags.length > 0) {
-                    const tags = new Elm().class("tags").appendTo(elm);
+        if (sense.tags.length > 0) { // has tags?
+            const tags = new Elm().class("tags").appendTo(senseElm);
+
                     for (const tag of sense.tags) {
                         if (tag === "Usually written using kana alone") {
-                            tags.unshiftElement(
+                    tags.appendAsFirst(
                                 this._createTagElm("u.kana")
                                     .attribute("title", tag)
                                     .class("ukana")
@@ -524,11 +555,7 @@ class LookupResult extends Component {
                     }
                 }
 
-                groupElm.append(elm);
-            }
-
-            elm.append(groupElm);
-        }
+        return senseElm;
     }
 
     /**

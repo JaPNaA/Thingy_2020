@@ -51,7 +51,7 @@ class Elm {
     /**
      * @param {any} elm 
      */
-    unshiftElement(elm) {
+    appendAsFirst(elm) {
         this.elm.insertBefore(this._anyToNode(elm), this.elm.firstChild);
     }
 
