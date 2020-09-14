@@ -180,6 +180,7 @@ textarea {
     margin-bottom: 24px;
     outline: none;
     min-width: 300px;
+    z-index: 0;
 }
 
 .lookupResult.clickable {
@@ -274,10 +275,11 @@ textarea {
 }
 
 .lookupResult .sense > .seeAlsos {
+    position: absolute;
     top: 0;
     right: 0;
+    z-index: 1;
     font-size: 0.8em;
-    position: absolute;
 }
 
 .lookupResult .sense > .seeAlsos > .seeAlso {
