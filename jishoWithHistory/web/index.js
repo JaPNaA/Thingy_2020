@@ -196,7 +196,7 @@ class ActionsBar extends Component {
         if (count) {
             this.clearAllButton.elm.innerHTML = "Clear all (" + count + ")";
         } else {
-            this.clearAllButton.elm.innerHTML = "Clear all"
+            this.clearAllButton.elm.innerHTML = "Clear all";
         }
     }
 }
@@ -462,7 +462,7 @@ class LookupResult extends Component {
             }
 
             for (const sense of group.senses) {
-                this._createSenseListItem(sense).appendTo(groupElm)
+                this._createSenseListItem(sense).appendTo(groupElm);
             }
 
             elm.append(groupElm);
@@ -579,7 +579,7 @@ class LookupResult extends Component {
                     const modal = new Modal();
                     const lookup = new Lookup(seeAlso);
                     lookup.setReturnHandler(result => {
-                        main.lookupHistory.addLookup(result)
+                        main.lookupHistory.addLookup(result);
                         modal.remove();
                     });
 
