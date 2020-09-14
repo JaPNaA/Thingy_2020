@@ -730,9 +730,9 @@ history.scrollRestoration = "manual";
 
 if (/\sElectron\//.test(navigator.userAgent) && window.require) {
     addEventListener("keydown", e => {
-        if (e.keyCode === 82 && e.ctrlKey) {
+        if (e.key.toLowerCase() === "r" && e.ctrlKey) {
             location.reload();
-        } else if (e.keyCode === 73 && e.ctrlKey && e.shiftKey) {
+        } else if (e.key.toLowerCase() === "i" && e.ctrlKey && e.shiftKey) {
             require("electron").remote.getCurrentWindow().webContents.openDevTools();
         }
     });
