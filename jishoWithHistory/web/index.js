@@ -292,6 +292,7 @@ class Lookup extends Component {
         const result = await this._requestMaybeUsingProxy(url).then(e => e.json());
         if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
 
+        this._removeLastLookup(); // do it again in case results have been added since
         const lookupResults = new Elm().class("lookupResults").appendTo(this);
 
         for (const item of result.data) {
