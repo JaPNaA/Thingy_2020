@@ -1,0 +1,21 @@
+{
+  "name": "tanki",
+  "version": "1.0.0",
+  "description": "Short term memorization program",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "short",
+    "term",
+    "memorization",
+    "flashcards"
+  ],
+  "author": "JaPNaA",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^11.0.2"
+  }
+}
