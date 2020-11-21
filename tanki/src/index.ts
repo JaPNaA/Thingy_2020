@@ -103,6 +103,10 @@ class Deck {
         this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
     }
 
+    public exportToString(): string {
+        return JSON.stringify(this.data);
+    }
+
     private selectCard(): Card {
         const nowMinute = Date.now() / 60e3;
 
@@ -203,23 +207,25 @@ function promptUser(message: string): Promise<string> {
     return promise;
 }
 
+const fs = require("fs");
+
 async function main() {
-    const deck = await fetch("../deckData.json")
-        .then(e => e.text())
-        .then(e => decodeToDeck(e));
+    const deckDataPath = "./deckData.json";
+    const deck = decodeToDeck(fs.readFileSync(deckDataPath).toString());
 
     document.body.appendChild(deck.elm);
     deck.showCard();
 
-    // document.getElementById("createNote")?.addEventListener("click", function() {
-    //     //
-    // });
-
-    document.getElementById("createNote")!.addEventListener("click", async function () {
+    document.getElementById("createNote")?.addEventListener("click", async function () {
         const type = parseInt(await promptUser("Type:"));
         const f1 = await promptUser("Field 1:");
         const f2 = await promptUser("Field 2:");
         deck.addNote([type, [f1, f2], []]);
+    });
+
+    document.getElementById("writeOut")?.addEventListener("click", function () {
+        const exportStr = deck.exportToString();
+        fs.writeFileSync(deckDataPath, exportStr);
     });
 
     console.log(deck);

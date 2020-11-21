@@ -107,6 +107,9 @@ var Deck = /** @class */ (function () {
         // sort latest due first
         this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
     };
+    Deck.prototype.exportToString = function () {
+        return JSON.stringify(this.data);
+    };
     Deck.prototype.selectCard = function () {
         var nowMinute = Date.now() / 60e3;
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
@@ -161,46 +164,44 @@ function promptUser(message) {
     document.body.appendChild(promptContainer);
     return promise;
 }
+var fs = require("fs");
 function main() {
+    var _a, _b;
     return __awaiter(this, void 0, void 0, function () {
-        var deck;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, fetch("../deckData.json")
-                        .then(function (e) { return e.text(); })
-                        .then(function (e) { return decodeToDeck(e); })];
-                case 1:
-                    deck = _a.sent();
-                    document.body.appendChild(deck.elm);
-                    deck.showCard();
-                    // document.getElementById("createNote")?.addEventListener("click", function() {
-                    //     //
-                    // });
-                    document.getElementById("createNote").addEventListener("click", function () {
-                        return __awaiter(this, void 0, void 0, function () {
-                            var type, _a, f1, f2;
-                            return __generator(this, function (_b) {
-                                switch (_b.label) {
-                                    case 0:
-                                        _a = parseInt;
-                                        return [4 /*yield*/, promptUser("Type:")];
-                                    case 1:
-                                        type = _a.apply(void 0, [_b.sent()]);
-                                        return [4 /*yield*/, promptUser("Field 1:")];
-                                    case 2:
-                                        f1 = _b.sent();
-                                        return [4 /*yield*/, promptUser("Field 2:")];
-                                    case 3:
-                                        f2 = _b.sent();
-                                        deck.addNote([type, [f1, f2], []]);
-                                        return [2 /*return*/];
-                                }
-                            });
-                        });
+        var deckDataPath, deck;
+        return __generator(this, function (_c) {
+            deckDataPath = "./deckData.json";
+            deck = decodeToDeck(fs.readFileSync(deckDataPath).toString());
+            document.body.appendChild(deck.elm);
+            deck.showCard();
+            (_a = document.getElementById("createNote")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", function () {
+                return __awaiter(this, void 0, void 0, function () {
+                    var type, _a, f1, f2;
+                    return __generator(this, function (_b) {
+                        switch (_b.label) {
+                            case 0:
+                                _a = parseInt;
+                                return [4 /*yield*/, promptUser("Type:")];
+                            case 1:
+                                type = _a.apply(void 0, [_b.sent()]);
+                                return [4 /*yield*/, promptUser("Field 1:")];
+                            case 2:
+                                f1 = _b.sent();
+                                return [4 /*yield*/, promptUser("Field 2:")];
+                            case 3:
+                                f2 = _b.sent();
+                                deck.addNote([type, [f1, f2], []]);
+                                return [2 /*return*/];
+                        }
                     });
-                    console.log(deck);
-                    return [2 /*return*/];
-            }
+                });
+            });
+            (_b = document.getElementById("writeOut")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", function () {
+                var exportStr = deck.exportToString();
+                fs.writeFileSync(deckDataPath, exportStr);
+            });
+            console.log(deck);
+            return [2 /*return*/];
         });
     });
 }
