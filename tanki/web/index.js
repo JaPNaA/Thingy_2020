@@ -64,6 +64,11 @@ var Deck = /** @class */ (function () {
         this.elm.appendChild(front.elm);
         this.elm.appendChild(back.elm);
     };
+    Deck.prototype.addNote = function (data) {
+        this.data.notes.unshift(data);
+        this.generateCardArrays();
+        this.showCard();
+    };
     Deck.prototype.cardContentReplacePlaceholders = function (content, fieldNames, fields) {
         var regexMatches = /{{(.+?)}}/g;
         var outString = "";
@@ -78,9 +83,15 @@ var Deck = /** @class */ (function () {
         return outString;
     };
     Deck.prototype.generateCardArrays = function () {
+        this.graduatedCards.length = 0;
+        this.newCards.length = 0;
+        this.seenCardsSorted.length = 0;
         for (var _i = 0, _a = this.data.notes; _i < _a.length; _i++) {
             var note = _a[_i];
-            for (var i = 0; i < note[2].length; i++) {
+            var noteID = note[0];
+            var noteType = this.data.noteTypes[noteID];
+            var noteType_NumCardType = noteType.cardTypes.length;
+            for (var i = 0; i < noteType_NumCardType; i++) {
                 var card = note[2][i];
                 if (card === 0 || card === undefined) {
                     this.newCards.push(new Card(this.newCardSettings, i, note));
@@ -97,7 +108,13 @@ var Deck = /** @class */ (function () {
         this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
     };
     Deck.prototype.selectCard = function () {
-        return this.seenCardsSorted[0];
+        var nowMinute = Date.now() / 60e3;
+        if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
+            return this.seenCardsSorted[0];
+        }
+        else {
+            return this.newCards[0];
+        }
     };
     return Deck;
 }());
@@ -127,6 +144,23 @@ var CardFaceDisplay = /** @class */ (function () {
     }
     return CardFaceDisplay;
 }());
+function promptUser(message) {
+    var promptContainer = document.createElement("elm");
+    promptContainer.classList.add("prompt");
+    var messageElm = document.createElement("div");
+    messageElm.innerHTML = message;
+    promptContainer.appendChild(messageElm);
+    var input = document.createElement("input");
+    var promise = new Promise(function (res) {
+        return input.addEventListener("change", function () {
+            res(input.value);
+            document.body.removeChild(promptContainer);
+        });
+    });
+    promptContainer.append(input);
+    document.body.appendChild(promptContainer);
+    return promise;
+}
 function main() {
     return __awaiter(this, void 0, void 0, function () {
         var deck;
@@ -139,6 +173,31 @@ function main() {
                     deck = _a.sent();
                     document.body.appendChild(deck.elm);
                     deck.showCard();
+                    // document.getElementById("createNote")?.addEventListener("click", function() {
+                    //     //
+                    // });
+                    document.getElementById("createNote").addEventListener("click", function () {
+                        return __awaiter(this, void 0, void 0, function () {
+                            var type, _a, f1, f2;
+                            return __generator(this, function (_b) {
+                                switch (_b.label) {
+                                    case 0:
+                                        _a = parseInt;
+                                        return [4 /*yield*/, promptUser("Type:")];
+                                    case 1:
+                                        type = _a.apply(void 0, [_b.sent()]);
+                                        return [4 /*yield*/, promptUser("Field 1:")];
+                                    case 2:
+                                        f1 = _b.sent();
+                                        return [4 /*yield*/, promptUser("Field 2:")];
+                                    case 3:
+                                        f2 = _b.sent();
+                                        deck.addNote([type, [f1, f2], []]);
+                                        return [2 /*return*/];
+                                }
+                            });
+                        });
+                    });
                     console.log(deck);
                     return [2 /*return*/];
             }

@@ -46,6 +46,12 @@ class Deck {
         this.elm.appendChild(back.elm);
     }
 
+    public addNote(data: NoteData) {
+        this.data.notes.unshift(data);
+        this.generateCardArrays();
+        this.showCard();
+    }
+
     private cardContentReplacePlaceholders(
         content: string, fieldNames: string[], fields: string[]
     ): string {
@@ -66,8 +72,15 @@ class Deck {
     }
 
     private generateCardArrays() {
+        this.graduatedCards.length = 0;
+        this.newCards.length = 0;
+        this.seenCardsSorted.length = 0;
+
         for (const note of this.data.notes) {
-            for (let i = 0; i < note[2].length; i++) {
+            const noteID = note[0];
+            const noteType = this.data.noteTypes[noteID];
+            const noteType_NumCardType = noteType.cardTypes.length;
+            for (let i = 0; i < noteType_NumCardType; i++) {
                 const card = note[2][i];
 
                 if (card === 0 || card === undefined) {
@@ -91,7 +104,13 @@ class Deck {
     }
 
     private selectCard(): Card {
-        return this.seenCardsSorted[0];
+        const nowMinute = Date.now() / 60e3;
+
+        if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
+            return this.seenCardsSorted[0];
+        } else {
+            return this.newCards[0];
+        }
     }
 }
 
@@ -163,6 +182,27 @@ class CardFaceDisplay {
     }
 }
 
+function promptUser(message: string): Promise<string> {
+    const promptContainer = document.createElement("elm");
+    promptContainer.classList.add("prompt");
+
+    const messageElm = document.createElement("div");
+    messageElm.innerHTML = message;
+    promptContainer.appendChild(messageElm);
+
+    const input = document.createElement("input");
+    const promise: Promise<string> = new Promise(res =>
+        input.addEventListener("change", function () {
+            res(input.value);
+            document.body.removeChild(promptContainer);
+        })
+    );
+    promptContainer.append(input);
+    document.body.appendChild(promptContainer);
+
+    return promise;
+}
+
 async function main() {
     const deck = await fetch("../deckData.json")
         .then(e => e.text())
@@ -170,6 +210,17 @@ async function main() {
 
     document.body.appendChild(deck.elm);
     deck.showCard();
+
+    // document.getElementById("createNote")?.addEventListener("click", function() {
+    //     //
+    // });
+
+    document.getElementById("createNote")!.addEventListener("click", async function () {
+        const type = parseInt(await promptUser("Type:"));
+        const f1 = await promptUser("Field 1:");
+        const f2 = await promptUser("Field 2:");
+        deck.addNote([type, [f1, f2], []]);
+    });
 
     console.log(deck);
 }
