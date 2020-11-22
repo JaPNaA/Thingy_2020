@@ -1,6 +1,8 @@
 class Deck {
     public elm: HTMLDivElement;
 
+    public minutesToNextCard?: number;
+
     private cardPresenter = new CardPresenter();
 
     private graduatedCards: Card[] = [];
@@ -25,33 +27,43 @@ class Deck {
         this.elm.appendChild(this.cardPresenter.elm);
     }
 
-    public showCard() {
+    public async showCard() {
         const card = this.selectCard();
         if (!card) { return; }
 
-        this.cardPresenter.showCard(card, this.data)
-            .then(e => {
-                if (e === 1) {
-                    card.data[1] *= 2 * card.data[2];
-                    //       .interval           .difficultyFactor
+        const result = await this.cardPresenter.presentCard(card, this.data);
 
-                    card.data[3] = getMinuteFloored() + card.data[1];
-                    //       .dueDate                         .interval
-                } else {
-                    card.data[3] = getMinuteFloored() + card.data[1];
-                    //       .dueDate                         .interval
-                }
-                if (card.data[0] === CardState.new) {
-                    // copy into actual data object
-                    card.parentNote[2][card.cardTypeID] = card.data;
-                    //             .cardData
-                }
-                this.sortSeenCards();
-            });
+        // update data based on results
+        if (result === 1) {
+            card.data[1] *= 2 * card.data[2];
+            //       .interval           .difficultyFactor
+
+            card.data[3] = getMinuteFloored() + card.data[1];
+            //       .dueDate                         .interval
+        } else {
+            card.data[3] = getMinuteFloored() + card.data[1];
+            //       .dueDate                         .interval
+        }
+
+        if (card.data[0] === CardState.new) {
+            // copy into actual data object
+            card.parentNote[2][card.cardTypeID] = card.data;
+            //             .cardData
+
+            card.data[0] = CardState.seen;
+            //       .state
+
+            const newCardIndex = this.newCards.indexOf(card);
+            if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
+
+            this.seenCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
+        }
+
+        this.sortSeenCards();
     }
 
     public addNote(data: NoteData) {
-        this.data.notes.unshift(data);
+        this.data.notes.push(data);
         this.generateCardArrays();
         this.showCard();
     }
@@ -100,12 +112,14 @@ class Deck {
     private selectCard(): Card | undefined {
         const nowMinute = getMinuteFloored();
 
-        console.log("Next card in", this.seenCardsSorted[0].data[3] - nowMinute, "minutes");
+        this.minutesToNextCard = 0;
 
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
-        } else {
+        } else if (this.newCards.length > 0) {
             return this.newCards[0];
+        } else {
+            this.minutesToNextCard = this.seenCardsSorted[0].data[3] - nowMinute;
         }
     }
 }
@@ -144,7 +158,7 @@ class CardPresenter {
         this.elm.appendChild(this.inputGetter.elm);
     }
 
-    public async showCard(card: Card, deckData: DeckData): Promise<number> {
+    public async presentCard(card: Card, deckData: DeckData): Promise<number> {
         if (this.currentState) {
             this.discardState();
         }
@@ -356,6 +370,12 @@ function promptUser(message: string): Promise<string> {
     return promise;
 }
 
+function wait(millis: number): Promise<void> {
+    return new Promise((res) => {
+        setTimeout(() => res(), millis);
+    });
+}
+
 const fs = require("fs");
 
 async function main() {
@@ -363,7 +383,6 @@ async function main() {
     const deck = decodeToDeck(fs.readFileSync(deckDataPath).toString());
 
     document.body.appendChild(deck.elm);
-    deck.showCard();
 
     document.getElementById("createNote")?.addEventListener("click", async function () {
         const type = parseInt(await promptUser("Type:"));
@@ -378,6 +397,14 @@ async function main() {
     });
 
     console.log(deck);
+
+    while (true) {
+        await deck.showCard();
+        if (deck.minutesToNextCard && deck.minutesToNextCard > 0) {
+            console.log(deck.minutesToNextCard);
+            await wait(deck.minutesToNextCard * 60e3);
+        }
+    }
 }
 
 main();
