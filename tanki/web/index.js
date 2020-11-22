@@ -38,7 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var Deck = /** @class */ (function () {
     function Deck(data) {
         this.data = data;
-        this.elm = document.createElement("div");
+        this.cardPresenter = new CardPresenter();
         this.graduatedCards = [];
         this.seenCardsSorted = [];
         this.newCards = [];
@@ -53,34 +53,18 @@ var Deck = /** @class */ (function () {
             0
         ];
         this.generateCardArrays();
+        this.elm = document.createElement("div");
+        this.elm.classList.add("deck");
+        this.elm.appendChild(this.cardPresenter.elm);
     }
     Deck.prototype.showCard = function () {
         var card = this.selectCard();
-        var noteTypeID = card.parentNote[0];
-        var noteType = this.data.noteTypes[noteTypeID];
-        var cardType = noteType.cardTypes[card.cardTypeID];
-        var front = new CardFaceDisplay(this.cardContentReplacePlaceholders(cardType.frontContent, noteType.fieldNames, card.parentNote[1]));
-        var back = new CardFaceDisplay(this.cardContentReplacePlaceholders(cardType.backContent, noteType.fieldNames, card.parentNote[1]));
-        this.elm.appendChild(front.elm);
-        this.elm.appendChild(back.elm);
+        this.cardPresenter.showCard(card, this.data);
     };
     Deck.prototype.addNote = function (data) {
         this.data.notes.unshift(data);
         this.generateCardArrays();
         this.showCard();
-    };
-    Deck.prototype.cardContentReplacePlaceholders = function (content, fieldNames, fields) {
-        var regexMatches = /{{(.+?)}}/g;
-        var outString = "";
-        var lastIndex = 0;
-        for (var match = void 0; match = regexMatches.exec(content);) {
-            outString += content.slice(lastIndex, match.index);
-            var replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "<<undefined>>";
-            lastIndex = match.index + match[0].length;
-        }
-        outString += content.slice(lastIndex);
-        return outString;
     };
     Deck.prototype.generateCardArrays = function () {
         this.graduatedCards.length = 0;
@@ -126,6 +110,71 @@ function decodeToDeck(str) {
     var deck = new Deck(obj);
     return deck;
 }
+var CardPresenter = /** @class */ (function () {
+    function CardPresenter() {
+        this.elm = document.createElement("div");
+        this.elm.classList.add("cardPresenter");
+    }
+    CardPresenter.prototype.showCard = function (card, deckData) {
+        return __awaiter(this, void 0, void 0, function () {
+            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, front, back;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (this.currentState) {
+                            this.discardState();
+                        }
+                        cardElm = document.createElement("div");
+                        cardElm.classList.add("card");
+                        this.elm.appendChild(cardElm);
+                        noteTypeID = card.parentNote[0];
+                        noteType = deckData.noteTypes[noteTypeID];
+                        cardType = noteType.cardTypes[card.cardTypeID];
+                        noteFieldNames = noteType.fieldNames;
+                        cardFields = card.parentNote[1];
+                        this.currentState = { card: card, cardElm: cardElm };
+                        front = this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields);
+                        this.currentState.front = front;
+                        cardElm.appendChild(front.elm);
+                        front.startListening();
+                        return [4 /*yield*/, front.ratingPromise];
+                    case 1:
+                        _a.sent();
+                        back = this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields);
+                        this.currentState.back = back;
+                        cardElm.appendChild(back.elm);
+                        back.startListening();
+                        return [4 /*yield*/, back.ratingPromise];
+                    case 2:
+                        _a.sent();
+                        this.currentState = { card: card, cardElm: cardElm, front: front, back: back };
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    CardPresenter.prototype.discardState = function () {
+        if (!this.currentState) {
+            return;
+        }
+        this.elm.removeChild(this.currentState.cardElm);
+        this.currentState = undefined;
+    };
+    CardPresenter.prototype.createFaceDisplay = function (contentTemplate, fieldNames, fields) {
+        var regexMatches = /{{(.+?)}}/g;
+        var outString = "";
+        var lastIndex = 0;
+        for (var match = void 0; match = regexMatches.exec(contentTemplate);) {
+            outString += contentTemplate.slice(lastIndex, match.index);
+            var replaceFieldName = match[1];
+            outString += fields[fieldNames.indexOf(replaceFieldName)] || "<<undefined>>";
+            lastIndex = match.index + match[0].length;
+        }
+        outString += contentTemplate.slice(lastIndex);
+        return new CardFaceDisplay(outString);
+    };
+    return CardPresenter;
+}());
 var CardState;
 (function (CardState) {
     CardState[CardState["new"] = 0] = "new";
@@ -142,9 +191,35 @@ var Card = /** @class */ (function () {
 }());
 var CardFaceDisplay = /** @class */ (function () {
     function CardFaceDisplay(content) {
+        var _this = this;
+        this.ratingPromise = new Promise(function (acc, rej) {
+            _this.promiseAccept = acc;
+            _this.promiseReject = rej;
+        });
         this.elm = document.createElement("div");
         this.elm.innerHTML = content;
+        this.rateYesHandler = this.rateYesHandler.bind(this);
+        this.rateNoHandler = this.rateNoHandler.bind(this);
     }
+    CardFaceDisplay.prototype.startListening = function () {
+        var _a, _b;
+        (_a = document.getElementById("rateYes")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", this.rateYesHandler);
+        (_b = document.getElementById("rateNo")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", this.rateNoHandler);
+    };
+    CardFaceDisplay.prototype.stopListening = function () {
+        var _a, _b;
+        (_a = document.getElementById("rateYes")) === null || _a === void 0 ? void 0 : _a.removeEventListener("click", this.rateYesHandler);
+        (_b = document.getElementById("rateNo")) === null || _b === void 0 ? void 0 : _b.removeEventListener("click", this.rateNoHandler);
+        this.promiseReject();
+    };
+    CardFaceDisplay.prototype.rateYesHandler = function () {
+        this.promiseAccept(1);
+        this.stopListening();
+    };
+    CardFaceDisplay.prototype.rateNoHandler = function () {
+        this.promiseAccept(0);
+        this.stopListening();
+    };
     return CardFaceDisplay;
 }());
 function promptUser(message) {

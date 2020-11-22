@@ -6,13 +6,13 @@
             "cardTypes": [
                 {
                     "name": "Front -> Back",
-                    "frontContent": "Front: <b>{{Front}}</b>; back: {{Back}}",
-                    "backContent": "Back: {{Back}}; front: {{Front}}"
+                    "frontTemplate": "Front: <b>{{Front}}</b>; back: {{Back}}",
+                    "backTemplate": "Back: {{Back}}; front: {{Front}}"
                 },
                 {
                     "name": "Back -> Front",
-                    "frontContent": "Back (but it's actually the front): {{Back}}",
-                    "backContent": "Front (but it's actually the back): {{Front}}"
+                    "frontTemplate": "Back (but it's actually the front): {{Back}}",
+                    "backTemplate": "Front (but it's actually the back): {{Front}}"
                 }
             ]
         }
