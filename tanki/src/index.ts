@@ -27,7 +27,25 @@ class Deck {
 
     public showCard() {
         const card = this.selectCard();
-        this.cardPresenter.showCard(card, this.data);
+        this.cardPresenter.showCard(card, this.data)
+            .then(e => {
+                if (e === 1) {
+                    card.data[1] *= 2 * card.data[2];
+                    //       .interval           .difficultyFactor
+
+                    card.data[3] = getMinuteFloored() + card.data[1];
+                    //       .dueDate                         .interval
+                } else {
+                    card.data[3] = getMinuteFloored() + card.data[1];
+                    //       .dueDate                         .interval
+                }
+                if (card.data[0] === CardState.new) {
+                    // copy into actual data object
+                    card.parentNote[2][card.cardTypeID] = card.data;
+                    //             .cardData
+                }
+                this.sortSeenCards();
+            });
     }
 
     public addNote(data: NoteData) {
@@ -51,7 +69,7 @@ class Deck {
 
                 if (card === 0 || card === undefined) {
                     this.newCards.push(
-                        new Card(this.newCardSettings, i, note)
+                        new Card(arrayCopy(this.newCardSettings), i, note)
                     )
                 } else if (card[0] === CardState.graduated) {
                     this.graduatedCards.push(
@@ -65,16 +83,20 @@ class Deck {
             }
         }
 
-        // sort latest due first
-        this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
+        this.sortSeenCards();
     }
 
     public exportToString(): string {
         return JSON.stringify(this.data);
     }
 
+    /** sort latest due first */
+    private sortSeenCards() {
+        this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
+    }
+
     private selectCard(): Card {
-        const nowMinute = Date.now() / 60e3;
+        const nowMinute = getMinuteFloored();
 
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
@@ -82,6 +104,15 @@ class Deck {
             return this.newCards[0];
         }
     }
+}
+
+function getMinuteFloored(): number {
+    return Math.floor(Date.now() / 60e3);
+}
+
+function arrayCopy<T extends Array<any>>(arr: T): T {
+    // @ts-ignore
+    return arr.slice(0);
 }
 
 function decodeToDeck(str: string): Deck {
@@ -107,7 +138,7 @@ class CardPresenter {
         this.elm.classList.add("cardPresenter");
     }
 
-    public async showCard(card: Card, deckData: DeckData) {
+    public async showCard(card: Card, deckData: DeckData): Promise<number> {
         if (this.currentState) {
             this.discardState();
         }
@@ -143,9 +174,12 @@ class CardPresenter {
         this.currentState.back = back;
         cardElm.appendChild(back.elm);
         back.startListening();
-        await back.ratingPromise;
 
-        this.currentState = { card, cardElm, front, back };
+        const rating = await back.ratingPromise;
+
+        this.discardState();
+
+        return rating;
     }
 
     private discardState() {
@@ -192,19 +226,16 @@ interface CardTypeData {
     backTemplate: string;
 }
 
-interface NoteData {
+interface NoteData extends Array<any> {
     /** Type of note */
     0: number;
     /** Fields */
     1: string[];
-    /**
-     * Card data
-     * @type {Array}
-     */
+    /** Card data */
     2: (CardData | undefined | 0)[];
 }
 
-interface CardData {
+interface CardData extends Array<any> {
     /** State */
     0: CardState;
     /** Interval in minutes */

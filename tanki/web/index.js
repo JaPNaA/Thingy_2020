@@ -58,8 +58,27 @@ var Deck = /** @class */ (function () {
         this.elm.appendChild(this.cardPresenter.elm);
     }
     Deck.prototype.showCard = function () {
+        var _this = this;
         var card = this.selectCard();
-        this.cardPresenter.showCard(card, this.data);
+        this.cardPresenter.showCard(card, this.data)
+            .then(function (e) {
+            if (e === 1) {
+                card.data[1] *= 2 * card.data[2];
+                //       .interval           .difficultyFactor
+                card.data[3] = getMinuteFloored() + card.data[1];
+                //       .dueDate                         .interval
+            }
+            else {
+                card.data[3] = getMinuteFloored() + card.data[1];
+                //       .dueDate                         .interval
+            }
+            if (card.data[0] === CardState.new) {
+                // copy into actual data object
+                card.parentNote[2][card.cardTypeID] = card.data;
+                //             .cardData
+            }
+            _this.sortSeenCards();
+        });
     };
     Deck.prototype.addNote = function (data) {
         this.data.notes.unshift(data);
@@ -78,7 +97,7 @@ var Deck = /** @class */ (function () {
             for (var i = 0; i < noteType_NumCardType; i++) {
                 var card = note[2][i];
                 if (card === 0 || card === undefined) {
-                    this.newCards.push(new Card(this.newCardSettings, i, note));
+                    this.newCards.push(new Card(arrayCopy(this.newCardSettings), i, note));
                 }
                 else if (card[0] === CardState.graduated) {
                     this.graduatedCards.push(new Card(card, i, note));
@@ -88,14 +107,17 @@ var Deck = /** @class */ (function () {
                 }
             }
         }
-        // sort latest due first
-        this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
+        this.sortSeenCards();
     };
     Deck.prototype.exportToString = function () {
         return JSON.stringify(this.data);
     };
+    /** sort latest due first */
+    Deck.prototype.sortSeenCards = function () {
+        this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
+    };
     Deck.prototype.selectCard = function () {
-        var nowMinute = Date.now() / 60e3;
+        var nowMinute = getMinuteFloored();
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
         }
@@ -105,6 +127,13 @@ var Deck = /** @class */ (function () {
     };
     return Deck;
 }());
+function getMinuteFloored() {
+    return Math.floor(Date.now() / 60e3);
+}
+function arrayCopy(arr) {
+    // @ts-ignore
+    return arr.slice(0);
+}
 function decodeToDeck(str) {
     var obj = JSON.parse(str);
     var deck = new Deck(obj);
@@ -117,7 +146,7 @@ var CardPresenter = /** @class */ (function () {
     }
     CardPresenter.prototype.showCard = function (card, deckData) {
         return __awaiter(this, void 0, void 0, function () {
-            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, front, back;
+            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, front, back, rating;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -146,9 +175,9 @@ var CardPresenter = /** @class */ (function () {
                         back.startListening();
                         return [4 /*yield*/, back.ratingPromise];
                     case 2:
-                        _a.sent();
-                        this.currentState = { card: card, cardElm: cardElm, front: front, back: back };
-                        return [2 /*return*/];
+                        rating = _a.sent();
+                        this.discardState();
+                        return [2 /*return*/, rating];
                 }
             });
         });
