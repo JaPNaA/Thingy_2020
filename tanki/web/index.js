@@ -145,8 +145,10 @@ function decodeToDeck(str) {
 }
 var CardPresenter = /** @class */ (function () {
     function CardPresenter() {
+        this.inputGetter = new QuickUserInputGetter();
         this.elm = document.createElement("div");
         this.elm.classList.add("cardPresenter");
+        this.elm.appendChild(this.inputGetter.elm);
     }
     CardPresenter.prototype.showCard = function (card, deckData) {
         return __awaiter(this, void 0, void 0, function () {
@@ -169,15 +171,13 @@ var CardPresenter = /** @class */ (function () {
                         front = this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields);
                         this.currentState.front = front;
                         cardElm.appendChild(front.elm);
-                        front.startListening();
-                        return [4 /*yield*/, front.ratingPromise];
+                        return [4 /*yield*/, this.inputGetter.options(["Show back"])];
                     case 1:
                         _a.sent();
                         back = this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields);
                         this.currentState.back = back;
                         cardElm.appendChild(back.elm);
-                        back.startListening();
-                        return [4 /*yield*/, back.ratingPromise];
+                        return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"])];
                     case 2:
                         rating = _a.sent();
                         this.discardState();
@@ -229,36 +229,57 @@ var Card = /** @class */ (function () {
 }());
 var CardFaceDisplay = /** @class */ (function () {
     function CardFaceDisplay(content) {
-        var _this = this;
-        this.ratingPromise = new Promise(function (acc, rej) {
-            _this.promiseAccept = acc;
-            _this.promiseReject = rej;
-        });
         this.elm = document.createElement("div");
         this.elm.innerHTML = content;
-        this.rateYesHandler = this.rateYesHandler.bind(this);
-        this.rateNoHandler = this.rateNoHandler.bind(this);
     }
-    CardFaceDisplay.prototype.startListening = function () {
-        var _a, _b;
-        (_a = document.getElementById("rateYes")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", this.rateYesHandler);
-        (_b = document.getElementById("rateNo")) === null || _b === void 0 ? void 0 : _b.addEventListener("click", this.rateNoHandler);
-    };
-    CardFaceDisplay.prototype.stopListening = function () {
-        var _a, _b;
-        (_a = document.getElementById("rateYes")) === null || _a === void 0 ? void 0 : _a.removeEventListener("click", this.rateYesHandler);
-        (_b = document.getElementById("rateNo")) === null || _b === void 0 ? void 0 : _b.removeEventListener("click", this.rateNoHandler);
-        this.promiseReject();
-    };
-    CardFaceDisplay.prototype.rateYesHandler = function () {
-        this.promiseAccept(1);
-        this.stopListening();
-    };
-    CardFaceDisplay.prototype.rateNoHandler = function () {
-        this.promiseAccept(0);
-        this.stopListening();
-    };
     return CardFaceDisplay;
+}());
+/**
+ * Can recieve inputs quickly from user
+ */
+var QuickUserInputGetter = /** @class */ (function () {
+    function QuickUserInputGetter() {
+        this.elm = document.createElement("div");
+        this.elm.classList.add("userInputGetter");
+    }
+    QuickUserInputGetter.prototype.options = function (items, defaultIndex) {
+        var _this = this;
+        this.discardState();
+        var optionsContainer = document.createElement("div");
+        var promiseRes, promiseRej;
+        var promise = new Promise(function (res, rej) {
+            promiseRej = rej;
+            promiseRes = res;
+        });
+        var _loop_1 = function (i) {
+            var item = items[i];
+            var button = document.createElement("button");
+            button.innerText = item;
+            button.addEventListener("click", function () {
+                promiseRes(i);
+                _this.discardState();
+            });
+            optionsContainer.appendChild(button);
+        };
+        for (var i = 0; i < items.length; i++) {
+            _loop_1(i);
+        }
+        this.elm.appendChild(optionsContainer);
+        this.state = {
+            promiseReject: promiseRej,
+            elm: optionsContainer
+        };
+        return promise;
+    };
+    QuickUserInputGetter.prototype.discardState = function () {
+        if (!this.state) {
+            return;
+        }
+        this.elm.removeChild(this.state.elm);
+        this.state.promiseReject();
+        this.state = undefined;
+    };
+    return QuickUserInputGetter;
 }());
 function promptUser(message) {
     var promptContainer = document.createElement("elm");

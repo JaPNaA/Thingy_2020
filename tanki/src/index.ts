@@ -130,6 +130,7 @@ class CardPresenter {
 
     public rating?: number;
 
+    private inputGetter = new QuickUserInputGetter();
     private currentState?: {
         card: Card;
         cardElm: HTMLDivElement;
@@ -140,6 +141,7 @@ class CardPresenter {
     constructor() {
         this.elm = document.createElement("div");
         this.elm.classList.add("cardPresenter");
+        this.elm.appendChild(this.inputGetter.elm);
     }
 
     public async showCard(card: Card, deckData: DeckData): Promise<number> {
@@ -168,8 +170,7 @@ class CardPresenter {
         );
         this.currentState.front = front;
         cardElm.appendChild(front.elm);
-        front.startListening();
-        await front.ratingPromise;
+        await this.inputGetter.options(["Show back"]);
 
         const back = this.createFaceDisplay(
             cardType.backTemplate,
@@ -177,9 +178,8 @@ class CardPresenter {
         );
         this.currentState.back = back;
         cardElm.appendChild(back.elm);
-        back.startListening();
 
-        const rating = await back.ratingPromise;
+        const rating = await this.inputGetter.options(["Forgot", "Remembered"]);
 
         this.discardState();
 
@@ -272,40 +272,66 @@ class Card {
 class CardFaceDisplay {
     public elm: HTMLDivElement;
 
-    private promiseAccept!: (rating: number) => void;
-    private promiseReject!: () => void;
-    public ratingPromise: Promise<number> = new Promise((acc, rej) => {
-        this.promiseAccept = acc;
-        this.promiseReject = rej;
-    });
-
     constructor(content: string) {
         this.elm = document.createElement("div");
         this.elm.innerHTML = content;
+    }
+}
 
-        this.rateYesHandler = this.rateYesHandler.bind(this);
-        this.rateNoHandler = this.rateNoHandler.bind(this);
+/**
+ * Can recieve inputs quickly from user
+ */
+class QuickUserInputGetter {
+    public elm: HTMLDivElement;
+
+    private state?: {
+        promiseReject: () => void,
+        elm: HTMLDivElement
+    };
+
+    constructor() {
+        this.elm = document.createElement("div");
+        this.elm.classList.add("userInputGetter");
     }
 
-    public startListening() {
-        document.getElementById("rateYes")?.addEventListener("click", this.rateYesHandler);
-        document.getElementById("rateNo")?.addEventListener("click", this.rateNoHandler);
+    public options(items: string[], defaultIndex?: number): Promise<number> {
+        this.discardState();
+
+        const optionsContainer = document.createElement("div");
+
+        let promiseRes: (result: number) => void,
+            promiseRej!: () => void;
+        const promise: Promise<number> = new Promise((res, rej) => {
+            promiseRej = rej;
+            promiseRes = res;
+        });
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const button = document.createElement("button");
+            button.innerText = item;
+            button.addEventListener("click", () => {
+                promiseRes(i);
+                this.discardState();
+            });
+            optionsContainer.appendChild(button);
+        }
+
+        this.elm.appendChild(optionsContainer);
+
+        this.state = {
+            promiseReject: promiseRej,
+            elm: optionsContainer
+        };
+
+        return promise;
     }
 
-    public stopListening() {
-        document.getElementById("rateYes")?.removeEventListener("click", this.rateYesHandler);
-        document.getElementById("rateNo")?.removeEventListener("click", this.rateNoHandler);
-        this.promiseReject();
-    }
-
-    private rateYesHandler() {
-        this.promiseAccept(1);
-        this.stopListening();
-    }
-
-    private rateNoHandler() {
-        this.promiseAccept(0);
-        this.stopListening();
+    private discardState() {
+        if (!this.state) { return; }
+        this.elm.removeChild(this.state.elm);
+        this.state.promiseReject();
+        this.state = undefined;
     }
 }
 
