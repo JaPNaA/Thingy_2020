@@ -27,6 +27,8 @@ class Deck {
 
     public showCard() {
         const card = this.selectCard();
+        if (!card) { return; }
+
         this.cardPresenter.showCard(card, this.data)
             .then(e => {
                 if (e === 1) {
@@ -95,8 +97,10 @@ class Deck {
         this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
     }
 
-    private selectCard(): Card {
+    private selectCard(): Card | undefined {
         const nowMinute = getMinuteFloored();
+
+        console.log("Next card in", this.seenCardsSorted[0].data[3] - nowMinute, "minutes");
 
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
@@ -247,7 +251,14 @@ interface CardData extends Array<any> {
 }
 
 enum CardState {
-    new = 0, seen = 1, graduated = 2
+    /** Not yet shown */
+    new = 0,
+    /** Just after showing or after 'forgetting' a card */
+    learn = 1,
+    /** Passing 'learn' */
+    seen = 2,
+    /** No longer in short-term reviews */
+    graduated = 3
 }
 
 class Card {

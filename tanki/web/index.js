@@ -60,6 +60,9 @@ var Deck = /** @class */ (function () {
     Deck.prototype.showCard = function () {
         var _this = this;
         var card = this.selectCard();
+        if (!card) {
+            return;
+        }
         this.cardPresenter.showCard(card, this.data)
             .then(function (e) {
             if (e === 1) {
@@ -118,6 +121,7 @@ var Deck = /** @class */ (function () {
     };
     Deck.prototype.selectCard = function () {
         var nowMinute = getMinuteFloored();
+        console.log("Next card in", this.seenCardsSorted[0].data[3] - nowMinute, "minutes");
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
         }
@@ -206,9 +210,14 @@ var CardPresenter = /** @class */ (function () {
 }());
 var CardState;
 (function (CardState) {
+    /** Not yet shown */
     CardState[CardState["new"] = 0] = "new";
-    CardState[CardState["seen"] = 1] = "seen";
-    CardState[CardState["graduated"] = 2] = "graduated";
+    /** Just after showing or after 'forgetting' a card */
+    CardState[CardState["learn"] = 1] = "learn";
+    /** Passing 'learn' */
+    CardState[CardState["seen"] = 2] = "seen";
+    /** No longer in short-term reviews */
+    CardState[CardState["graduated"] = 3] = "graduated";
 })(CardState || (CardState = {}));
 var Card = /** @class */ (function () {
     function Card(data, cardTypeID, parentNote) {
