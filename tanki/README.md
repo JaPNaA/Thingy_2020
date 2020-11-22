@@ -20,3 +20,11 @@ _日本語：短記_
 </table>
 
 And that's what this is. A short term memorization program.
+
+## Why?
+
+Anki is steroids for the entire vocabulary acquisition process, but it's slow (unless you're willing to overdo yourself).
+
+tAnki's goal is to assist with the start of vocabulary acquisition, and let your brain take over from there. Because cards 'graduate' after some time, you can study more cards without fear of increasing your workload in the long run.
+
+Scared of forgetting? Let's remember that people didn't always use steroids to learn languages.
