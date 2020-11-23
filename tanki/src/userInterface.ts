@@ -1,9 +1,20 @@
 import { NoteTypeData, CardTypeData } from "./dataTypes.js";
-import { Card, Deck } from "./logic.js";
+import { Component } from "./libs/elements.js";
+import { Card } from "./logic.js";
 
-export class CardPresenter {
-    public elm: HTMLElement;
+export class TankiInterface extends Component {
+    private cardPresenter = new CardPresenter();
 
+    constructor() {
+        super("tankiInterface");
+
+        this.cardPresenter.appendTo(this);
+
+        this.append("Hello world!");
+    }
+}
+
+export class CardPresenter extends Component {
     public rating?: number;
 
     private inputGetter = new QuickUserInputGetter();
@@ -17,9 +28,8 @@ export class CardPresenter {
     private noteTypes?: NoteTypeData[];
 
     constructor() {
-        this.elm = document.createElement("div");
-        this.elm.classList.add("cardPresenter");
-        this.elm.appendChild(this.inputGetter.elm);
+        super("cardPresenter");
+        this.inputGetter.appendTo(this);
     }
 
     public setNoteTypes(noteTypeData: NoteTypeData[]) {
@@ -48,20 +58,16 @@ export class CardPresenter {
 
         this.currentState = { card, cardElm };
 
-        const front = this.createFaceDisplay(
+        this.currentState.front = this.createFaceDisplay(
             cardType.frontTemplate,
             noteFieldNames, cardFields
-        );
-        this.currentState.front = front;
-        cardElm.appendChild(front.elm);
+        ).appendTo(cardElm);
         await this.inputGetter.options(["Show back"]);
 
-        const back = this.createFaceDisplay(
+        this.currentState.back = this.createFaceDisplay(
             cardType.backTemplate,
             noteFieldNames, cardFields
-        );
-        this.currentState.back = back;
-        cardElm.appendChild(back.elm);
+        ).appendTo(cardElm);
 
         const rating = await this.inputGetter.options(["Forgot", "Remembered"]);
 
@@ -98,11 +104,9 @@ export class CardPresenter {
 
 
 
-export class CardFaceDisplay {
-    public elm: HTMLDivElement;
-
+export class CardFaceDisplay extends Component {
     constructor(content: string) {
-        this.elm = document.createElement("div");
+        super("cardFaceDisplay");
         this.elm.innerHTML = content;
     }
 }
@@ -110,17 +114,14 @@ export class CardFaceDisplay {
 /**
  * Can recieve inputs quickly from user
  */
-export class QuickUserInputGetter {
-    public elm: HTMLDivElement;
-
+export class QuickUserInputGetter extends Component {
     private state?: {
         promiseReject: () => void,
         elm: HTMLDivElement
     };
 
     constructor() {
-        this.elm = document.createElement("div");
-        this.elm.classList.add("userInputGetter");
+        super("quickUserInputGetter");
     }
 
     public options(items: string[], defaultIndex?: number): Promise<number> {
