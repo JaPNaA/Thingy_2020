@@ -1,5 +1,5 @@
 import { CardData, CardState, DeckData, NoteData, NoteTypeData } from "./dataTypes.js";
-import { getMinuteFloored, arrayCopy } from "./utils.js";
+import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
     private graduatedCards: Card[] = [];
@@ -22,7 +22,7 @@ export class Deck {
     }
 
     public selectCard(): Card | undefined {
-        const nowMinute = getMinuteFloored();
+        const nowMinute = getCurrMinuteFloored();
 
         if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].data[3] <= nowMinute) {
             return this.seenAndLearningCardsSorted[0];
@@ -37,10 +37,10 @@ export class Deck {
             card.data[1] *= 2 * card.data[2];
             //       .interval           .difficultyFactor
 
-            card.data[3] = getMinuteFloored() + card.data[1];
+            card.data[3] = getCurrMinuteFloored() + card.data[1];
             //       .dueDate                         .interval
         } else {
-            card.data[3] = getMinuteFloored() + card.data[1];
+            card.data[3] = getCurrMinuteFloored() + card.data[1];
             //       .dueDate                         .interval
         }
 
@@ -71,7 +71,7 @@ export class Deck {
     }
 
     public getMinutesToNextCard(): number {
-        const nowMinute = getMinuteFloored();
+        const nowMinute = getCurrMinuteFloored();
         return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
     }
 
@@ -81,6 +81,41 @@ export class Deck {
             seen: this.seenAndLearningCardsSorted.length,
             graduated: this.graduatedCards.length
         };
+    }
+
+    /**
+     * Finds the number of cards that are due by binary-searching for
+     * the boundary where a card due that's due becomes not due.
+     */
+    public getDueCardsCount(): number {
+        const currMinute = getCurrMinuteFloored();
+
+        // algorithm: binary search for boundary
+        let bottom = 0;
+        let top = this.seenAndLearningCardsSorted.length;
+
+        // while(true) loop with protection
+        for (
+            let i = 0, max = Math.log2(this.seenAndLearningCardsSorted.length) + 2;
+            i < max; i++
+        ) {
+            const middle = Math.floor((bottom + top) / 2);
+            if (middle === bottom) {
+                if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+                    return top - 1;
+                } else {
+                    return top;
+                }
+            }
+
+            if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+                top = middle;
+            } else {
+                bottom = middle;
+            }
+        }
+
+        throw new Error("Looped too many times. Is array sorted?");
     }
 
     public exportToString(): string {

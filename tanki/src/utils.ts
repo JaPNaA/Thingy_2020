@@ -25,7 +25,7 @@ export function promptUser(message: string): Promise<string> {
     return promise;
 }
 
-export function getMinuteFloored(): number {
+export function getCurrMinuteFloored(): number {
     return Math.floor(Date.now() / 60e3);
 }
 

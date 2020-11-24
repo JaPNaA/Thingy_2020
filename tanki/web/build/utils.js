@@ -20,7 +20,7 @@ export function promptUser(message) {
     document.body.appendChild(promptContainer);
     return promise;
 }
-export function getMinuteFloored() {
+export function getCurrMinuteFloored() {
     return Math.floor(Date.now() / 60e3);
 }
 export function arrayCopy(arr) {

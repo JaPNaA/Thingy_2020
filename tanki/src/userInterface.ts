@@ -58,16 +58,16 @@ class DeckPresenter extends Component {
 class DeckTimeline extends Component {
     private nextCardInMinutesElm = new Elm("span");
     private newCardsElm = new Elm().class("new");
-    private seenCardsElm = new Elm().class("seen");
+    private dueCardsElm = new Elm().class("seen");
     private graduatedCardsElm = new Elm().class("graduated");
 
     constructor(private deck: Deck) {
         super("deckTimeline");
 
         this.append(
-            new Elm().append("Next card in ", this.nextCardInMinutesElm, " minutes"),
+            new Elm().append("Next review card in ", this.nextCardInMinutesElm, " minutes"),
             new Elm().class("cardCounts").append(
-                this.newCardsElm, this.seenCardsElm, this.graduatedCardsElm
+                this.newCardsElm, this.dueCardsElm, this.graduatedCardsElm
             )
         );
 
@@ -76,10 +76,10 @@ class DeckTimeline extends Component {
 
     public update() {
         const counts = this.deck.getCardCount();
-        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
 
+        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
         this.newCardsElm.replaceContents(counts.new);
-        this.seenCardsElm.replaceContents(counts.seen);
+        this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.graduated);
     }
 }

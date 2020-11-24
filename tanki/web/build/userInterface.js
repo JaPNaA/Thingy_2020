@@ -126,9 +126,9 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.deck = deck;
         _this.nextCardInMinutesElm = new Elm("span");
         _this.newCardsElm = new Elm().class("new");
-        _this.seenCardsElm = new Elm().class("seen");
+        _this.dueCardsElm = new Elm().class("seen");
         _this.graduatedCardsElm = new Elm().class("graduated");
-        _this.append(new Elm().append("Next card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(_this.newCardsElm, _this.seenCardsElm, _this.graduatedCardsElm));
+        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(_this.newCardsElm, _this.dueCardsElm, _this.graduatedCardsElm));
         _this.nextCardInMinutesElm.append("~");
         return _this;
     }
@@ -136,7 +136,7 @@ var DeckTimeline = /** @class */ (function (_super) {
         var counts = this.deck.getCardCount();
         this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
         this.newCardsElm.replaceContents(counts.new);
-        this.seenCardsElm.replaceContents(counts.seen);
+        this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.graduated);
     };
     return DeckTimeline;

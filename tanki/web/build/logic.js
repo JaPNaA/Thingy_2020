@@ -1,5 +1,5 @@
 import { CardState } from "./dataTypes.js";
-import { getMinuteFloored, arrayCopy } from "./utils.js";
+import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
 var Deck = /** @class */ (function () {
     function Deck(data) {
         this.data = data;
@@ -19,7 +19,7 @@ var Deck = /** @class */ (function () {
         this.generateCardArrays();
     }
     Deck.prototype.selectCard = function () {
-        var nowMinute = getMinuteFloored();
+        var nowMinute = getCurrMinuteFloored();
         if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].data[3] <= nowMinute) {
             return this.seenAndLearningCardsSorted[0];
         }
@@ -32,11 +32,11 @@ var Deck = /** @class */ (function () {
         if (result === 1) {
             card.data[1] *= 2 * card.data[2];
             //       .interval           .difficultyFactor
-            card.data[3] = getMinuteFloored() + card.data[1];
+            card.data[3] = getCurrMinuteFloored() + card.data[1];
             //       .dueDate                         .interval
         }
         else {
-            card.data[3] = getMinuteFloored() + card.data[1];
+            card.data[3] = getCurrMinuteFloored() + card.data[1];
             //       .dueDate                         .interval
         }
         if (card.data[0] === CardState.new) {
@@ -61,7 +61,7 @@ var Deck = /** @class */ (function () {
         return this.data.noteTypes;
     };
     Deck.prototype.getMinutesToNextCard = function () {
-        var nowMinute = getMinuteFloored();
+        var nowMinute = getCurrMinuteFloored();
         return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
     };
     Deck.prototype.getCardCount = function () {
@@ -70,6 +70,35 @@ var Deck = /** @class */ (function () {
             seen: this.seenAndLearningCardsSorted.length,
             graduated: this.graduatedCards.length
         };
+    };
+    /**
+     * Finds the number of cards that are due by binary-searching for
+     * the boundary where a card due that's due becomes not due.
+     */
+    Deck.prototype.getDueCardsCount = function () {
+        var currMinute = getCurrMinuteFloored();
+        // algorithm: binary search for boundary
+        var bottom = 0;
+        var top = this.seenAndLearningCardsSorted.length;
+        // while(true) loop with protection
+        for (var i = 0, max = Math.log2(this.seenAndLearningCardsSorted.length) + 2; i < max; i++) {
+            var middle = Math.floor((bottom + top) / 2);
+            if (middle === bottom) {
+                if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+                    return top - 1;
+                }
+                else {
+                    return top;
+                }
+            }
+            if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+                top = middle;
+            }
+            else {
+                bottom = middle;
+            }
+        }
+        throw new Error("Looped too many times. Is array sorted?");
     };
     Deck.prototype.exportToString = function () {
         return JSON.stringify(this.data);
