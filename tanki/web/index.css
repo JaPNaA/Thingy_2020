@@ -1,0 +1,28 @@
+body {
+    margin: 0;
+}
+
+.cardPresenter {
+    display: grid;
+    grid-template-areas: "card" "inputs";
+    grid-template-rows: auto 32px;
+    height: 100vh;
+}
+
+.cardPresenter .cardContainer {
+    grid-area: "card";
+}
+
+.cardPresenter .quickUserInputGetter {
+    grid-area: "inputs";
+    text-align: center;
+    background-color: #e4e4e4;
+    padding-top: 1px;
+}
+
+.quickUserInputGetter button {
+    margin-left: 4px;
+    margin-right: 4px;
+    width: auto;
+    height: 24px;
+}
