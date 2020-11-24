@@ -1,7 +1,7 @@
 import { NoteTypeData, CardTypeData } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
-import { promptUser } from "./utils.js";
+import { PromiseRejectFunc, PromiseResolveFunc, promptUser } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -17,6 +17,8 @@ class DeckPresenter extends Component {
     private cardPresenter: CardPresenter;
     private deckTimeline: DeckTimeline;
 
+    private cardPresenterContainer: Elm;
+
     constructor(private deck: Deck) {
         super("deckPresenter");
 
@@ -25,19 +27,35 @@ class DeckPresenter extends Component {
         this.deckTimeline.update();
 
         this.append(
-            new Elm().class("cardPresenterContainer").append(this.cardPresenter),
-            new Elm().class("timeLine").append(this.deckTimeline),
-            new Elm().class("createNote").on("click", () => this.openCreateNoteDialog())
+            this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
+                .append(this.cardPresenter),
+            new Elm().class("timeline").append(this.deckTimeline),
+            new Elm("button").class("exitButton")
+                .append("Exit")
+                .on("click", () => this.exitCardPresenter()),
+            new Elm("button").class("enterButton")
+                .append("Enter")
+                .on("click", () => this.enterCardPresenter()),
+            new Elm("button").class("createNote")
+                .append("Create Note")
+                .on("click", () => this.openCreateNoteDialog()),
         );
 
-        this.presentingLoop();
+        this.enterCardPresenter();
     }
 
     private async presentingLoop() {
         while (true) {
             const selectedCard = this.deck.selectCard();
             if (selectedCard) {
-                const result = await this.cardPresenter.presentCard(selectedCard);
+                let result;
+                try {
+                    result = await this.cardPresenter.presentCard(selectedCard);
+                } catch (interrupt) {
+                    console.log(interrupt);
+                    break;
+                }
+
                 this.deck.applyResultToCard(selectedCard, result);
             } else {
                 break;
@@ -52,6 +70,16 @@ class DeckPresenter extends Component {
         const f1 = await promptUser("Field 1:");
         const f2 = await promptUser("Field 2:");
         console.log("Todo: add:", [type, [f1, f2], []]);
+    }
+
+    private exitCardPresenter() {
+        this.cardPresenter.discardState();
+        this.cardPresenterContainer.class("hidden");
+    }
+
+    private enterCardPresenter() {
+        this.cardPresenterContainer.removeClass("hidden");
+        this.presentingLoop();
     }
 }
 
@@ -141,8 +169,9 @@ class CardPresenter extends Component {
         return rating;
     }
 
-    private discardState() {
+    public discardState() {
         if (!this.currentState) { return; }
+        this.inputGetter.discardState();
         this.cardContainer.clear();
         this.currentState = undefined;
     }
@@ -181,7 +210,7 @@ class CardFaceDisplay extends Component {
  */
 class QuickUserInputGetter extends Component {
     private state?: {
-        promiseReject: () => void,
+        promiseReject: PromiseRejectFunc,
         documentKeydownListener: (e: KeyboardEvent) => void,
         elm: HTMLDivElement
     };
@@ -195,8 +224,8 @@ class QuickUserInputGetter extends Component {
 
         const optionsContainer = document.createElement("div");
 
-        let promiseRes: (result: number) => void,
-            promiseRej!: () => void;
+        let promiseRes: PromiseResolveFunc<number>,
+            promiseRej!: PromiseRejectFunc;
         const promise: Promise<number> = new Promise((res, rej) => {
             promiseRej = rej;
             promiseRes = res;
@@ -243,11 +272,11 @@ class QuickUserInputGetter extends Component {
         return promise;
     }
 
-    private discardState() {
+    public discardState() {
         if (!this.state) { return; }
         this.elm.removeChild(this.state.elm);
         document.removeEventListener("keydown", this.state.documentKeydownListener);
-        this.state.promiseReject();
+        this.state.promiseReject("State discarded");
         this.state = undefined;
     }
 }

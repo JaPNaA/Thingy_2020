@@ -2,6 +2,10 @@ body {
     margin: 0;
 }
 
+.hidden {
+    display: none;
+}
+
 .cardPresenter {
     display: grid;
     grid-template-areas: "card" "inputs";

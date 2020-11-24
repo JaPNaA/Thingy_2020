@@ -33,3 +33,6 @@ export function arrayCopy<T extends Array<any>>(arr: T): T {
     // @ts-ignore
     return arr.slice(0);
 }
+
+export interface PromiseRejectFunc { (reason?: any): void; }
+export interface PromiseResolveFunc<T> { (result: T): void; }

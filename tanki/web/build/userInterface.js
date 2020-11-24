@@ -68,29 +68,46 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.cardPresenter = new CardPresenter(_this.deck);
         _this.deckTimeline = new DeckTimeline(_this.deck);
         _this.deckTimeline.update();
-        _this.append(new Elm().class("cardPresenterContainer").append(_this.cardPresenter), new Elm().class("timeLine").append(_this.deckTimeline), new Elm().class("createNote").on("click", function () { return _this.openCreateNoteDialog(); }));
-        _this.presentingLoop();
+        _this.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
+            .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm("button").class("exitButton")
+            .append("Exit")
+            .on("click", function () { return _this.exitCardPresenter(); }), new Elm("button").class("enterButton")
+            .append("Enter")
+            .on("click", function () { return _this.enterCardPresenter(); }), new Elm("button").class("createNote")
+            .append("Create Note")
+            .on("click", function () { return _this.openCreateNoteDialog(); }));
+        _this.enterCardPresenter();
         return _this;
     }
     DeckPresenter.prototype.presentingLoop = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var selectedCard, result;
+            var selectedCard, result, interrupt_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!true) return [3 /*break*/, 4];
+                        if (!true) return [3 /*break*/, 7];
                         selectedCard = this.deck.selectCard();
-                        if (!selectedCard) return [3 /*break*/, 2];
-                        return [4 /*yield*/, this.cardPresenter.presentCard(selectedCard)];
+                        if (!selectedCard) return [3 /*break*/, 5];
+                        result = void 0;
+                        _a.label = 1;
                     case 1:
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, this.cardPresenter.presentCard(selectedCard)];
+                    case 2:
                         result = _a.sent();
-                        this.deck.applyResultToCard(selectedCard, result);
-                        return [3 /*break*/, 3];
-                    case 2: return [3 /*break*/, 4];
+                        return [3 /*break*/, 4];
                     case 3:
+                        interrupt_1 = _a.sent();
+                        console.log(interrupt_1);
+                        return [3 /*break*/, 7];
+                    case 4:
+                        this.deck.applyResultToCard(selectedCard, result);
+                        return [3 /*break*/, 6];
+                    case 5: return [3 /*break*/, 7];
+                    case 6:
                         this.deckTimeline.update();
                         return [3 /*break*/, 0];
-                    case 4: return [2 /*return*/];
+                    case 7: return [2 /*return*/];
                 }
             });
         });
@@ -116,6 +133,14 @@ var DeckPresenter = /** @class */ (function (_super) {
                 }
             });
         });
+    };
+    DeckPresenter.prototype.exitCardPresenter = function () {
+        this.cardPresenter.discardState();
+        this.cardPresenterContainer.class("hidden");
+    };
+    DeckPresenter.prototype.enterCardPresenter = function () {
+        this.cardPresenterContainer.removeClass("hidden");
+        this.presentingLoop();
     };
     return DeckPresenter;
 }(Component));
@@ -189,6 +214,7 @@ var CardPresenter = /** @class */ (function (_super) {
         if (!this.currentState) {
             return;
         }
+        this.inputGetter.discardState();
         this.cardContainer.clear();
         this.currentState = undefined;
     };
@@ -278,7 +304,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
         }
         this.elm.removeChild(this.state.elm);
         document.removeEventListener("keydown", this.state.documentKeydownListener);
-        this.state.promiseReject();
+        this.state.promiseReject("State discarded");
         this.state = undefined;
     };
     return QuickUserInputGetter;
