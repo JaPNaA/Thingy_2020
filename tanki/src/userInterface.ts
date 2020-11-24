@@ -19,6 +19,8 @@ class DeckPresenter extends Component {
 
     private cardPresenterContainer: Elm;
 
+    private presenting: boolean = false;
+
     constructor(private deck: Deck) {
         super("deckPresenter");
 
@@ -45,6 +47,9 @@ class DeckPresenter extends Component {
     }
 
     private async presentingLoop() {
+        if (this.presenting) { return; }
+        this.presenting = true;
+
         while (true) {
             const selectedCard = this.deck.selectCard();
             if (selectedCard) {
@@ -63,6 +68,9 @@ class DeckPresenter extends Component {
 
             this.deckTimeline.update();
         }
+
+        this.presenting = false;
+        this.exitCardPresenter();
     }
 
     private async openCreateNoteDialog() {

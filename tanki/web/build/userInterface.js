@@ -65,6 +65,7 @@ var DeckPresenter = /** @class */ (function (_super) {
     function DeckPresenter(deck) {
         var _this = _super.call(this, "deckPresenter") || this;
         _this.deck = deck;
+        _this.presenting = false;
         _this.cardPresenter = new CardPresenter(_this.deck);
         _this.deckTimeline = new DeckTimeline(_this.deck);
         _this.deckTimeline.update();
@@ -85,29 +86,38 @@ var DeckPresenter = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (!true) return [3 /*break*/, 7];
-                        selectedCard = this.deck.selectCard();
-                        if (!selectedCard) return [3 /*break*/, 5];
-                        result = void 0;
+                        if (this.presenting) {
+                            return [2 /*return*/];
+                        }
+                        this.presenting = true;
                         _a.label = 1;
                     case 1:
-                        _a.trys.push([1, 3, , 4]);
-                        return [4 /*yield*/, this.cardPresenter.presentCard(selectedCard)];
+                        if (!true) return [3 /*break*/, 8];
+                        selectedCard = this.deck.selectCard();
+                        if (!selectedCard) return [3 /*break*/, 6];
+                        result = void 0;
+                        _a.label = 2;
                     case 2:
-                        result = _a.sent();
-                        return [3 /*break*/, 4];
+                        _a.trys.push([2, 4, , 5]);
+                        return [4 /*yield*/, this.cardPresenter.presentCard(selectedCard)];
                     case 3:
+                        result = _a.sent();
+                        return [3 /*break*/, 5];
+                    case 4:
                         interrupt_1 = _a.sent();
                         console.log(interrupt_1);
-                        return [3 /*break*/, 7];
-                    case 4:
+                        return [3 /*break*/, 8];
+                    case 5:
                         this.deck.applyResultToCard(selectedCard, result);
-                        return [3 /*break*/, 6];
-                    case 5: return [3 /*break*/, 7];
-                    case 6:
+                        return [3 /*break*/, 7];
+                    case 6: return [3 /*break*/, 8];
+                    case 7:
                         this.deckTimeline.update();
-                        return [3 /*break*/, 0];
-                    case 7: return [2 /*return*/];
+                        return [3 /*break*/, 1];
+                    case 8:
+                        this.presenting = false;
+                        this.exitCardPresenter();
+                        return [2 /*return*/];
                 }
             });
         });
