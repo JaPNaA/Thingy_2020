@@ -8,7 +8,7 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
     constructor(tagNameOrElement: T);
     constructor(tagNameOrElement: HTMLElementTagNameMap[T]);
     constructor(tagNameOrElement?: HTMLElementTagNameMap[T] | T) {
-        
+
         if (typeof tagNameOrElement === "undefined") {
             // @ts-ignore
             this.elm = document.createElement("div");
@@ -51,8 +51,10 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
             return document.createTextNode(any);
         } else if (any instanceof Node) {
             return any;
+        } else if (any !== undefined && any !== null) {
+            return document.createTextNode(any.toString());
         } else {
-            return document.createTextNode(any && any.toString() || "");
+            return document.createTextNode("");
         }
     }
 
@@ -69,6 +71,11 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
         while (this.elm.firstChild) {
             this.elm.removeChild(this.elm.firstChild);
         }
+    }
+
+    replaceContents(...elms: any[]) {
+        this.clear();
+        this.append(...elms);
     }
 
     remove() {
