@@ -1,7 +1,7 @@
-import { NoteTypeData, CardTypeData } from "./dataTypes.js";
+import { NoteTypeData, CardTypeData, NoteData } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
-import { PromiseRejectFunc, PromiseResolveFunc, promptUser } from "./utils.js";
+import { PromiseRejectFunc, PromiseResolveFunc, promptUser, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -74,10 +74,12 @@ class DeckPresenter extends Component {
     }
 
     private async openCreateNoteDialog() {
-        const type = parseInt(await promptUser("Type:"));
-        const f1 = await promptUser("Field 1:");
-        const f2 = await promptUser("Field 2:");
-        console.log("Todo: add:", [type, [f1, f2], []]);
+        this.exitCardPresenter();
+
+        const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        const noteData = await createNoteDialog.requestCreateNote();
+        console.log(noteData);
+        createNoteDialog.remove();
     }
 
     private exitCardPresenter() {
@@ -88,6 +90,58 @@ class DeckPresenter extends Component {
     private enterCardPresenter() {
         this.cardPresenterContainer.removeClass("hidden");
         this.presentingLoop();
+    }
+}
+
+abstract class ModalDialog extends Component {
+    protected foregroundElm: Elm;
+
+    constructor(name: string) {
+        super(name);
+        this.class("modalDialog");
+
+        this.append(
+            new Elm().class("modalBackground")
+                .on("click", () => this.remove()),
+            this.foregroundElm = new Elm().class("modalForeground").appendTo(this.elm)
+        );
+    }
+
+    public setPositionFixed() {
+        this.class("positionFixed");
+        return this;
+    }
+
+    public async remove() {
+        await this.hide();
+        super.remove();
+    }
+
+    protected async show(elm: Elm) {
+        await wait(1);
+        this.foregroundElm.append(elm);
+        this.class("showing");
+    }
+
+    protected async hide() {
+        this.removeClass("showing");
+        await wait(500);
+        this.foregroundElm.clear();
+    }
+}
+
+class CreateNoteDialog extends ModalDialog {
+    constructor(private deck: Deck) {
+        super("createNoteDialog");
+    }
+
+    public async requestCreateNote(): Promise<NoteData> {
+        await this.show(new Elm().append("Create note"));
+
+        const type = parseInt(await promptUser("Type:", this.foregroundElm));
+        const f1 = await promptUser("Field 1:", this.foregroundElm);
+        const f2 = await promptUser("Field 2:", this.foregroundElm);
+        return [type, [f1, f2], []];
     }
 }
 

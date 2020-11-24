@@ -1,26 +1,27 @@
+import { Elm } from "./libs/elements.js";
+
 export function wait(millis: number): Promise<void> {
     return new Promise((res) => {
         setTimeout(() => res(), millis);
     });
 }
 
-export function promptUser(message: string): Promise<string> {
-    const promptContainer = document.createElement("elm");
-    promptContainer.classList.add("prompt");
-
-    const messageElm = document.createElement("div");
-    messageElm.innerHTML = message;
-    promptContainer.appendChild(messageElm);
+export function promptUser(message: string, parent?: Elm): Promise<string> {
+    const promptContainer = new Elm().class("prompt").append(
+        new Elm().append(message)
+    );
 
     const input = document.createElement("input");
     const promise: Promise<string> = new Promise(res =>
         input.addEventListener("change", function () {
             res(input.value);
-            document.body.removeChild(promptContainer);
+            promptContainer.remove();
         })
     );
     promptContainer.append(input);
-    document.body.appendChild(promptContainer);
+
+    //* abbr -> temp fix; this function is temporary anyway
+    (parent || new Elm<"abbr">(document.body)).append(promptContainer);
 
     return promise;
 }

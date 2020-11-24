@@ -30,3 +30,51 @@ body {
     width: auto;
     height: 24px;
 }
+
+.modalDialog,
+.modalDialog .modalBackground {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.modalDialog {
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s ease;
+}
+
+.modalDialog.showing {
+    opacity: 1;
+}
+
+.modalDialog.positionFixed {
+    position: fixed;
+}
+
+.modalDialog .modalBackground {
+    z-index: 0;
+    background-color: transparent;
+}
+
+.modalDialog.showing .modalBackground {
+    backdrop-filter: blur(4px);
+    background-color: #0000007c;
+    transition: background-color 0.15s ease;
+}
+
+.modalDialog .modalForeground {
+    position: relative;
+    z-index: 1;
+
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 380px;
+    max-height: 80vh;
+    background-color: #ffffff;
+}

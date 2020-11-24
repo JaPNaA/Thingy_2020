@@ -48,7 +48,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import { Component, Elm } from "./libs/elements.js";
-import { promptUser } from "./utils.js";
+import { promptUser, wait } from "./utils.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -124,21 +124,17 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     DeckPresenter.prototype.openCreateNoteDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var type, _a, f1, f2;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            var createNoteDialog, noteData;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        _a = parseInt;
-                        return [4 /*yield*/, promptUser("Type:")];
+                        this.exitCardPresenter();
+                        createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                        return [4 /*yield*/, createNoteDialog.requestCreateNote()];
                     case 1:
-                        type = _a.apply(void 0, [_b.sent()]);
-                        return [4 /*yield*/, promptUser("Field 1:")];
-                    case 2:
-                        f1 = _b.sent();
-                        return [4 /*yield*/, promptUser("Field 2:")];
-                    case 3:
-                        f2 = _b.sent();
-                        console.log("Todo: add:", [type, [f1, f2], []]);
+                        noteData = _a.sent();
+                        console.log(noteData);
+                        createNoteDialog.remove();
                         return [2 /*return*/];
                 }
             });
@@ -154,6 +150,95 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     return DeckPresenter;
 }(Component));
+var ModalDialog = /** @class */ (function (_super) {
+    __extends(ModalDialog, _super);
+    function ModalDialog(name) {
+        var _this = _super.call(this, name) || this;
+        _this.class("modalDialog");
+        _this.append(new Elm().class("modalBackground")
+            .on("click", function () { return _this.remove(); }), _this.foregroundElm = new Elm().class("modalForeground").appendTo(_this.elm));
+        return _this;
+    }
+    ModalDialog.prototype.setPositionFixed = function () {
+        this.class("positionFixed");
+        return this;
+    };
+    ModalDialog.prototype.remove = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, this.hide()];
+                    case 1:
+                        _a.sent();
+                        _super.prototype.remove.call(this);
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ModalDialog.prototype.show = function (elm) {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, wait(1)];
+                    case 1:
+                        _a.sent();
+                        this.foregroundElm.append(elm);
+                        this.class("showing");
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    ModalDialog.prototype.hide = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        this.removeClass("showing");
+                        return [4 /*yield*/, wait(500)];
+                    case 1:
+                        _a.sent();
+                        this.foregroundElm.clear();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    return ModalDialog;
+}(Component));
+var CreateNoteDialog = /** @class */ (function (_super) {
+    __extends(CreateNoteDialog, _super);
+    function CreateNoteDialog(deck) {
+        var _this = _super.call(this, "createNoteDialog") || this;
+        _this.deck = deck;
+        return _this;
+    }
+    CreateNoteDialog.prototype.requestCreateNote = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var type, _a, f1, f2;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0: return [4 /*yield*/, this.show(new Elm().append("Create note"))];
+                    case 1:
+                        _b.sent();
+                        _a = parseInt;
+                        return [4 /*yield*/, promptUser("Type:", this.foregroundElm)];
+                    case 2:
+                        type = _a.apply(void 0, [_b.sent()]);
+                        return [4 /*yield*/, promptUser("Field 1:", this.foregroundElm)];
+                    case 3:
+                        f1 = _b.sent();
+                        return [4 /*yield*/, promptUser("Field 2:", this.foregroundElm)];
+                    case 4:
+                        f2 = _b.sent();
+                        return [2 /*return*/, [type, [f1, f2], []]];
+                }
+            });
+        });
+    };
+    return CreateNoteDialog;
+}(ModalDialog));
 var DeckTimeline = /** @class */ (function (_super) {
     __extends(DeckTimeline, _super);
     function DeckTimeline(deck) {
