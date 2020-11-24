@@ -17,8 +17,6 @@ var Deck = /** @class */ (function () {
             0
         ];
         this.generateCardArrays();
-        this.elm = document.createElement("div");
-        this.elm.classList.add("deck");
     }
     Deck.prototype.applyResultToCard = function (card, result) {
         // update data based on results
@@ -84,17 +82,24 @@ var Deck = /** @class */ (function () {
     Deck.prototype.sortSeenCards = function () {
         this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
     };
+    Deck.prototype.getMinutesToNextCard = function () {
+        var nowMinute = getMinuteFloored();
+        return this.seenCardsSorted[0].data[3] - nowMinute;
+    };
+    Deck.prototype.getCardCount = function () {
+        return {
+            new: this.newCards.length,
+            seen: this.seenCardsSorted.length,
+            graduated: this.graduatedCards.length
+        };
+    };
     Deck.prototype.selectCard = function () {
         var nowMinute = getMinuteFloored();
-        this.minutesToNextCard = 0;
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
         }
         else if (this.newCards.length > 0) {
             return this.newCards[0];
-        }
-        else {
-            this.minutesToNextCard = this.seenCardsSorted[0].data[3] - nowMinute;
         }
     };
     return Deck;

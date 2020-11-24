@@ -1,3 +1,16 @@
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -34,19 +47,112 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var CardPresenter = /** @class */ (function () {
-    function CardPresenter() {
-        this.inputGetter = new QuickUserInputGetter();
-        this.elm = document.createElement("div");
-        this.elm.classList.add("cardPresenter");
-        this.elm.appendChild(this.inputGetter.elm);
+import { Component, Elm } from "./libs/elements.js";
+import { promptUser } from "./utils.js";
+var TankiInterface = /** @class */ (function (_super) {
+    __extends(TankiInterface, _super);
+    function TankiInterface(deck) {
+        var _this = _super.call(this, "tankiInterface") || this;
+        _this.deckPresenter = new DeckPresenter(deck);
+        _this.deckPresenter.appendTo(_this);
+        return _this;
     }
-    CardPresenter.prototype.setNoteTypes = function (noteTypeData) {
-        this.noteTypes = noteTypeData;
+    return TankiInterface;
+}(Component));
+export { TankiInterface };
+var DeckPresenter = /** @class */ (function (_super) {
+    __extends(DeckPresenter, _super);
+    function DeckPresenter(deck) {
+        var _this = _super.call(this, "deckPresenter") || this;
+        _this.deck = deck;
+        _this.cardPresenter = new CardPresenter(_this.deck);
+        _this.deckTimeline = new DeckTimeline(_this.deck);
+        _this.deckTimeline.update();
+        _this.append(new Elm().class("cardPresenterContainer").append(_this.cardPresenter), new Elm().class("timeLine").append(_this.deckTimeline), new Elm().class("createNote").on("click", function () { return _this.openCreateNoteDialog(); }));
+        _this.presentingLoop();
+        return _this;
+    }
+    DeckPresenter.prototype.presentingLoop = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var selectedCard, result;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!true) return [3 /*break*/, 4];
+                        selectedCard = this.deck.selectCard();
+                        if (!selectedCard) return [3 /*break*/, 2];
+                        return [4 /*yield*/, this.cardPresenter.presentCard(selectedCard)];
+                    case 1:
+                        result = _a.sent();
+                        this.deck.applyResultToCard(selectedCard, result);
+                        return [3 /*break*/, 3];
+                    case 2: return [3 /*break*/, 4];
+                    case 3:
+                        this.deckTimeline.update();
+                        return [3 /*break*/, 0];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
     };
+    DeckPresenter.prototype.openCreateNoteDialog = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var type, _a, f1, f2;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _a = parseInt;
+                        return [4 /*yield*/, promptUser("Type:")];
+                    case 1:
+                        type = _a.apply(void 0, [_b.sent()]);
+                        return [4 /*yield*/, promptUser("Field 1:")];
+                    case 2:
+                        f1 = _b.sent();
+                        return [4 /*yield*/, promptUser("Field 2:")];
+                    case 3:
+                        f2 = _b.sent();
+                        console.log("Todo: add:", [type, [f1, f2], []]);
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    return DeckPresenter;
+}(Component));
+var DeckTimeline = /** @class */ (function (_super) {
+    __extends(DeckTimeline, _super);
+    function DeckTimeline(deck) {
+        var _this = _super.call(this, "deckTimeline") || this;
+        _this.deck = deck;
+        _this.nextCardInMinutesElm = new Elm("span");
+        _this.newCardsElm = new Elm().class("new");
+        _this.seenCardsElm = new Elm().class("seen");
+        _this.graduatedCardsElm = new Elm().class("graduated");
+        _this.append(new Elm().append("Next card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(_this.newCardsElm, _this.seenCardsElm, _this.graduatedCardsElm));
+        _this.nextCardInMinutesElm.append("~");
+        return _this;
+    }
+    DeckTimeline.prototype.update = function () {
+        var counts = this.deck.getCardCount();
+        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
+        this.newCardsElm.replaceContents(counts.new);
+        this.seenCardsElm.replaceContents(counts.seen);
+        this.graduatedCardsElm.replaceContents(counts.graduated);
+    };
+    return DeckTimeline;
+}(Component));
+var CardPresenter = /** @class */ (function (_super) {
+    __extends(CardPresenter, _super);
+    function CardPresenter(deck) {
+        var _this = _super.call(this, "cardPresenter") || this;
+        _this.inputGetter = new QuickUserInputGetter();
+        _this.noteTypes = deck.getNoteTypes();
+        _this.inputGetter.appendTo(_this);
+        return _this;
+    }
     CardPresenter.prototype.presentCard = function (card) {
         return __awaiter(this, void 0, void 0, function () {
-            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, front, back, rating;
+            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, rating;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -65,15 +171,11 @@ var CardPresenter = /** @class */ (function () {
                         noteFieldNames = noteType.fieldNames;
                         cardFields = card.parentNote[1];
                         this.currentState = { card: card, cardElm: cardElm };
-                        front = this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields);
-                        this.currentState.front = front;
-                        cardElm.appendChild(front.elm);
+                        this.currentState.front = this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields).appendTo(cardElm);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
                     case 1:
                         _a.sent();
-                        back = this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields);
-                        this.currentState.back = back;
-                        cardElm.appendChild(back.elm);
+                        this.currentState.back = this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields).appendTo(cardElm);
                         return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"])];
                     case 2:
                         rating = _a.sent();
@@ -104,23 +206,23 @@ var CardPresenter = /** @class */ (function () {
         return new CardFaceDisplay(outString);
     };
     return CardPresenter;
-}());
-export { CardPresenter };
-var CardFaceDisplay = /** @class */ (function () {
+}(Component));
+var CardFaceDisplay = /** @class */ (function (_super) {
+    __extends(CardFaceDisplay, _super);
     function CardFaceDisplay(content) {
-        this.elm = document.createElement("div");
-        this.elm.innerHTML = content;
+        var _this = _super.call(this, "cardFaceDisplay") || this;
+        _this.elm.innerHTML = content;
+        return _this;
     }
     return CardFaceDisplay;
-}());
-export { CardFaceDisplay };
+}(Component));
 /**
  * Can recieve inputs quickly from user
  */
-var QuickUserInputGetter = /** @class */ (function () {
+var QuickUserInputGetter = /** @class */ (function (_super) {
+    __extends(QuickUserInputGetter, _super);
     function QuickUserInputGetter() {
-        this.elm = document.createElement("div");
-        this.elm.classList.add("userInputGetter");
+        return _super.call(this, "quickUserInputGetter") || this;
     }
     QuickUserInputGetter.prototype.options = function (items, defaultIndex) {
         var _this = this;
@@ -160,5 +262,4 @@ var QuickUserInputGetter = /** @class */ (function () {
         this.state = undefined;
     };
     return QuickUserInputGetter;
-}());
-export { QuickUserInputGetter };
+}(Component));
