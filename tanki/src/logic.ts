@@ -3,7 +3,7 @@ import { getMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
     private graduatedCards: Card[] = [];
-    private seenCardsSorted: Card[] = [];
+    private seenAndLearningCardsSorted: Card[] = [];
     private newCards: Card[] = [];
 
     private newCardSettings: CardData = [
@@ -19,6 +19,16 @@ export class Deck {
 
     constructor(private data: DeckData) {
         this.generateCardArrays();
+    }
+
+    public selectCard(): Card | undefined {
+        const nowMinute = getMinuteFloored();
+
+        if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].data[3] <= nowMinute) {
+            return this.seenAndLearningCardsSorted[0];
+        } else if (this.newCards.length > 0) {
+            return this.newCards[0];
+        }
     }
 
     public applyResultToCard(card: Card, result: number) {
@@ -45,7 +55,7 @@ export class Deck {
             const newCardIndex = this.newCards.indexOf(card);
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
 
-            this.seenCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
+            this.seenAndLearningCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
         }
 
         this.sortSeenCards();
@@ -56,19 +66,41 @@ export class Deck {
         this.generateCardArrays();
     }
 
+    public getNoteTypes(): NoteTypeData[] {
+        return this.data.noteTypes;
+    }
+
+    public getMinutesToNextCard(): number {
+        const nowMinute = getMinuteFloored();
+        return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
+    }
+
+    public getCardCount() {
+        return {
+            new: this.newCards.length,
+            seen: this.seenAndLearningCardsSorted.length,
+            graduated: this.graduatedCards.length
+        };
+    }
+
+    public exportToString(): string {
+        return JSON.stringify(this.data);
+    }
+
     private generateCardArrays() {
         this.graduatedCards.length = 0;
         this.newCards.length = 0;
-        this.seenCardsSorted.length = 0;
+        this.seenAndLearningCardsSorted.length = 0;
 
         for (const note of this.data.notes) {
             const noteID = note[0];
             const noteType = this.data.noteTypes[noteID];
             const noteType_NumCardType = noteType.cardTypes.length;
+
             for (let i = 0; i < noteType_NumCardType; i++) {
                 const card = note[2][i];
 
-                if (card === 0 || card === undefined) {
+                if (card === 0 || card === undefined || card[0] === CardState.new) {
                     this.newCards.push(
                         new Card(arrayCopy(this.newCardSettings), i, note)
                     )
@@ -76,10 +108,13 @@ export class Deck {
                     this.graduatedCards.push(
                         new Card(card, i, note)
                     );
-                } else {
-                    this.seenCardsSorted.push(
+                } else if (card[0] === CardState.seen || card[0] === CardState.learn) {
+                    this.seenAndLearningCardsSorted.push(
                         new Card(card, i, note)
                     );
+                } else {
+                    console.error("Unexpected card", card, note, this.data);
+                    throw new Error("Unexpected card");
                 }
             }
         }
@@ -87,40 +122,9 @@ export class Deck {
         this.sortSeenCards();
     }
 
-    public getNoteTypes(): NoteTypeData[] {
-        return this.data.noteTypes;
-    }
-
-    public exportToString(): string {
-        return JSON.stringify(this.data);
-    }
-
     /** sort latest due first */
     private sortSeenCards() {
-        this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
-    }
-
-    public getMinutesToNextCard(): number {
-        const nowMinute = getMinuteFloored();
-        return this.seenCardsSorted[0].data[3] - nowMinute;
-    }
-
-    public getCardCount() {
-        return {
-            new: this.newCards.length,
-            seen: this.seenCardsSorted.length,
-            graduated: this.graduatedCards.length
-        };
-    }
-
-    public selectCard(): Card | undefined {
-        const nowMinute = getMinuteFloored();
-
-        if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
-            return this.seenCardsSorted[0];
-        } else if (this.newCards.length > 0) {
-            return this.newCards[0];
-        }
+        this.seenAndLearningCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
     }
 }
 

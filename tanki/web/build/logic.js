@@ -4,7 +4,7 @@ var Deck = /** @class */ (function () {
     function Deck(data) {
         this.data = data;
         this.graduatedCards = [];
-        this.seenCardsSorted = [];
+        this.seenAndLearningCardsSorted = [];
         this.newCards = [];
         this.newCardSettings = [
             /** State */
@@ -18,6 +18,15 @@ var Deck = /** @class */ (function () {
         ];
         this.generateCardArrays();
     }
+    Deck.prototype.selectCard = function () {
+        var nowMinute = getMinuteFloored();
+        if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].data[3] <= nowMinute) {
+            return this.seenAndLearningCardsSorted[0];
+        }
+        else if (this.newCards.length > 0) {
+            return this.newCards[0];
+        }
+    };
     Deck.prototype.applyResultToCard = function (card, result) {
         // update data based on results
         if (result === 1) {
@@ -40,7 +49,7 @@ var Deck = /** @class */ (function () {
             if (newCardIndex < 0) {
                 throw new Error("Rated new card that wasn't in new cards array");
             }
-            this.seenCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
+            this.seenAndLearningCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
         }
         this.sortSeenCards();
     };
@@ -48,10 +57,27 @@ var Deck = /** @class */ (function () {
         this.data.notes.push(data);
         this.generateCardArrays();
     };
+    Deck.prototype.getNoteTypes = function () {
+        return this.data.noteTypes;
+    };
+    Deck.prototype.getMinutesToNextCard = function () {
+        var nowMinute = getMinuteFloored();
+        return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
+    };
+    Deck.prototype.getCardCount = function () {
+        return {
+            new: this.newCards.length,
+            seen: this.seenAndLearningCardsSorted.length,
+            graduated: this.graduatedCards.length
+        };
+    };
+    Deck.prototype.exportToString = function () {
+        return JSON.stringify(this.data);
+    };
     Deck.prototype.generateCardArrays = function () {
         this.graduatedCards.length = 0;
         this.newCards.length = 0;
-        this.seenCardsSorted.length = 0;
+        this.seenAndLearningCardsSorted.length = 0;
         for (var _i = 0, _a = this.data.notes; _i < _a.length; _i++) {
             var note = _a[_i];
             var noteID = note[0];
@@ -59,48 +85,26 @@ var Deck = /** @class */ (function () {
             var noteType_NumCardType = noteType.cardTypes.length;
             for (var i = 0; i < noteType_NumCardType; i++) {
                 var card = note[2][i];
-                if (card === 0 || card === undefined) {
+                if (card === 0 || card === undefined || card[0] === CardState.new) {
                     this.newCards.push(new Card(arrayCopy(this.newCardSettings), i, note));
                 }
                 else if (card[0] === CardState.graduated) {
                     this.graduatedCards.push(new Card(card, i, note));
                 }
+                else if (card[0] === CardState.seen || card[0] === CardState.learn) {
+                    this.seenAndLearningCardsSorted.push(new Card(card, i, note));
+                }
                 else {
-                    this.seenCardsSorted.push(new Card(card, i, note));
+                    console.error("Unexpected card", card, note, this.data);
+                    throw new Error("Unexpected card");
                 }
             }
         }
         this.sortSeenCards();
     };
-    Deck.prototype.getNoteTypes = function () {
-        return this.data.noteTypes;
-    };
-    Deck.prototype.exportToString = function () {
-        return JSON.stringify(this.data);
-    };
     /** sort latest due first */
     Deck.prototype.sortSeenCards = function () {
-        this.seenCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
-    };
-    Deck.prototype.getMinutesToNextCard = function () {
-        var nowMinute = getMinuteFloored();
-        return this.seenCardsSorted[0].data[3] - nowMinute;
-    };
-    Deck.prototype.getCardCount = function () {
-        return {
-            new: this.newCards.length,
-            seen: this.seenCardsSorted.length,
-            graduated: this.graduatedCards.length
-        };
-    };
-    Deck.prototype.selectCard = function () {
-        var nowMinute = getMinuteFloored();
-        if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
-            return this.seenCardsSorted[0];
-        }
-        else if (this.newCards.length > 0) {
-            return this.newCards[0];
-        }
+        this.seenAndLearningCardsSorted.sort(function (a, b) { return a.data[3] - b.data[3]; });
     };
     return Deck;
 }());
