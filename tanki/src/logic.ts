@@ -2,10 +2,6 @@ import { CardData, CardState, DeckData, NoteData, NoteTypeData } from "./dataTyp
 import { getMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
-    public elm: HTMLDivElement;
-
-    public minutesToNextCard?: number;
-
     private graduatedCards: Card[] = [];
     private seenCardsSorted: Card[] = [];
     private newCards: Card[] = [];
@@ -23,8 +19,6 @@ export class Deck {
 
     constructor(private data: DeckData) {
         this.generateCardArrays();
-        this.elm = document.createElement("div");
-        this.elm.classList.add("deck");
     }
 
     public applyResultToCard(card: Card, result: number) {
@@ -106,17 +100,26 @@ export class Deck {
         this.seenCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
     }
 
+    public getMinutesToNextCard(): number {
+        const nowMinute = getMinuteFloored();
+        return this.seenCardsSorted[0].data[3] - nowMinute;
+    }
+
+    public getCardCount() {
+        return {
+            new: this.newCards.length,
+            seen: this.seenCardsSorted.length,
+            graduated: this.graduatedCards.length
+        };
+    }
+
     public selectCard(): Card | undefined {
         const nowMinute = getMinuteFloored();
-
-        this.minutesToNextCard = 0;
 
         if (this.seenCardsSorted.length && this.seenCardsSorted[0].data[3] <= nowMinute) {
             return this.seenCardsSorted[0];
         } else if (this.newCards.length > 0) {
             return this.newCards[0];
-        } else {
-            this.minutesToNextCard = this.seenCardsSorted[0].data[3] - nowMinute;
         }
     }
 }

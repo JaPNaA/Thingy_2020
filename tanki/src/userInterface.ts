@@ -1,20 +1,90 @@
 import { NoteTypeData, CardTypeData } from "./dataTypes.js";
-import { Component } from "./libs/elements.js";
-import { Card } from "./logic.js";
+import { Component, Elm } from "./libs/elements.js";
+import { Card, Deck } from "./logic.js";
+import { promptUser } from "./utils.js";
 
 export class TankiInterface extends Component {
-    private cardPresenter = new CardPresenter();
+    private deckPresenter: DeckPresenter;
 
-    constructor() {
+    constructor(deck: Deck) {
         super("tankiInterface");
-
-        this.cardPresenter.appendTo(this);
-
-        this.append("Hello world!");
+        this.deckPresenter = new DeckPresenter(deck);
+        this.deckPresenter.appendTo(this);
     }
 }
 
-export class CardPresenter extends Component {
+class DeckPresenter extends Component {
+    private cardPresenter: CardPresenter;
+    private deckTimeline: DeckTimeline;
+
+    constructor(private deck: Deck) {
+        super("deckPresenter");
+
+        this.cardPresenter = new CardPresenter(this.deck);
+        this.deckTimeline = new DeckTimeline(this.deck);
+        this.deckTimeline.update();
+
+        this.append(
+            new Elm().class("cardPresenterContainer").append(this.cardPresenter),
+            new Elm().class("timeLine").append(this.deckTimeline),
+            new Elm().class("createNote").on("click", () => this.openCreateNoteDialog())
+        );
+
+        this.presentingLoop();
+    }
+
+    private async presentingLoop() {
+        while (true) {
+            const selectedCard = this.deck.selectCard();
+            if (selectedCard) {
+                const result = await this.cardPresenter.presentCard(selectedCard);
+                this.deck.applyResultToCard(selectedCard, result);
+            } else {
+                break;
+            }
+
+            this.deckTimeline.update();
+        }
+    }
+
+    private async openCreateNoteDialog() {
+        const type = parseInt(await promptUser("Type:"));
+        const f1 = await promptUser("Field 1:");
+        const f2 = await promptUser("Field 2:");
+        console.log("Todo: add:", [type, [f1, f2], []]);
+    }
+}
+
+class DeckTimeline extends Component {
+    private nextCardInMinutesElm = new Elm("span");
+    private newCardsElm = new Elm().class("new");
+    private seenCardsElm = new Elm().class("seen");
+    private graduatedCardsElm = new Elm().class("graduated");
+
+    constructor(private deck: Deck) {
+        super("deckTimeline");
+
+        this.append(
+            new Elm().append("Next card in ", this.nextCardInMinutesElm, " minutes"),
+            new Elm().class("cardCounts").append(
+                this.newCardsElm, this.seenCardsElm, this.graduatedCardsElm
+            )
+        );
+
+        this.nextCardInMinutesElm.append("~");
+    }
+
+    public update() {
+        const counts = this.deck.getCardCount();
+        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
+
+        this.newCardsElm.replaceContents(counts.new);
+        this.seenCardsElm.replaceContents(counts.seen);
+        this.graduatedCardsElm.replaceContents(counts.graduated);
+    }
+}
+
+class CardPresenter extends Component {
     public rating?: number;
 
     private inputGetter = new QuickUserInputGetter();
@@ -27,13 +97,10 @@ export class CardPresenter extends Component {
 
     private noteTypes?: NoteTypeData[];
 
-    constructor() {
+    constructor(deck: Deck) {
         super("cardPresenter");
+        this.noteTypes = deck.getNoteTypes();
         this.inputGetter.appendTo(this);
-    }
-
-    public setNoteTypes(noteTypeData: NoteTypeData[]) {
-        this.noteTypes = noteTypeData;
     }
 
     public async presentCard(card: Card): Promise<number> {
@@ -104,7 +171,7 @@ export class CardPresenter extends Component {
 
 
 
-export class CardFaceDisplay extends Component {
+class CardFaceDisplay extends Component {
     constructor(content: string) {
         super("cardFaceDisplay");
         this.elm.innerHTML = content;
@@ -114,7 +181,7 @@ export class CardFaceDisplay extends Component {
 /**
  * Can recieve inputs quickly from user
  */
-export class QuickUserInputGetter extends Component {
+class QuickUserInputGetter extends Component {
     private state?: {
         promiseReject: () => void,
         elm: HTMLDivElement
