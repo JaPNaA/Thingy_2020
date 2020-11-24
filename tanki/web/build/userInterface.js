@@ -146,8 +146,9 @@ var CardPresenter = /** @class */ (function (_super) {
     function CardPresenter(deck) {
         var _this = _super.call(this, "cardPresenter") || this;
         _this.inputGetter = new QuickUserInputGetter();
+        _this.cardContainer = new Elm().class("cardContainer");
         _this.noteTypes = deck.getNoteTypes();
-        _this.inputGetter.appendTo(_this);
+        _this.append(_this.cardContainer, _this.inputGetter);
         return _this;
     }
     CardPresenter.prototype.presentCard = function (card) {
@@ -162,23 +163,22 @@ var CardPresenter = /** @class */ (function (_super) {
                         if (!this.noteTypes) {
                             throw new Error("Note types not set");
                         }
-                        cardElm = document.createElement("div");
-                        cardElm.classList.add("card");
-                        this.elm.appendChild(cardElm);
+                        cardElm = new Elm().class("card").appendTo(this.cardContainer);
                         noteTypeID = card.parentNote[0];
                         noteType = this.noteTypes[noteTypeID];
                         cardType = noteType.cardTypes[card.cardTypeID];
                         noteFieldNames = noteType.fieldNames;
                         cardFields = card.parentNote[1];
-                        this.currentState = { card: card, cardElm: cardElm };
-                        this.currentState.front = this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields).appendTo(cardElm);
+                        this.currentState = { card: card };
+                        this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields).appendTo(cardElm);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
                     case 1:
                         _a.sent();
-                        this.currentState.back = this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields).appendTo(cardElm);
-                        return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"])];
+                        this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields).appendTo(cardElm);
+                        return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
                     case 2:
                         rating = _a.sent();
+                        console.log(rating);
                         this.discardState();
                         return [2 /*return*/, rating];
                 }
@@ -189,7 +189,7 @@ var CardPresenter = /** @class */ (function (_super) {
         if (!this.currentState) {
             return;
         }
-        this.elm.removeChild(this.currentState.cardElm);
+        this.cardContainer.clear();
         this.currentState = undefined;
     };
     CardPresenter.prototype.createFaceDisplay = function (contentTemplate, fieldNames, fields) {
@@ -247,9 +247,28 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             _loop_1(i);
         }
         this.elm.appendChild(optionsContainer);
+        var keydownHandler = function (e) {
+            var numberKey = parseInt(e.key) - 1;
+            var wasValidInput = true;
+            if (!isNaN(numberKey) && numberKey < items.length) {
+                promiseRes(numberKey);
+            }
+            else if (e.key === " " || e.key === "Enter") {
+                promiseRes(defaultIndex !== null && defaultIndex !== void 0 ? defaultIndex : 0);
+            }
+            else {
+                wasValidInput = false;
+            }
+            if (wasValidInput) {
+                e.preventDefault();
+                _this.discardState();
+            }
+        };
+        document.addEventListener("keydown", keydownHandler);
         this.state = {
             promiseReject: promiseRej,
-            elm: optionsContainer
+            elm: optionsContainer,
+            documentKeydownListener: keydownHandler
         };
         return promise;
     };
@@ -258,6 +277,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             return;
         }
         this.elm.removeChild(this.state.elm);
+        document.removeEventListener("keydown", this.state.documentKeydownListener);
         this.state.promiseReject();
         this.state = undefined;
     };

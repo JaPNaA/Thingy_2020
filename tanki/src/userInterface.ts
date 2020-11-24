@@ -90,17 +90,16 @@ class CardPresenter extends Component {
     private inputGetter = new QuickUserInputGetter();
     private currentState?: {
         card: Card;
-        cardElm: HTMLDivElement;
-        front?: CardFaceDisplay;
-        back?: CardFaceDisplay;
     };
 
     private noteTypes?: NoteTypeData[];
 
+    private cardContainer = new Elm().class("cardContainer");
+
     constructor(deck: Deck) {
         super("cardPresenter");
         this.noteTypes = deck.getNoteTypes();
-        this.inputGetter.appendTo(this);
+        this.append(this.cardContainer, this.inputGetter);
     }
 
     public async presentCard(card: Card): Promise<number> {
@@ -110,9 +109,7 @@ class CardPresenter extends Component {
 
         if (!this.noteTypes) { throw new Error("Note types not set"); }
 
-        const cardElm = document.createElement("div");
-        cardElm.classList.add("card");
-        this.elm.appendChild(cardElm);
+        const cardElm = new Elm().class("card").appendTo(this.cardContainer);
 
 
         const noteTypeID = card.parentNote[0]; // .type
@@ -123,20 +120,21 @@ class CardPresenter extends Component {
         const noteFieldNames = noteType.fieldNames;
         const cardFields = card.parentNote[1]; // .fields
 
-        this.currentState = { card, cardElm };
+        this.currentState = { card };
 
-        this.currentState.front = this.createFaceDisplay(
+        this.createFaceDisplay(
             cardType.frontTemplate,
             noteFieldNames, cardFields
         ).appendTo(cardElm);
         await this.inputGetter.options(["Show back"]);
 
-        this.currentState.back = this.createFaceDisplay(
+        this.createFaceDisplay(
             cardType.backTemplate,
             noteFieldNames, cardFields
         ).appendTo(cardElm);
 
-        const rating = await this.inputGetter.options(["Forgot", "Remembered"]);
+        const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
+        console.log(rating);
 
         this.discardState();
 
@@ -145,7 +143,7 @@ class CardPresenter extends Component {
 
     private discardState() {
         if (!this.currentState) { return; }
-        this.elm.removeChild(this.currentState.cardElm);
+        this.cardContainer.clear();
         this.currentState = undefined;
     }
 
@@ -184,6 +182,7 @@ class CardFaceDisplay extends Component {
 class QuickUserInputGetter extends Component {
     private state?: {
         promiseReject: () => void,
+        documentKeydownListener: (e: KeyboardEvent) => void,
         elm: HTMLDivElement
     };
 
@@ -216,9 +215,29 @@ class QuickUserInputGetter extends Component {
 
         this.elm.appendChild(optionsContainer);
 
+        const keydownHandler = (e: KeyboardEvent) => {
+            const numberKey = parseInt(e.key) - 1;
+            let wasValidInput = true;
+            if (!isNaN(numberKey) && numberKey < items.length) {
+                promiseRes(numberKey);
+            } else if (e.key === " " || e.key === "Enter") {
+                promiseRes(defaultIndex ?? 0);
+            } else {
+                wasValidInput = false;
+            }
+
+            if (wasValidInput) {
+                e.preventDefault();
+                this.discardState();
+            }
+        };
+
+        document.addEventListener("keydown", keydownHandler);
+
         this.state = {
             promiseReject: promiseRej,
-            elm: optionsContainer
+            elm: optionsContainer,
+            documentKeydownListener: keydownHandler
         };
 
         return promise;
@@ -227,6 +246,7 @@ class QuickUserInputGetter extends Component {
     private discardState() {
         if (!this.state) { return; }
         this.elm.removeChild(this.state.elm);
+        document.removeEventListener("keydown", this.state.documentKeydownListener);
         this.state.promiseReject();
         this.state = undefined;
     }
