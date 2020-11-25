@@ -77,8 +77,14 @@ class DeckPresenter extends Component {
         this.exitCardPresenter();
 
         const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-        // await createNoteDialog;
-        // createNoteDialog.remove();
+        const data = await new Promise<NoteData>(function (res) {
+            createNoteDialog.onNoteCreated.addHandler(function (data) {
+                res(data);
+            })
+        });
+        this.deck.addNote(data);
+
+        createNoteDialog.remove();
     }
 
     private exitCardPresenter() {
