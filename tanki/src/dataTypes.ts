@@ -21,7 +21,7 @@ export interface NoteData extends Array<any> {
     /** Fields */
     1: string[];
     /** Card data */
-    2: (CardData | undefined | 0)[];
+    2?: (CardData | undefined | 0)[] | undefined | 0;
 }
 
 export interface CardData extends Array<any> {

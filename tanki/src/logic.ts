@@ -46,6 +46,7 @@ export class Deck {
 
         if (card.data[0] === CardState.new) {
             // copy into actual data object
+            if (typeof card.parentNote[2] !== "object") { card.parentNote[2] = []; }
             card.parentNote[2][card.cardTypeID] = card.data;
             //             .cardData
 
@@ -133,7 +134,7 @@ export class Deck {
             const noteType_NumCardType = noteType.cardTypes.length;
 
             for (let i = 0; i < noteType_NumCardType; i++) {
-                const card = note[2][i];
+                const card = typeof note[2] === "object" ? note[2][i] : undefined;
 
                 if (card === 0 || card === undefined || card[0] === CardState.new) {
                     this.newCards.push(
