@@ -44,20 +44,6 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
         this.elm.insertBefore(this._anyToNode(elm), this.elm.firstChild);
     }
 
-    _anyToNode(any: any): Node {
-        if (any instanceof Elm) {
-            return any.elm;
-        } else if (typeof any === "string") {
-            return document.createTextNode(any);
-        } else if (any instanceof Node) {
-            return any;
-        } else if (any !== undefined && any !== null) {
-            return document.createTextNode(any.toString());
-        } else {
-            return document.createTextNode("");
-        }
-    }
-
     appendTo(parent: HTMLElement | Elm) {
         if (parent instanceof Elm) {
             parent.append(this.elm);
@@ -112,13 +98,31 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
         this.elm.setAttribute(key, value || "true");
         return this;
     }
+
+    getValue(): string {
+        // @ts-ignore
+        return this.elm.value ?? this.elm.innerHTML;
+    }
+
+    private _anyToNode(any: any): Node {
+        if (any instanceof Elm) {
+            return any.elm;
+        } else if (typeof any === "string") {
+            return document.createTextNode(any);
+        } else if (any instanceof Node) {
+            return any;
+        } else if (any !== undefined && any !== null) {
+            return document.createTextNode(any.toString());
+        } else {
+            return document.createTextNode("");
+        }
+    }
 }
 
 class Component extends Elm {
     constructor(protected name: string) {
         super();
-        this.name = name;
-        this.class(this.name);
+        this.class(name);
     }
 }
 
