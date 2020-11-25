@@ -71,9 +71,11 @@ export class Deck {
         return this.data.noteTypes;
     }
 
-    public getMinutesToNextCard(): number {
+    public getMinutesToNextCard(): number | undefined {
         const nowMinute = getCurrMinuteFloored();
-        return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
+        const firstCard = this.seenAndLearningCardsSorted[0];
+        if (!firstCard) { return; }
+        return firstCard.data[3] - nowMinute;
     }
 
     public getCardCount() {
@@ -89,11 +91,16 @@ export class Deck {
      * the boundary where a card due that's due becomes not due.
      */
     public getDueCardsCount(): number {
+        if (this.seenAndLearningCardsSorted.length <= 0) {
+            return 0;
+        }
+
         const currMinute = getCurrMinuteFloored();
 
         // algorithm: binary search for boundary
         let bottom = 0;
         let top = this.seenAndLearningCardsSorted.length;
+
 
         // while(true) loop with protection
         for (
