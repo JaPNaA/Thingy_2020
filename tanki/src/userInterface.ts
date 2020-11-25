@@ -220,6 +220,9 @@ class DeckTimeline extends Component {
         );
 
         this.nextCardInMinutesElm.append("~");
+
+        //* temporary quality-of-life
+        setInterval(() => this.update(), 30e3);
     }
 
     public update() {
