@@ -57,7 +57,7 @@ textarea {
 .lookupHistory,
 .actionsBar {
     width: 100%;
-    max-width: 464px;
+    max-width: 480px;
     padding: 8px;
     text-align: left;
 }
@@ -137,25 +137,8 @@ textarea {
 }
 
 .proxyWarning .tooltip {
-    position: absolute;
     top: 1em;
     right: 0;
-    z-index: 1;
-
-    background: var(--light-highlight);
-    width: 316px;
-    padding: 8px;
-
-    pointer-events: none;
-
-    transition: 0.25s ease;
-    opacity: 0;
-    transform: translateY(-8px);
-}
-
-.proxyWarning .tooltip.show {
-    opacity: 1;
-    transform: translateY(0);
 }
 
 .proxyWarning .tooltip div {
@@ -305,6 +288,41 @@ textarea {
     color: var(--emphasis-color);
 }
 
+.lookupResult .sense > .infoElmContainer {
+    display: inline-block;
+}
+
+.lookupResult .sense > .infoElmContainer .infoIndicator {
+    display: inline-block;
+    background-color: rgba(0, 47, 255, 0.61);
+    color: #fff;
+    font-style: italic;
+    text-align: center;
+    font-family: serif;
+    font-size: 8px;
+    line-height: 2px;
+    width: 2px;
+    height: 2px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 3.5px;
+    padding-right: 4.5px;
+    border-radius: 50%;
+    margin-left: 4px;
+}
+
+.lookupResult .sense > .infoElmContainer > .infoElm {
+    font-size: 0.8em;
+
+    top: 100%;
+    left: 0;
+}
+
+.lookupResult .sense:hover > .infoElmContainer > .infoElm {
+    opacity: 1;
+    transform: translateY(0);
+}
+
 .lookupResultRemoveButton {
     position: absolute;
     top: 0;
@@ -351,6 +369,26 @@ textarea {
 .shadow {
     border: 1px solid #0000000d;
     box-shadow: 0px 2px 4px #0000002e, 0px 0px 8px #00000005;
+}
+
+.tooltip {
+    position: absolute;
+    z-index: 1;
+
+    background: var(--light-highlight);
+    width: 316px;
+    padding: 8px;
+
+    pointer-events: none;
+
+    transition: 0.25s ease;
+    opacity: 0;
+    transform: translateY(-8px);
+}
+
+.tooltip.show {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 .furigana {

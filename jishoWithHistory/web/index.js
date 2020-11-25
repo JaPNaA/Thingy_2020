@@ -21,7 +21,7 @@ import { Elm, Component } from "./elements.js";
  * @property {string[]} parts_of_speech
  * @property {string[]} restrictions
  * @property {string[]} see_also
- * @property {string[]} source
+ * @property { {language: string, word: string}[] } source
  * @property {string[]} tags
  * 
  * @typedef {Object} Japanese
@@ -550,6 +550,8 @@ class LookupResult extends Component {
             this._createSeeAlsoElm(sense.see_also).appendTo(senseElm);
         }
 
+        this._createInfoElm(sense).appendTo(senseElm);
+
         if (sense.tags.length > 0) { // has tags?
             const tags = new Elm().class("tags").appendTo(senseElm);
 
@@ -592,6 +594,51 @@ class LookupResult extends Component {
         }
 
         return seeAlsosElm;
+    }
+
+    /** @param {Sense} sense */
+    _createInfoElm(sense) {
+        // sense.antonyms
+        // sense.info
+        // sense.parts_of_speech
+        // sense.source
+
+        const infoElmContainer = new Elm().class("infoElmContainer");
+        const infoElm = new Elm().class("infoElm", "shadow", "tooltip").appendTo(infoElmContainer);
+        let important = false;
+
+        if (sense.parts_of_speech.length > 0) {
+            infoElm.append(new Elm("i").append(sense.parts_of_speech.join(", ")));
+        }
+        if (sense.antonyms.length > 0) {
+            infoElm.append(new Elm().append(
+                new Elm("b").append("Antonyms: "),
+                sense.antonyms.join("; ")
+            ));
+        }
+        if (sense.info.length > 0) {
+            important = true;
+
+            infoElm.append(new Elm().append(
+                new Elm("b").append("Info: "),
+                sense.info.join("; ")
+            ));
+        }
+        if (sense.source.length > 0) {
+            infoElm.append(new Elm().append(
+                new Elm("b").append("Source: "),
+                sense.source.map(e => e.language + " " + e.word).join("; ")
+            ));
+        }
+
+        if (important) {
+            infoElmContainer.class("important");
+            infoElmContainer.append(new Elm("sup").append(
+                new Elm().append("i").class("infoIndicator")
+            ));
+        }
+
+        return infoElmContainer;
     }
 
     /**
