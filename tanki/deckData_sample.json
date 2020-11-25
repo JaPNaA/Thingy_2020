@@ -15,7 +15,17 @@
                     "backTemplate": "Front: {{Front}}"
                 }
             ]
+        }, {
+            "name": "Question -> Answer",
+            "fieldNames": ["Question", "Answer"],
+            "cardTypes": [
+                {
+                    "name": "Question -> Answer",
+                    "frontTemplate": "(oneway) {{Question}}",
+                    "backTemplate": "{{Answer}}"
                 }
+            ]
+        }
     ],
     "notes": [
         [

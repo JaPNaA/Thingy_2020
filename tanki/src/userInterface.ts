@@ -1,7 +1,7 @@
 import { NoteTypeData, CardTypeData, NoteData } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
-import { PromiseRejectFunc, PromiseResolveFunc, promptUser, wait } from "./utils.js";
+import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, promptUser, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -77,9 +77,8 @@ class DeckPresenter extends Component {
         this.exitCardPresenter();
 
         const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-        const noteData = await createNoteDialog.requestCreateNote();
-        console.log(noteData);
-        createNoteDialog.remove();
+        // await createNoteDialog;
+        // createNoteDialog.remove();
     }
 
     private exitCardPresenter() {
@@ -117,31 +116,84 @@ abstract class ModalDialog extends Component {
         super.remove();
     }
 
-    protected async show(elm: Elm) {
+    protected async show() {
         await wait(1);
-        this.foregroundElm.append(elm);
         this.class("showing");
     }
 
     protected async hide() {
         this.removeClass("showing");
         await wait(500);
-        this.foregroundElm.clear();
     }
 }
 
 class CreateNoteDialog extends ModalDialog {
+    public onNoteCreated = new EventHandler<NoteData>();
+
+    private inputsContainer: Elm;
+    private typeSelectElm: Elm<"select">;
+
+    private noteTypeIndex?: number;
+    private inputElms?: Elm<"input">[];
+
     constructor(private deck: Deck) {
         super("createNoteDialog");
+
+        this.foregroundElm.append(
+            new Elm("h2").append("Create Note"),
+            this.typeSelectElm = new Elm("select").class("typeSelect")
+                .on("change", () => this.updateInputsElm()),
+            this.inputsContainer = new Elm().class("inputs"),
+            new Elm("button").append("Add")
+                .on("click", () => this.submit())
+        );
+
+        this.loadNoteTypes();
+        this.updateInputsElm();
+        this.show();
     }
 
-    public async requestCreateNote(): Promise<NoteData> {
-        await this.show(new Elm().append("Create note"));
+    private loadNoteTypes() {
+        const noteTypes = this.deck.getNoteTypes();
 
-        const type = parseInt(await promptUser("Type:", this.foregroundElm));
-        const f1 = await promptUser("Field 1:", this.foregroundElm);
-        const f2 = await promptUser("Field 2:", this.foregroundElm);
-        return [type, [f1, f2], []];
+        for (let i = 0; i < noteTypes.length; i++) {
+            const noteType = noteTypes[i];
+            this.typeSelectElm.append(
+                new Elm("option").append(noteType.name).attribute("value", i.toString())
+            );
+        }
+    }
+
+    private updateInputsElm() {
+        const noteTypes = this.deck.getNoteTypes();
+
+        this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
+        this.inputElms = [];
+        this.inputsContainer.clear();
+
+        const noteType = noteTypes[this.noteTypeIndex];
+
+        for (const fieldName of noteType.fieldNames) {
+            const inputElm = new Elm("input").class("cardFieldInput");
+
+            this.inputElms.push(inputElm);
+            this.inputsContainer.append(
+                new Elm("label").class("cardFieldLabel").append(fieldName, inputElm)
+            );
+        }
+    }
+
+    private submit() {
+        if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
+        this.onNoteCreated.dispatch([
+            this.noteTypeIndex,
+            this.inputElms.map(e => e.getHTMLElement().value)
+        ]);
+
+        for (const inputElm of this.inputElms) {
+            inputElm.getHTMLElement().value = "";
+        }
+        this.inputElms[0].getHTMLElement().focus();
     }
 }
 
