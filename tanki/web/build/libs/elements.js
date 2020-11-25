@@ -57,23 +57,6 @@ var Elm = /** @class */ (function () {
     Elm.prototype.appendAsFirst = function (elm) {
         this.elm.insertBefore(this._anyToNode(elm), this.elm.firstChild);
     };
-    Elm.prototype._anyToNode = function (any) {
-        if (any instanceof Elm) {
-            return any.elm;
-        }
-        else if (typeof any === "string") {
-            return document.createTextNode(any);
-        }
-        else if (any instanceof Node) {
-            return any;
-        }
-        else if (any !== undefined && any !== null) {
-            return document.createTextNode(any.toString());
-        }
-        else {
-            return document.createTextNode("");
-        }
-    };
     Elm.prototype.appendTo = function (parent) {
         if (parent instanceof Elm) {
             parent.append(this.elm);
@@ -128,6 +111,26 @@ var Elm = /** @class */ (function () {
         this.elm.setAttribute(key, value || "true");
         return this;
     };
+    Elm.prototype.getHTMLElement = function () {
+        return this.elm;
+    };
+    Elm.prototype._anyToNode = function (any) {
+        if (any instanceof Elm) {
+            return any.elm;
+        }
+        else if (typeof any === "string") {
+            return document.createTextNode(any);
+        }
+        else if (any instanceof Node) {
+            return any;
+        }
+        else if (any !== undefined && any !== null) {
+            return document.createTextNode(any.toString());
+        }
+        else {
+            return document.createTextNode("");
+        }
+    };
     return Elm;
 }());
 var Component = /** @class */ (function (_super) {
@@ -135,8 +138,7 @@ var Component = /** @class */ (function (_super) {
     function Component(name) {
         var _this = _super.call(this) || this;
         _this.name = name;
-        _this.name = name;
-        _this.class(_this.name);
+        _this.class(name);
         return _this;
     }
     return Component;

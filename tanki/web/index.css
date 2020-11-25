@@ -62,7 +62,7 @@ body {
 }
 
 .modalDialog.showing .modalBackground {
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(1.1px);
     background-color: #0000007c;
     transition: background-color 0.15s ease;
 }
@@ -71,10 +71,22 @@ body {
     position: relative;
     z-index: 1;
 
+    background-color: #ffffff;
+
     display: block;
     width: auto;
     height: auto;
     max-width: 380px;
     max-height: 80vh;
-    background-color: #ffffff;
+    padding: 8px;
+}
+
+.createNoteDialog .cardFieldLabel {
+    display: block;
+    font-size: 0.8em;
+    margin-bottom: 8px;
+}
+
+.createNoteDialog .cardFieldInput {
+    display: block;
 }

@@ -41,6 +41,9 @@ var Deck = /** @class */ (function () {
         }
         if (card.data[0] === CardState.new) {
             // copy into actual data object
+            if (typeof card.parentNote[2] !== "object") {
+                card.parentNote[2] = [];
+            }
             card.parentNote[2][card.cardTypeID] = card.data;
             //             .cardData
             card.data[0] = CardState.seen;
@@ -62,7 +65,11 @@ var Deck = /** @class */ (function () {
     };
     Deck.prototype.getMinutesToNextCard = function () {
         var nowMinute = getCurrMinuteFloored();
-        return this.seenAndLearningCardsSorted[0].data[3] - nowMinute;
+        var firstCard = this.seenAndLearningCardsSorted[0];
+        if (!firstCard) {
+            return;
+        }
+        return firstCard.data[3] - nowMinute;
     };
     Deck.prototype.getCardCount = function () {
         return {
@@ -76,6 +83,9 @@ var Deck = /** @class */ (function () {
      * the boundary where a card due that's due becomes not due.
      */
     Deck.prototype.getDueCardsCount = function () {
+        if (this.seenAndLearningCardsSorted.length <= 0) {
+            return 0;
+        }
         var currMinute = getCurrMinuteFloored();
         // algorithm: binary search for boundary
         var bottom = 0;
@@ -113,7 +123,7 @@ var Deck = /** @class */ (function () {
             var noteType = this.data.noteTypes[noteID];
             var noteType_NumCardType = noteType.cardTypes.length;
             for (var i = 0; i < noteType_NumCardType; i++) {
-                var card = note[2][i];
+                var card = typeof note[2] === "object" ? note[2][i] : undefined;
                 if (card === 0 || card === undefined || card[0] === CardState.new) {
                     this.newCards.push(new Card(arrayCopy(this.newCardSettings), i, note));
                 }

@@ -48,7 +48,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import { Component, Elm } from "./libs/elements.js";
-import { promptUser, wait } from "./utils.js";
+import { EventHandler, wait } from "./utils.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -124,16 +124,20 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     DeckPresenter.prototype.openCreateNoteDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var createNoteDialog, noteData;
+            var createNoteDialog, data;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         this.exitCardPresenter();
                         createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-                        return [4 /*yield*/, createNoteDialog.requestCreateNote()];
+                        return [4 /*yield*/, new Promise(function (res) {
+                                createNoteDialog.onNoteCreated.addHandler(function (data) {
+                                    res(data);
+                                });
+                            })];
                     case 1:
-                        noteData = _a.sent();
-                        console.log(noteData);
+                        data = _a.sent();
+                        this.deck.addNote(data);
                         createNoteDialog.remove();
                         return [2 /*return*/];
                 }
@@ -176,14 +180,13 @@ var ModalDialog = /** @class */ (function (_super) {
             });
         });
     };
-    ModalDialog.prototype.show = function (elm) {
+    ModalDialog.prototype.show = function () {
         return __awaiter(this, void 0, void 0, function () {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0: return [4 /*yield*/, wait(1)];
                     case 1:
                         _a.sent();
-                        this.foregroundElm.append(elm);
                         this.class("showing");
                         return [2 /*return*/];
                 }
@@ -199,7 +202,6 @@ var ModalDialog = /** @class */ (function (_super) {
                         return [4 /*yield*/, wait(500)];
                     case 1:
                         _a.sent();
-                        this.foregroundElm.clear();
                         return [2 /*return*/];
                 }
             });
@@ -212,30 +214,48 @@ var CreateNoteDialog = /** @class */ (function (_super) {
     function CreateNoteDialog(deck) {
         var _this = _super.call(this, "createNoteDialog") || this;
         _this.deck = deck;
+        _this.onNoteCreated = new EventHandler();
+        _this.foregroundElm.append(new Elm("h2").append("Create Note"), _this.typeSelectElm = new Elm("select").class("typeSelect")
+            .on("change", function () { return _this.updateInputsElm(); }), _this.inputsContainer = new Elm().class("inputs"), new Elm("button").append("Add")
+            .on("click", function () { return _this.submit(); }));
+        _this.loadNoteTypes();
+        _this.updateInputsElm();
+        _this.show();
         return _this;
     }
-    CreateNoteDialog.prototype.requestCreateNote = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var type, _a, f1, f2;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0: return [4 /*yield*/, this.show(new Elm().append("Create note"))];
-                    case 1:
-                        _b.sent();
-                        _a = parseInt;
-                        return [4 /*yield*/, promptUser("Type:", this.foregroundElm)];
-                    case 2:
-                        type = _a.apply(void 0, [_b.sent()]);
-                        return [4 /*yield*/, promptUser("Field 1:", this.foregroundElm)];
-                    case 3:
-                        f1 = _b.sent();
-                        return [4 /*yield*/, promptUser("Field 2:", this.foregroundElm)];
-                    case 4:
-                        f2 = _b.sent();
-                        return [2 /*return*/, [type, [f1, f2], []]];
-                }
-            });
-        });
+    CreateNoteDialog.prototype.loadNoteTypes = function () {
+        var noteTypes = this.deck.getNoteTypes();
+        for (var i = 0; i < noteTypes.length; i++) {
+            var noteType = noteTypes[i];
+            this.typeSelectElm.append(new Elm("option").append(noteType.name).attribute("value", i.toString()));
+        }
+    };
+    CreateNoteDialog.prototype.updateInputsElm = function () {
+        var noteTypes = this.deck.getNoteTypes();
+        this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
+        this.inputElms = [];
+        this.inputsContainer.clear();
+        var noteType = noteTypes[this.noteTypeIndex];
+        for (var _i = 0, _a = noteType.fieldNames; _i < _a.length; _i++) {
+            var fieldName = _a[_i];
+            var inputElm = new Elm("input").class("cardFieldInput");
+            this.inputElms.push(inputElm);
+            this.inputsContainer.append(new Elm("label").class("cardFieldLabel").append(fieldName, inputElm));
+        }
+    };
+    CreateNoteDialog.prototype.submit = function () {
+        if (this.noteTypeIndex === undefined || !this.inputElms) {
+            return;
+        }
+        this.onNoteCreated.dispatch([
+            this.noteTypeIndex,
+            this.inputElms.map(function (e) { return e.getHTMLElement().value; })
+        ]);
+        for (var _i = 0, _a = this.inputElms; _i < _a.length; _i++) {
+            var inputElm = _a[_i];
+            inputElm.getHTMLElement().value = "";
+        }
+        this.inputElms[0].getHTMLElement().focus();
     };
     return CreateNoteDialog;
 }(ModalDialog));
@@ -250,6 +270,8 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.graduatedCardsElm = new Elm().class("graduated");
         _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(_this.newCardsElm, _this.dueCardsElm, _this.graduatedCardsElm));
         _this.nextCardInMinutesElm.append("~");
+        //* temporary quality-of-life
+        setInterval(function () { return _this.update(); }, 30e3);
         return _this;
     }
     DeckTimeline.prototype.update = function () {
