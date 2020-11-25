@@ -99,9 +99,8 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
         return this;
     }
 
-    getValue(): string {
-        // @ts-ignore
-        return this.elm.value ?? this.elm.innerHTML;
+    getHTMLElement(): HTMLElementTagNameMap[T] {
+        return this.elm;
     }
 
     private _anyToNode(any: any): Node {
