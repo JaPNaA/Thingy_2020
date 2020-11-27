@@ -1,7 +1,7 @@
 import { NoteTypeData, CardTypeData, NoteData } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
-import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, promptUser, wait } from "./utils.js";
+import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;

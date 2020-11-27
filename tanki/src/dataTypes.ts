@@ -58,6 +58,7 @@ export interface CardSchedulingSettingsData {
     skipCardIfIsNewButAnsweredCorrectly: boolean;
     learningStepsMinutes: number[];
     initialInterval: number;
+    baseIntervalMultiplier: number;
 }
 
 export enum CardState {

@@ -1,25 +1,12 @@
-import { CardData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
+import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
 import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
     public data: DeckDataInteract;
 
-    private graduatedCards: Card[] = [];
-    private seenAndLearningCardsSorted: Card[] = [];
+    private graduatedCards: ScheduledCard[] = [];
+    private seenAndLearningCardsSorted: ScheduledCard[] = [];
     private newCards: Card[] = [];
-
-    private newCardSettings: CardData = [
-        /** State */
-        CardState.new,
-        /** Interval in minutes */
-        1,
-        /** Difficulty factor */
-        1,
-        /** Due date in minutes ( [Date#getTime() / 60_000] )*/
-        0,
-        /** Times wrong history */
-        []
-    ];
 
     constructor(data: DeckData) {
         this.data = new DeckDataInteract(data);
@@ -36,27 +23,57 @@ export class Deck {
         }
     }
 
+    /** update data based on results */
     public applyResultToCard(card: Card, result: number) {
-        // update data based on results
-        if (result === 1) {
-            card.interval *= 2 * card.difficultyFactor;
-            card.dueMinutes = getCurrMinuteFloored() + card.interval;
-        } else {
-            card.dueMinutes = getCurrMinuteFloored() + card.interval;
-        }
-
         if (card.state === CardState.new) {
-            card._addCardDataToDataObject();
-
-            card.state = CardState.seen;
-
+            const schedulingSettings = this.data.getCardSchedulingSettings(card);
             const newCardIndex = this.newCards.indexOf(card);
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
+            const newCard = this.newCards.splice(newCardIndex, 1)[0];
 
-            this.seenAndLearningCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
+            let state = CardState.learn;
+            if (result === 1 && schedulingSettings.skipCardIfIsNewButAnsweredCorrectly) {
+                state = CardState.graduated;
+            }
+
+            const scheduledNewCard = new ScheduledCard([
+                /** State */
+                state,
+                /** Interval in minutes */
+                schedulingSettings.initialInterval,
+                /** Difficulty factor */
+                1,
+                /** Due date in minutes ( [Date#getTime() / 60_000] )*/
+                0,
+                /** Times wrong history */
+                []
+            ], newCard.cardTypeID, newCard.parentNote);
+            scheduledNewCard._attachCardSchedulingDataToParentNote();
+            this.updateCardIntervalWithResult(scheduledNewCard, result);
+
+            this.seenAndLearningCardsSorted.push(scheduledNewCard);
+        } else if (card instanceof ScheduledCard) {
+            this.updateCardIntervalWithResult(card, result);
+        } else {
+            throw new Error();
         }
 
         this.sortSeenAndReviewCards();
+    }
+
+    private updateCardIntervalWithResult(card: ScheduledCard, result: number) {
+        const schedulingSettings = this.data.getCardSchedulingSettings(card);
+
+        if (card.state === CardState.seen) {
+            if (result === 1) {
+                card.interval *= schedulingSettings.baseIntervalMultiplier * card.difficultyFactor;
+                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            } else {
+                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            }
+        } else {
+            throw new Error("lol not supported yet");
+        }
     }
 
     public addNote(data: NoteData) {
@@ -133,15 +150,15 @@ export class Deck {
 
                 if (card === 0 || card === undefined || card[0] === CardState.new) {
                     this.newCards.push(
-                        new Card(arrayCopy(this.newCardSettings), i, note)
+                        new Card(i, note)
                     )
                 } else if (card[0] === CardState.graduated) {
                     this.graduatedCards.push(
-                        new Card(card, i, note)
+                        new ScheduledCard(card, i, note)
                     );
                 } else if (card[0] === CardState.seen || card[0] === CardState.learn) {
                     this.seenAndLearningCardsSorted.push(
-                        new Card(card, i, note)
+                        new ScheduledCard(card, i, note)
                     );
                 } else {
                     console.error("Unexpected card", card, note, this.data);
@@ -179,6 +196,10 @@ class DeckDataInteract {
         return this.deckData.noteTypes[noteTypeIndex];
     }
 
+    public getCardSchedulingSettings(card: Card): CardSchedulingSettingsData {
+        return this.deckData.schedulingSettings;
+    }
+
     public _addNote(note: NoteData): void {
         this.deckData.notes.push(note);
     }
@@ -186,10 +207,21 @@ class DeckDataInteract {
 
 export class Card {
     constructor(
-        private data: CardData,
         public cardTypeID: number,
         public parentNote: NoteData
     ) { }
+
+    public get state(): CardState { return CardState.new; }
+}
+
+class ScheduledCard extends Card {
+    constructor(
+        private data: CardData,
+        cardTypeID: number,
+        parentNote: NoteData
+    ) {
+        super(cardTypeID, parentNote);
+    }
 
     public get state(): CardState { return this.data[0]; }
     public set state(state: CardState) { this.state = state; }
@@ -220,7 +252,7 @@ export class Card {
         return this.data[5];
     }
 
-    public _addCardDataToDataObject() {
+    public _attachCardSchedulingDataToParentNote() {
         // this.parentNote[2] is cardData of parent note
 
         // optional field, so add if not existing
