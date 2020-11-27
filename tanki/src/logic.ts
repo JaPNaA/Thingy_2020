@@ -2,6 +2,8 @@ import { CardData, CardState, DeckData, NoteData, NoteTypeData } from "./dataTyp
 import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
+    public data: DeckDataInteract;
+
     private graduatedCards: Card[] = [];
     private seenAndLearningCardsSorted: Card[] = [];
     private newCards: Card[] = [];
@@ -17,7 +19,8 @@ export class Deck {
         0
     ];
 
-    constructor(private data: DeckData) {
+    constructor(data: DeckData) {
+        this.data = new DeckDataInteract(data);
         this.generateCardArrays();
     }
 
@@ -34,24 +37,16 @@ export class Deck {
     public applyResultToCard(card: Card, result: number) {
         // update data based on results
         if (result === 1) {
-            card.data[1] *= 2 * card.data[2];
-            //       .interval           .difficultyFactor
-
-            card.data[3] = getCurrMinuteFloored() + card.data[1];
-            //       .dueDate                         .interval
+            card.interval *= 2 * card.difficultyFactor;
+            card.dueMinutes = getCurrMinuteFloored() + card.interval;
         } else {
-            card.data[3] = getCurrMinuteFloored() + card.data[1];
-            //       .dueDate                         .interval
+            card.dueMinutes = getCurrMinuteFloored() + card.interval;
         }
 
-        if (card.data[0] === CardState.new) {
-            // copy into actual data object
-            if (typeof card.parentNote[2] !== "object") { card.parentNote[2] = []; }
-            card.parentNote[2][card.cardTypeID] = card.data;
-            //             .cardData
+        if (card.state === CardState.new) {
+            card._addCardDataToDataObject();
 
-            card.data[0] = CardState.seen;
-            //       .state
+            card.state = CardState.seen;
 
             const newCardIndex = this.newCards.indexOf(card);
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
@@ -63,12 +58,8 @@ export class Deck {
     }
 
     public addNote(data: NoteData) {
-        this.data.notes.push(data);
+        this.data._addNote(data);
         this.generateCardArrays();
-    }
-
-    public getNoteTypes(): NoteTypeData[] {
-        return this.data.noteTypes;
     }
 
     public getMinutesToNextCard(): number | undefined {
@@ -126,18 +117,13 @@ export class Deck {
         throw new Error("Looped too many times. Is array sorted?");
     }
 
-    public exportToString(): string {
-        return JSON.stringify(this.data);
-    }
-
     private generateCardArrays() {
         this.graduatedCards.length = 0;
         this.newCards.length = 0;
         this.seenAndLearningCardsSorted.length = 0;
 
-        for (const note of this.data.notes) {
-            const noteID = note[0];
-            const noteType = this.data.noteTypes[noteID];
+        for (const note of this.data.getNotes()) {
+            const noteType = this.data.noteGetNoteType(note);
             const noteType_NumCardType = noteType.cardTypes.length;
 
             for (let i = 0; i < noteType_NumCardType; i++) {
@@ -171,10 +157,55 @@ export class Deck {
     }
 }
 
+class DeckDataInteract {
+    constructor(private deckData: DeckData) { }
+
+    public toJSON() {
+        return JSON.stringify(this.deckData);
+    }
+
+    public getNoteTypes(): NoteTypeData[] {
+        return this.deckData.noteTypes;
+    }
+
+    public getNotes(): NoteData[] {
+        return this.deckData.notes;
+    }
+
+    public noteGetNoteType(note: NoteData): NoteTypeData {
+        const noteTypeIndex = note[0];
+        return this.deckData.noteTypes[noteTypeIndex];
+    }
+
+    public _addNote(note: NoteData): void {
+        this.deckData.notes.push(note);
+    }
+}
+
 export class Card {
     constructor(
         public data: CardData,
         public cardTypeID: number,
         public parentNote: NoteData
     ) { }
+
+    public get state(): CardState { return this.data[0]; }
+    public set state(state: CardState) { this.state = state; }
+    public get interval(): number { return this.data[1]; }
+    public set interval(minutes: number) { this.data[1] = minutes; }
+    public get difficultyFactor(): number { return this.data[2]; }
+    public set difficultyFactor(factor: number) { this.data[2] = factor; }
+    public get dueMinutes(): number { return this.data[3]; }
+    public set dueMinutes(minutes: number) { this.data[3] = minutes; }
+
+    public _addCardDataToDataObject() {
+        // this.parentNote[2] is cardData of parent note
+
+        // optional field, so add if not existing
+        if (typeof this.parentNote[2] !== "object") {
+            this.parentNote[2] = [];
+        }
+
+        this.parentNote[2][this.cardTypeID] = this.data;
+    }
 }

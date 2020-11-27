@@ -160,7 +160,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private loadNoteTypes() {
-        const noteTypes = this.deck.getNoteTypes();
+        const noteTypes = this.deck.data.getNoteTypes();
 
         for (let i = 0; i < noteTypes.length; i++) {
             const noteType = noteTypes[i];
@@ -171,7 +171,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private updateInputsElm() {
-        const noteTypes = this.deck.getNoteTypes();
+        const noteTypes = this.deck.data.getNoteTypes();
 
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
         this.inputElms = [];
@@ -249,7 +249,7 @@ class CardPresenter extends Component {
 
     constructor(deck: Deck) {
         super("cardPresenter");
-        this.noteTypes = deck.getNoteTypes();
+        this.noteTypes = deck.data.getNoteTypes();
         this.append(this.cardContainer, this.inputGetter);
     }
 

@@ -9,7 +9,7 @@ async function main() {
     const deck = new Deck(deckData);
 
     document.getElementById("writeOut")?.addEventListener("click", function () {
-        const exportStr = deck.exportToString();
+        const exportStr = deck.data.toJSON();
         fs.writeFileSync(deckDataPath, exportStr);
     });
 
