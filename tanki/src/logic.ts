@@ -29,7 +29,7 @@ export class Deck {
     public selectCard(): Card | undefined {
         const nowMinute = getCurrMinuteFloored();
 
-        if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].data[3] <= nowMinute) {
+        if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].dueMinutes <= nowMinute) {
             return this.seenAndLearningCardsSorted[0];
         } else if (this.newCards.length > 0) {
             return this.newCards[0];
@@ -56,7 +56,7 @@ export class Deck {
             this.seenAndLearningCardsSorted.push(this.newCards.splice(newCardIndex, 1)[0]);
         }
 
-        this.sortSeenCards();
+        this.sortSeenAndReviewCards();
     }
 
     public addNote(data: NoteData) {
@@ -68,7 +68,7 @@ export class Deck {
         const nowMinute = getCurrMinuteFloored();
         const firstCard = this.seenAndLearningCardsSorted[0];
         if (!firstCard) { return; }
-        return firstCard.data[3] - nowMinute;
+        return firstCard.dueMinutes - nowMinute;
     }
 
     public getCardCount() {
@@ -102,14 +102,14 @@ export class Deck {
         ) {
             const middle = Math.floor((bottom + top) / 2);
             if (middle === bottom) {
-                if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+                if (this.seenAndLearningCardsSorted[middle].dueMinutes > currMinute) {
                     return top - 1;
                 } else {
                     return top;
                 }
             }
 
-            if (this.seenAndLearningCardsSorted[middle].data[3] > currMinute) {
+            if (this.seenAndLearningCardsSorted[middle].dueMinutes > currMinute) {
                 top = middle;
             } else {
                 bottom = middle;
@@ -150,12 +150,12 @@ export class Deck {
             }
         }
 
-        this.sortSeenCards();
+        this.sortSeenAndReviewCards();
     }
 
     /** sort latest due first */
-    private sortSeenCards() {
-        this.seenAndLearningCardsSorted.sort((a, b) => a.data[3] - b.data[3]);
+    private sortSeenAndReviewCards() {
+        this.seenAndLearningCardsSorted.sort((a, b) => a.dueMinutes - b.dueMinutes);
     }
 }
 
@@ -186,7 +186,7 @@ class DeckDataInteract {
 
 export class Card {
     constructor(
-        public data: CardData,
+        private data: CardData,
         public cardTypeID: number,
         public parentNote: NoteData
     ) { }
