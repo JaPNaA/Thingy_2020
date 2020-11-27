@@ -2,18 +2,21 @@ export interface DeckData {
     version: string;
     noteTypes: NoteTypeData[];
     notes: NoteData[];
+    schedulingSettings: CardSchedulingSettingsData;
 }
 
 export interface NoteTypeData {
     name: string;
     fieldNames: string[];
     cardTypes: CardTypeData[];
+    schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
 }
 
 export interface CardTypeData {
     name: string;
     frontTemplate: string;
     backTemplate: string;
+    schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
 }
 
 export interface NoteData extends Array<any> {
@@ -35,14 +38,14 @@ interface CardDataStandard extends Array<any> {
     /** Due date in minutes ( [Date#getTime() / 60_000] )*/
     3: number;
     /** Times wrong history (0 for correct) */
-    4: number[] | undefined | 0;
+    4: number[] | undefined | 0; //* not used in code yet
 }
 
 interface CardDataLearning extends CardDataStandard {
     /** State */
     0: CardState.learn;
     /** Current learning interval */
-    5: number;
+    5: number; //* not used in code yet
 }
 
 export function isCardLearning(card: CardData): card is CardDataLearning {
