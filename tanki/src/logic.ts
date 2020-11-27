@@ -1,5 +1,5 @@
 import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
-import { getCurrMinuteFloored } from "./utils.js";
+import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
     public data: DeckDataInteract;
@@ -49,11 +49,11 @@ export class Deck {
                 []
             ], newCard.cardTypeID, newCard.parentNote);
             scheduledNewCard._attachCardSchedulingDataToParentNote();
-            this.updateCardIntervalWithResult(scheduledNewCard, result);
+            this.updateCardScheduleWithResult(scheduledNewCard, result);
 
             this.seenAndLearningCardsSorted.push(scheduledNewCard);
         } else if (card instanceof ScheduledCard) {
-            this.updateCardIntervalWithResult(card, result);
+            this.updateCardScheduleWithResult(card, result);
         } else {
             throw new Error();
         }
@@ -61,7 +61,7 @@ export class Deck {
         this.sortSeenAndReviewCards();
     }
 
-    private updateCardIntervalWithResult(card: ScheduledCard, result: number) {
+    private updateCardScheduleWithResult(card: ScheduledCard, result: number) {
         const schedulingSettings = this.data.getCardSchedulingSettings(card);
 
         if (card.state === CardState.seen) {
@@ -70,6 +70,27 @@ export class Deck {
                 card.dueMinutes = getCurrMinuteFloored() + card.interval;
             } else {
                 card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            }
+        } else if (card.state === CardState.learn) {
+            if (result === 0) {
+                card.learningInterval = schedulingSettings.learningStepsMinutes[0];
+                card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+            } else if (result === 1) {
+                const nextStepIndex = binaryBoundarySearch(
+                    schedulingSettings.learningStepsMinutes,
+                    step => step > card.learningInterval
+                );
+
+                console.log(nextStepIndex);
+
+                // finished all learning steps check
+                if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
+                    card.state = CardState.seen;
+                    this.updateCardScheduleWithResult(card, result);
+                } else {
+                    card.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
+                    card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+                }
             }
         } else {
             throw new Error("lol not supported yet");
@@ -227,6 +248,12 @@ class ScheduledCard extends Card {
             throw new Error("Tried to get learning interval for card not in learning");
         }
         return this.data[5];
+    }
+    public set learningInterval(interval: number) {
+        if (!isCardLearning(this.data)) {
+            throw new Error("Tried to setting learning interval for card not in learning");
+        }
+        this.data[5] = interval;
     }
 
     public _attachCardSchedulingDataToParentNote() {
