@@ -107,33 +107,10 @@ export class Deck {
 
         const currMinute = getCurrMinuteFloored();
 
-        // algorithm: binary search for boundary
-        let bottom = 0;
-        let top = this.seenAndLearningCardsSorted.length;
-
-
-        // while(true) loop with protection
-        for (
-            let i = 0, max = Math.log2(this.seenAndLearningCardsSorted.length) + 2;
-            i < max; i++
-        ) {
-            const middle = Math.floor((bottom + top) / 2);
-            if (middle === bottom) {
-                if (this.seenAndLearningCardsSorted[middle].dueMinutes > currMinute) {
-                    return top - 1;
-                } else {
-                    return top;
-                }
-            }
-
-            if (this.seenAndLearningCardsSorted[middle].dueMinutes > currMinute) {
-                top = middle;
-            } else {
-                bottom = middle;
-            }
-        }
-
-        throw new Error("Looped too many times. Is array sorted?");
+        return binaryBoundarySearch(
+            this.seenAndLearningCardsSorted,
+            card => card.dueMinutes > currMinute
+        );
     }
 
     private generateCardArrays() {

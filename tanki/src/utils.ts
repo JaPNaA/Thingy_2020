@@ -8,6 +8,39 @@ export function getCurrMinuteFloored(): number {
     return Math.floor(Date.now() / 60e3);
 }
 
+/**
+ * Returns the boundary at which isPastCheck first fails
+ */
+export function binaryBoundarySearch<T>(
+    array: T[], isPastCheck: (a: T) => boolean
+): number {
+    let bottom = 0;
+    let top = array.length;
+
+    // while(true) loop with protection
+    for (
+        let i = 0, max = Math.log2(array.length) + 2;
+        i < max; i++
+    ) {
+        const middle = Math.floor((bottom + top) / 2);
+        if (middle === bottom) {
+            if (isPastCheck(array[middle])) {
+                return top - 1;
+            } else {
+                return top;
+            }
+        }
+
+        if (isPastCheck(array[middle])) {
+            top = middle;
+        } else {
+            bottom = middle;
+        }
+    }
+
+    throw new Error("Looped too many times. Is array sorted (smallest first)?");
+}
+
 export interface PromiseRejectFunc { (reason?: any): void; }
 export interface PromiseResolveFunc<T> { (result: T): void; }
 
