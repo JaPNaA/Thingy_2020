@@ -1,5 +1,5 @@
 import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
-import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
+import { getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
     public data: DeckDataInteract;
