@@ -3,7 +3,8 @@
     "schedulingSettings": {
         "skipCardIfIsNewButAnsweredCorrectly": true,
         "learningStepsMinutes": [0, 1, 10],
-        "initialInterval": 206
+        "initialInterval": 206,
+        "baseIntervalMultiplier": 2.5
     },
     "noteTypes": [
         {
