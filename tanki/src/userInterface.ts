@@ -243,7 +243,7 @@ class CardPresenter extends Component {
         card: Card;
     };
 
-    private noteTypes?: NoteTypeData[];
+    private noteTypes?: Readonly<NoteTypeData[]>;
 
     private cardContainer = new Elm().class("cardContainer");
 

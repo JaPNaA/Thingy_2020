@@ -1,4 +1,5 @@
 export interface DeckData {
+    version: string;
     noteTypes: NoteTypeData[];
     notes: NoteData[];
 }
@@ -24,7 +25,7 @@ export interface NoteData extends Array<any> {
     2?: (CardData | undefined | 0)[] | undefined | 0;
 }
 
-export interface CardData extends Array<any> {
+interface CardDataStandard extends Array<any> {
     /** State */
     0: CardState;
     /** Interval in minutes */
@@ -33,6 +34,27 @@ export interface CardData extends Array<any> {
     2: number;
     /** Due date in minutes ( [Date#getTime() / 60_000] )*/
     3: number;
+    /** Times wrong history (0 for correct) */
+    4: number[] | undefined | 0;
+}
+
+interface CardDataLearning extends CardDataStandard {
+    /** State */
+    0: CardState.learn;
+    /** Current learning interval */
+    5: number;
+}
+
+export function isCardLearning(card: CardData): card is CardDataLearning {
+    return card[0] === CardState.learn;
+}
+
+export type CardData = CardDataStandard | CardDataLearning;
+
+export interface CardSchedulingSettingsData {
+    skipCardIfIsNewButAnsweredCorrectly: boolean;
+    learningStepsMinutes: number[];
+    initialInterval: number;
 }
 
 export enum CardState {

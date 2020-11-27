@@ -1,4 +1,4 @@
-import { CardData, CardState, DeckData, NoteData, NoteTypeData } from "./dataTypes.js";
+import { CardData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
 import { getCurrMinuteFloored, arrayCopy } from "./utils.js";
 
 export class Deck {
@@ -16,7 +16,9 @@ export class Deck {
         /** Difficulty factor */
         1,
         /** Due date in minutes ( [Date#getTime() / 60_000] )*/
-        0
+        0,
+        /** Times wrong history */
+        []
     ];
 
     constructor(data: DeckData) {
@@ -164,15 +166,15 @@ class DeckDataInteract {
         return JSON.stringify(this.deckData);
     }
 
-    public getNoteTypes(): NoteTypeData[] {
+    public getNoteTypes(): Readonly<NoteTypeData[]> {
         return this.deckData.noteTypes;
     }
 
-    public getNotes(): NoteData[] {
+    public getNotes(): Readonly<NoteData[]> {
         return this.deckData.notes;
     }
 
-    public noteGetNoteType(note: NoteData): NoteTypeData {
+    public noteGetNoteType(note: NoteData): Readonly<NoteTypeData> {
         const noteTypeIndex = note[0];
         return this.deckData.noteTypes[noteTypeIndex];
     }
@@ -197,6 +199,26 @@ export class Card {
     public set difficultyFactor(factor: number) { this.data[2] = factor; }
     public get dueMinutes(): number { return this.data[3]; }
     public set dueMinutes(minutes: number) { this.data[3] = minutes; }
+    public get timesWrongHistory(): number[] | undefined {
+        if (this.data[4] === 0) { return; }
+        return this.data[4];
+    }
+    public addIncorrectCountToRollingHistory(incorrectCount: number) {
+        if (this.data[4] === 0 || this.data[4] === undefined) {
+            this.data[4] = [];
+        }
+        this.data[4].push(incorrectCount);
+        if (this.data[4].length > 5) {
+            this.data[4].shift();
+        }
+    }
+
+    public get learningInterval(): number {
+        if (!isCardLearning(this.data)) {
+            throw new Error("Tried to get learning interval for card not in learning");
+        }
+        return this.data[5];
+    }
 
     public _addCardDataToDataObject() {
         // this.parentNote[2] is cardData of parent note
