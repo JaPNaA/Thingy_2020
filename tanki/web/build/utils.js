@@ -1,29 +1,36 @@
-import { Elm } from "./libs/elements.js";
 export function wait(millis) {
     return new Promise(function (res) {
         setTimeout(function () { return res(); }, millis);
     });
 }
-export function promptUser(message, parent) {
-    var promptContainer = new Elm().class("prompt").append(new Elm().append(message));
-    var input = document.createElement("input");
-    var promise = new Promise(function (res) {
-        return input.addEventListener("change", function () {
-            res(input.value);
-            promptContainer.remove();
-        });
-    });
-    promptContainer.append(input);
-    //* abbr -> temp fix; this function is temporary anyway
-    (parent || new Elm(document.body)).append(promptContainer);
-    return promise;
-}
 export function getCurrMinuteFloored() {
     return Math.floor(Date.now() / 60e3);
 }
-export function arrayCopy(arr) {
-    // @ts-ignore
-    return arr.slice(0);
+/**
+ * Returns the boundary at which isPastCheck first fails
+ */
+export function binaryBoundarySearch(array, isPastCheck) {
+    var bottom = 0;
+    var top = array.length;
+    // while(true) loop with protection
+    for (var i = 0, max = Math.log2(array.length) + 2; i < max; i++) {
+        var middle = Math.floor((bottom + top) / 2);
+        if (middle === bottom) {
+            if (isPastCheck(array[middle])) {
+                return top - 1;
+            }
+            else {
+                return top;
+            }
+        }
+        if (isPastCheck(array[middle])) {
+            top = middle;
+        }
+        else {
+            bottom = middle;
+        }
+    }
+    throw new Error("Looped too many times. Is array sorted (smallest first)?");
 }
 var EventHandler = /** @class */ (function () {
     function EventHandler() {

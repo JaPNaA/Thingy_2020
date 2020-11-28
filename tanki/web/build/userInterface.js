@@ -224,14 +224,14 @@ var CreateNoteDialog = /** @class */ (function (_super) {
         return _this;
     }
     CreateNoteDialog.prototype.loadNoteTypes = function () {
-        var noteTypes = this.deck.getNoteTypes();
+        var noteTypes = this.deck.data.getNoteTypes();
         for (var i = 0; i < noteTypes.length; i++) {
             var noteType = noteTypes[i];
             this.typeSelectElm.append(new Elm("option").append(noteType.name).attribute("value", i.toString()));
         }
     };
     CreateNoteDialog.prototype.updateInputsElm = function () {
-        var noteTypes = this.deck.getNoteTypes();
+        var noteTypes = this.deck.data.getNoteTypes();
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
         this.inputElms = [];
         this.inputsContainer.clear();
@@ -289,7 +289,7 @@ var CardPresenter = /** @class */ (function (_super) {
         var _this = _super.call(this, "cardPresenter") || this;
         _this.inputGetter = new QuickUserInputGetter();
         _this.cardContainer = new Elm().class("cardContainer");
-        _this.noteTypes = deck.getNoteTypes();
+        _this.noteTypes = deck.data.getNoteTypes();
         _this.append(_this.cardContainer, _this.inputGetter);
         return _this;
     }

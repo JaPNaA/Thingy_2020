@@ -1,3 +1,6 @@
+export function isCardLearning(card) {
+    return card[0] === CardState.learn;
+}
 export var CardState;
 (function (CardState) {
     /** Not yet shown */

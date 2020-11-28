@@ -46,7 +46,7 @@ function main() {
             deckData = JSON.parse(fs.readFileSync(deckDataPath).toString());
             deck = new Deck(deckData);
             (_a = document.getElementById("writeOut")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", function () {
-                var exportStr = deck.exportToString();
+                var exportStr = deck.data.toJSON();
                 fs.writeFileSync(deckDataPath, exportStr);
             });
             console.log(deck);
