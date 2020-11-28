@@ -222,13 +222,13 @@ class ScheduledCard extends Card {
     }
 
     public get state(): CardState { return this.data[0]; }
-    public set state(state: CardState) { this.state = state; }
+    public set state(state: CardState) { this.data[0] = state; }
     public get interval(): number { return this.data[1]; }
     public set interval(minutes: number) { this.data[1] = minutes; }
     public get difficultyFactor(): number { return this.data[2]; }
     public set difficultyFactor(factor: number) { this.data[2] = factor; }
     public get dueMinutes(): number { return this.data[3]; }
-    public set dueMinutes(minutes: number) { this.data[3] = minutes; }
+    public set dueMinutes(minutes: number) { this.data[3] = Math.round(minutes); }
     public get timesWrongHistory(): number[] | undefined {
         if (this.data[4] === 0) { return; }
         return this.data[4];
