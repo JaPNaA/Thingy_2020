@@ -5,12 +5,24 @@ export interface DeckData {
     schedulingSettings: CardSchedulingSettingsData;
 }
 
-export interface NoteTypeData {
+export interface NoteTypeDataExternal {
+    name: string;
+    src: string;
+}
+
+export interface NoteTypeDataIntegrated {
     name: string;
     fieldNames: string[];
     cardTypes: CardTypeData[];
     schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
 }
+
+export function isNoteTypeDataIntegrated(x: NoteTypeData): x is NoteTypeDataIntegrated {
+    // @ts-ignore
+    return !x.src;
+}
+
+export type NoteTypeData = NoteTypeDataExternal | NoteTypeDataIntegrated;
 
 export interface CardTypeData {
     name: string;

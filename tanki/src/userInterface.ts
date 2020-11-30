@@ -26,7 +26,7 @@ class DeckPresenter extends Component {
 
         this.cardPresenter = new CardPresenter(this.deck);
         this.deckTimeline = new DeckTimeline(this.deck);
-        this.deckTimeline.update();
+        deck.loaded.then(() => this.deckTimeline.update());
 
         this.append(
             this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
@@ -179,7 +179,7 @@ class CreateNoteDialog extends ModalDialog {
         }
     }
 
-    private updateInputsElm() {
+    private async updateInputsElm() {
         const noteTypes = this.deck.data.getNoteTypes();
 
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
@@ -188,7 +188,9 @@ class CreateNoteDialog extends ModalDialog {
 
         const noteType = noteTypes[this.noteTypeIndex];
 
-        for (const fieldName of noteType.fieldNames) {
+        for (const fieldName of
+            (await this.deck.data.getIntegratedNoteType(noteType.name)).fieldNames
+        ) {
             const inputElm = new Elm("input").class("cardFieldInput");
 
             this.inputElms.push(inputElm);
@@ -283,13 +285,10 @@ class CardPresenter extends Component {
         card: Card;
     };
 
-    private noteTypes?: Readonly<NoteTypeData[]>;
-
     private cardContainer = new Elm().class("cardContainer");
 
-    constructor(deck: Deck) {
+    constructor(private deck: Deck) {
         super("cardPresenter");
-        this.noteTypes = deck.data.getNoteTypes();
         this.append(this.cardContainer, this.inputGetter);
     }
 
@@ -298,15 +297,14 @@ class CardPresenter extends Component {
             this.discardState();
         }
 
-        if (!this.noteTypes) { throw new Error("Note types not set"); }
+        const noteTypes = this.deck.data.getNoteTypes();
 
         const cardElm = new Elm().class("card").appendTo(this.cardContainer);
 
 
-        const noteTypeID = card.parentNote[0]; // .type
-        const noteType: NoteTypeData =
-            this.noteTypes[noteTypeID];
-        const cardType: CardTypeData = noteType.cardTypes[card.cardTypeID];
+        const noteType = await this.deck.data.getIntegratedNoteType(
+            noteTypes[card.noteType].name);
+        const cardType = noteType.cardTypes[card.cardTypeID];
 
         const noteFieldNames = noteType.fieldNames;
         const cardFields = card.parentNote[1]; // .fields

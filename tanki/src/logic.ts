@@ -1,8 +1,9 @@
-import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, NoteData, NoteTypeData } from "./dataTypes.js";
+import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
     public data: DeckDataInteract;
+    public loaded: Promise<void>;
 
     private graduatedCards: ScheduledCard[] = [];
     private seenAndLearningCardsSorted: ScheduledCard[] = [];
@@ -10,7 +11,7 @@ export class Deck {
 
     constructor(data: DeckData) {
         this.data = new DeckDataInteract(data);
-        this.generateCardArrays();
+        this.loaded = this.generateCardArrays();
     }
 
     public selectCard(): Card | undefined {
@@ -134,13 +135,14 @@ export class Deck {
         );
     }
 
-    private generateCardArrays() {
+    private async generateCardArrays() {
         this.graduatedCards.length = 0;
         this.newCards.length = 0;
         this.seenAndLearningCardsSorted.length = 0;
 
         for (const note of this.data.getNotes()) {
-            const noteType = this.data.noteGetNoteType(note);
+            // todo: lazy-load external cards
+            const noteType = await this.data.getIntegratedNoteType(this.data.noteGetNoteType(note).name);
             const noteType_NumCardType = noteType.cardTypes.length;
 
             for (let i = 0; i < noteType_NumCardType; i++) {
@@ -175,6 +177,8 @@ export class Deck {
 }
 
 class DeckDataInteract {
+    private externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
+
     constructor(private deckData: DeckData) { }
 
     public toJSON() {
@@ -183,6 +187,32 @@ class DeckDataInteract {
 
     public getNoteTypes(): Readonly<NoteTypeData[]> {
         return this.deckData.noteTypes;
+    }
+
+    public async getIntegratedNoteType(noteName: string): Promise<Readonly<NoteTypeDataIntegrated>> {
+        let src: string | undefined;
+
+        for (const type of this.deckData.noteTypes) {
+            if (type.name !== noteName) { continue; }
+
+            if (isNoteTypeDataIntegrated(type)) {
+                return type;
+            } else {
+                src = type.src;
+                break;
+            }
+        }
+
+        if (!src) { throw new Error("Invalid note name"); }
+
+        const alreadyLoaded = this.externalNoteTypesCache.get(src);
+        if (alreadyLoaded) {
+            return alreadyLoaded;
+        }
+
+        const fetchResult = await fetch("../" + src).then(e => e.json());
+        this.externalNoteTypesCache.set(src, fetchResult);
+        return fetchResult;
     }
 
     public getNotes(): Readonly<NoteData[]> {
@@ -210,6 +240,7 @@ export class Card {
     ) { }
 
     public get state(): CardState { return CardState.new; }
+    public get noteType(): number { return this.parentNote[0]; }
 }
 
 class ScheduledCard extends Card {

@@ -1,0 +1,19 @@
+{
+    "name": "jishoAPIDataImportedNoteType",
+    "fieldNames": ["jsonData", "userNotes"],
+    "cardTypes": [
+        {
+            "name": "Word -> Kana",
+            "frontTemplate": "{{jsonData}}",
+            "backTemplate": "{{jsonData}}, {{userNotes}}"
+        }, {
+            "name": "Word -> Meaning",
+            "frontTemplate": "{{jsonData}}",
+            "backTemplate": "{{jsonData}}, {{userNotes}}"
+        }, {
+            "name": "Kana + Meaning -> Word",
+            "frontTemplate": "{{jsonData}}",
+            "backTemplate": "{{jsonData}}, {{userNotes}}"
+        }
+    ]
+}
