@@ -11,7 +11,7 @@ export class Deck {
 
     constructor(data: DeckData) {
         this.data = new DeckDataInteract(data);
-        this.loaded = this.generateCardArrays();
+        this.loaded = this.updateCardArrays();
     }
 
     public selectCard(): Card | undefined {
@@ -98,9 +98,9 @@ export class Deck {
         }
     }
 
-    public addNote(data: NoteData) {
-        this.data._addNote(data);
-        this.generateCardArrays();
+    public addNoteAndUpdate(data: NoteData) {
+        this.data.addNote(data);
+        this.updateCardArrays();
     }
 
     public getMinutesToNextCard(): number | undefined {
@@ -135,7 +135,8 @@ export class Deck {
         );
     }
 
-    private async generateCardArrays() {
+    // todo: make private again and listen for when cards are added
+    public async updateCardArrays() {
         this.graduatedCards.length = 0;
         this.newCards.length = 0;
         this.seenAndLearningCardsSorted.length = 0;
@@ -189,6 +190,15 @@ class DeckDataInteract {
         return this.deckData.noteTypes;
     }
 
+    public indexOfNote(noteName: string): number {
+        for (let i = 0; i < this.deckData.noteTypes.length; i++) {
+            const type = this.deckData.noteTypes[i];
+            if (type.name === noteName) { return i; }
+        }
+
+        return -1;
+    }
+
     public async getIntegratedNoteType(noteName: string): Promise<Readonly<NoteTypeDataIntegrated>> {
         let src: string | undefined;
 
@@ -228,7 +238,11 @@ class DeckDataInteract {
         return this.deckData.schedulingSettings;
     }
 
-    public _addNote(note: NoteData): void {
+    public addNoteType(noteType: NoteTypeData): void {
+        this.deckData.noteTypes.push(noteType);
+    }
+
+    public addNote(note: NoteData): void {
         this.deckData.notes.push(note);
     }
 }

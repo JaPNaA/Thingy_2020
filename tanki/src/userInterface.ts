@@ -1,4 +1,4 @@
-import { NoteTypeData, CardTypeData, NoteData } from "./dataTypes.js";
+import { NoteTypeData, CardTypeData, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
@@ -85,7 +85,7 @@ class DeckPresenter extends Component {
                 res(data);
             })
         });
-        this.deck.addNote(data);
+        this.deck.addNoteAndUpdate(data);
 
         createNoteDialog.remove();
     }
@@ -217,6 +217,11 @@ class CreateNoteDialog extends ModalDialog {
 class ImportNotesDialog extends ModalDialog {
     private sourcesListElm: Elm;
 
+    private static jishoAPIDataImportedNoteType: NoteTypeDataExternal = {
+        name: "jishoAPIDataImportedNoteType",
+        src: "resources/jishoAPIDataImportedNoteType.json"
+    };
+
     constructor(private deck: Deck) {
         super("importNotesDialog");
         this.foregroundElm.append(
@@ -237,9 +242,24 @@ class ImportNotesDialog extends ModalDialog {
         this.foregroundElm.append(
             textarea = new Elm("textarea").class("big"),
             new Elm("button").append("Import")
-                .on("click", function () {
+                .on("click", () => {
                     const value = textarea.getHTMLElement().value;
-                    JSON.parse(value);
+                    const parsed = JSON.parse(value);
+                    if (this.deck.data.indexOfNote(
+                        ImportNotesDialog.jishoAPIDataImportedNoteType.name
+                    ) < 0) {
+                        this.deck.data.addNoteType(ImportNotesDialog.jishoAPIDataImportedNoteType)
+                    }
+
+                    const index = this.deck.data.indexOfNote(
+                        ImportNotesDialog.jishoAPIDataImportedNoteType.name
+                    );
+
+                    for (const item of parsed) {
+                        this.deck.data.addNote([index, [JSON.stringify(item)]]);
+                    }
+
+                    this.deck.updateCardArrays();
                 })
         )
     }
@@ -347,7 +367,7 @@ class CardPresenter extends Component {
         for (let match; match = regexMatches.exec(contentTemplate);) {
             outString += contentTemplate.slice(lastIndex, match.index);
             const replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "<<undefined>>";
+            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
             lastIndex = match.index + match[0].length;
         }
 
