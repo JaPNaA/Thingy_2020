@@ -41,6 +41,9 @@ class DeckPresenter extends Component {
             new Elm("button").class("createNote")
                 .append("Create Note")
                 .on("click", () => this.openCreateNoteDialog()),
+            new Elm("button").class("importNotes")
+                .append("Import Notes")
+                .on("click", () => this.openImportNotesDialog())
         );
 
         this.enterCardPresenter();
@@ -87,6 +90,11 @@ class DeckPresenter extends Component {
         createNoteDialog.remove();
     }
 
+    private async openImportNotesDialog() {
+        this.exitCardPresenter();
+        const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+    }
+
     private exitCardPresenter() {
         this.cardPresenter.discardState();
         this.cardPresenterContainer.class("hidden");
@@ -110,6 +118,8 @@ abstract class ModalDialog extends Component {
                 .on("click", () => this.remove()),
             this.foregroundElm = new Elm().class("modalForeground").appendTo(this.elm)
         );
+
+        this.show();
     }
 
     public setPositionFixed() {
@@ -156,7 +166,6 @@ class CreateNoteDialog extends ModalDialog {
 
         this.loadNoteTypes();
         this.updateInputsElm();
-        this.show();
     }
 
     private loadNoteTypes() {
@@ -200,6 +209,37 @@ class CreateNoteDialog extends ModalDialog {
             inputElm.getHTMLElement().value = "";
         }
         this.inputElms[0].getHTMLElement().focus();
+    }
+}
+
+class ImportNotesDialog extends ModalDialog {
+    private sourcesListElm: Elm;
+
+    constructor(private deck: Deck) {
+        super("importNotesDialog");
+        this.foregroundElm.append(
+            new Elm("h3").append("Import Notes"),
+            this.sourcesListElm = new Elm().class("sourcesList").append(
+                new Elm("button").append("jishoAPIData (jishoWithHistory)")
+                    .on("click", () => this.importFromJishoAPIData())
+            )
+        )
+        console.log(deck);
+    }
+
+    private importFromJishoAPIData() {
+        this.sourcesListElm.remove();
+
+        let textarea: Elm<"textarea">;
+
+        this.foregroundElm.append(
+            textarea = new Elm("textarea").class("big"),
+            new Elm("button").append("Import")
+                .on("click", function () {
+                    const value = textarea.getHTMLElement().value;
+                    JSON.parse(value);
+                })
+        )
     }
 }
 
