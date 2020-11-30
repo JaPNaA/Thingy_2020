@@ -333,13 +333,15 @@ class CardPresenter extends Component {
 
         this.createFaceDisplay(
             cardType.frontTemplate,
-            noteFieldNames, cardFields
+            noteFieldNames, cardFields,
+            [noteType.script, cardType.frontScript]
         ).appendTo(cardElm);
         await this.inputGetter.options(["Show back"]);
 
         this.createFaceDisplay(
             cardType.backTemplate,
-            noteFieldNames, cardFields
+            noteFieldNames, cardFields,
+            [noteType.script, cardType.backScript]
         ).appendTo(cardElm);
 
         const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
@@ -358,7 +360,8 @@ class CardPresenter extends Component {
     }
 
     private createFaceDisplay(
-        contentTemplate: string, fieldNames: string[], fields: string[]
+        contentTemplate: string, fieldNames: string[], fields: string[],
+        scripts: (string | undefined)[]
     ): CardFaceDisplay {
         const regexMatches = /{{(.+?)}}/g;
         let outString = "";
@@ -373,7 +376,16 @@ class CardPresenter extends Component {
 
         outString += contentTemplate.slice(lastIndex);
 
-        return new CardFaceDisplay(outString);
+
+        const display = new CardFaceDisplay(outString);
+
+        try {
+            //* dangerous!
+            new Function("require", ...fieldNames, scripts.join("\n"))
+                .call(display.getHTMLElement(), undefined, ...fields);
+        } catch (err) { }
+
+        return display;
     }
 }
 

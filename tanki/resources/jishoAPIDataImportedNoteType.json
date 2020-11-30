@@ -1,10 +1,12 @@
 {
     "name": "jishoAPIDataImportedNoteType",
     "fieldNames": ["jsonData", "userNotes"],
+    "script": "const $that = this; function $(x) { return $that.querySelector(x); }",
     "cardTypes": [
         {
             "name": "Word -> Kana",
-            "frontTemplate": "{{jsonData}}",
+            "frontTemplate": "<h1 id=\"word\"></h1>",
+            "frontScript": "$('#word').innerHTML = JSON.parse(jsonData).slug; f console.log(require);",
             "backTemplate": "{{jsonData}}, {{userNotes}}"
         }, {
             "name": "Word -> Meaning",
