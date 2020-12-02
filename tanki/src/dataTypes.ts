@@ -15,7 +15,9 @@ export interface NoteTypeDataIntegrated {
     fieldNames: string[];
     cardTypes: CardTypeData[];
     schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
+    /** JavaScript that runs on all children cards */
     script?: string;
+    /** CSS Styles that apply to all children cards */
     style?: string;
 }
 
@@ -28,9 +30,19 @@ export type NoteTypeData = NoteTypeDataExternal | NoteTypeDataIntegrated;
 
 export interface CardTypeData {
     name: string;
+    /**
+     * HTML string with {{placeholders}} in braces to be replaced with field
+     * names on the front of the card
+    */
     frontTemplate: string;
+    /** JavaScript that runs on the front of the card */
     frontScript?: string;
+    /**
+     * HTML string with {{placeholders}} in braces to be replaced with field
+     * names on the back of the card
+    */
     backTemplate: string;
+    /** JavaScript that runs on the back of the card */
     backScript?: string;
     schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
 }
