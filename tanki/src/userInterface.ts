@@ -1,4 +1,4 @@
-import { NoteTypeData, CardTypeData, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
+import { isNoteTypeDataIntegrated, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
@@ -334,6 +334,7 @@ class CardPresenter extends Component {
         this.createFaceDisplay(
             cardType.frontTemplate,
             noteFieldNames, cardFields,
+            noteType.style,
             [noteType.script, cardType.frontScript]
         ).appendTo(cardElm);
         await this.inputGetter.options(["Show back"]);
@@ -341,6 +342,7 @@ class CardPresenter extends Component {
         this.createFaceDisplay(
             cardType.backTemplate,
             noteFieldNames, cardFields,
+            noteType.style,
             [noteType.script, cardType.backScript]
         ).appendTo(cardElm);
 
@@ -361,7 +363,7 @@ class CardPresenter extends Component {
 
     private createFaceDisplay(
         contentTemplate: string, fieldNames: string[], fields: string[],
-        scripts: (string | undefined)[]
+        styles: string | undefined, scripts: (string | undefined)[]
     ): CardFaceDisplay {
         const regexMatches = /{{(.+?)}}/g;
         let outString = "";
@@ -378,12 +380,17 @@ class CardPresenter extends Component {
 
 
         const display = new CardFaceDisplay(outString);
+        if (styles) {
+            display.append(new Elm("style").append(styles));
+        }
 
         try {
             //* dangerous!
             new Function("require", ...fieldNames, scripts.join("\n"))
                 .call(display.getHTMLElement(), undefined, ...fields);
-        } catch (err) { }
+        } catch (err) {
+            console.warn("Error while running script for card", err);
+        }
 
         return display;
     }

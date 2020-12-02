@@ -16,6 +16,7 @@ export interface NoteTypeDataIntegrated {
     cardTypes: CardTypeData[];
     schedulingSettings?: Partial<CardSchedulingSettingsData>; //* not used in code yet
     script?: string;
+    style?: string;
 }
 
 export function isNoteTypeDataIntegrated(x: NoteTypeData): x is NoteTypeDataIntegrated {
