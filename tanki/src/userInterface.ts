@@ -2,7 +2,7 @@ import { NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
+import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -411,7 +411,7 @@ class CardPresenter extends Component {
 
     private setPropogateKeyEvents(iframeWindow: Window) {
         iframeWindow.addEventListener("keydown", e => {
-            setImmediate(
+            setImmediatePolyfill(
                 () => this.cardIFrame.getHTMLElement().dispatchEvent(e)
             );
         });

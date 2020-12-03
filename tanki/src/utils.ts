@@ -8,6 +8,8 @@ export function getCurrMinuteFloored(): number {
     return Math.floor(Date.now() / 60e3);
 }
 
+export const setImmediatePolyfill = window.setImmediate || (f => setTimeout(f, 1));
+
 /**
  * Returns the boundary at which isPastCheck first fails
  */
