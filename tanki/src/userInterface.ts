@@ -1,6 +1,7 @@
 import { NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
+import { writeOut } from "./storage.js";
 import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
@@ -10,6 +11,13 @@ export class TankiInterface extends Component {
         super("tankiInterface");
         this.deckPresenter = new DeckPresenter(deck);
         this.deckPresenter.appendTo(this);
+        this.append(
+            new Elm("button").class("writeOut")
+                .append("Write Out")
+                .on("click", () => {
+                    writeOut(deck);
+                })
+        );
     }
 }
 
