@@ -13,12 +13,17 @@ body {
     height: 100vh;
 }
 
-.cardPresenter .cardContainer {
-    grid-area: "card";
+.cardPresenter iframe.card {
+    grid-area: card;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    margin: 0;
+    padding: 0;
 }
 
 .cardPresenter .quickUserInputGetter {
-    grid-area: "inputs";
+    grid-area: inputs;
     text-align: center;
     background-color: #e4e4e4;
     padding-top: 1px;
