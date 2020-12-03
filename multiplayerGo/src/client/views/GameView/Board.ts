@@ -43,26 +43,63 @@ class Board {
 
     private setup(): void {
         this.canvas.addEventListener("click", e => {
-            this.goBoardLogic.putStone(
-                (this.turn = !this.turn) ?
+            const success = this.goBoardLogic.putStone(
+                this.turn ?
                     Stone.white : Stone.black,
                 Math.floor(e.offsetX / this.cellSize - Board.PADDING),
                 Math.floor(e.offsetY / this.cellSize - Board.PADDING)
             );
 
+            if (success) {
+                this.turn = !this.turn;
+            }
+
             this.draw();
         });
+
+        setInterval(() => {
+            const success = this.goBoardLogic.putStone(
+                this.turn ?
+                    Stone.white : Stone.black,
+                Math.floor(Math.random() * Board.HEIGHT),
+                Math.floor(Math.random() * Board.WIDTH)
+            );
+
+            if (success) {
+                this.turn = !this.turn;
+            }
+
+            this.draw();
+        }, 1);
     }
 
     private draw(): void {
         this.X.clearRect(0, 0, this.canvas.width, this.canvas.height);
         this.drawGrid();
         this._debugDrawOwner();
-        this.drawStones();
+        // this.drawStones();
     }
 
     private _debugDrawOwner() {
-        // 
+        for (let y = 0; y < Board.HEIGHT; y++) {
+            for (let x = 0; x < Board.WIDTH; x++) {
+                const owner = this.goBoardLogic.ownerOfSquare(x, y);
+
+                if (owner === Stone.black) {
+                    this.X.fillStyle = "#ffdddd";
+                } else if (owner === Stone.white) {
+                    this.X.fillStyle = "#ddddff";
+                } else {
+                    continue;
+                }
+
+                this.X.fillRect(
+                    (x + Board.PADDING) * this.cellSize,
+                    (y + Board.PADDING) * this.cellSize,
+                    this.cellSize, this.cellSize
+                );
+            }
+        }
     }
 
     private drawGrid(): void {
@@ -101,9 +138,9 @@ class Board {
                 if (stone === Stone.none) { continue; }
 
                 if (stone === Stone.black) {
-                    this.X.fillStyle = "#2e2e2e";
+                    this.X.fillStyle = "#dd0000";
                 } else if (stone === Stone.white) {
-                    this.X.fillStyle = "#adadad";
+                    this.X.fillStyle = "#0000dd";
                 }
 
                 this.X.fillRect(
