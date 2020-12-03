@@ -1,22 +1,27 @@
 {
     "name": "jishoAPIDataImportedNoteType",
     "fieldNames": ["jsonData", "userNotes"],
-    "script": "const $that = this; function $(x) { return $that.querySelector(x); }",
+    "script": "const $that = this; function $(x) { return $that.querySelector(x); } const data = JSON.parse(jsonData); function setWord() { $('#word').innerText = data.japanese[0].word; } function setMeaning() { $('#meaning').innerText = data.senses.map(e => e.english_definitions.join(', ')).join('\\n'); } function setKana() { $('#kana').innerText = data.japanese[0].reading; }",
     "style": "h1 { color: red; }",
     "cardTypes": [
         {
             "name": "Word -> Kana",
-            "frontTemplate": "<h1 id=\"word\"></h1>",
-            "frontScript": "$('#word').innerHTML = JSON.parse(jsonData).slug; console.log(require);",
-            "backTemplate": "{{jsonData}}, {{userNotes}}"
+            "frontTemplate": "Kana of <br> <h1 id=\"word\"></h1>",
+            "frontScript": "setWord()",
+            "backTemplate": "Kana of <br> <h1 id=\"word\"></h1><div id=\"kana\"></div>",
+            "backScript": "setWord(); setKana(); "
         }, {
             "name": "Word -> Meaning",
-            "frontTemplate": "{{jsonData}}",
-            "backTemplate": "{{jsonData}}, {{userNotes}}"
+            "frontTemplate": "Meaning of <br> <h1 id=\"word\"></h1>",
+            "frontScript": "setWord()",
+            "backTemplate": "Meaning of <br> <h1 id=\"word\"></h1><div id=\"meaning\"></div>",
+            "backScript": "setWord(); setMeaning();"
         }, {
             "name": "Kana + Meaning -> Word",
-            "frontTemplate": "{{jsonData}}",
-            "backTemplate": "{{jsonData}}, {{userNotes}}"
+            "frontTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div>",
+            "frontScript": "setKana(); setMeaning()",
+            "backTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div> <h1 id='word'></h1>",
+            "backScript":"setWord(); setKana(); setMeaning();"
         }
     ]
 }
