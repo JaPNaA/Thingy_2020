@@ -1,3 +1,7 @@
+export function isNoteTypeDataIntegrated(x) {
+    // @ts-ignore
+    return !x.src;
+}
 export function isCardLearning(card) {
     return card[0] === CardState.learn;
 }

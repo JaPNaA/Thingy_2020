@@ -35,20 +35,14 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import { Deck } from "./logic.js";
+import { readIn } from "./storage.js";
 import { TankiInterface } from "./userInterface.js";
-var fs = require("fs");
 function main() {
-    var _a;
     return __awaiter(this, void 0, void 0, function () {
-        var deckDataPath, deckData, deck, tankiInterface;
-        return __generator(this, function (_b) {
-            deckDataPath = "./deckData.json";
-            deckData = JSON.parse(fs.readFileSync(deckDataPath).toString());
+        var deckData, deck, tankiInterface;
+        return __generator(this, function (_a) {
+            deckData = readIn();
             deck = new Deck(deckData);
-            (_a = document.getElementById("writeOut")) === null || _a === void 0 ? void 0 : _a.addEventListener("click", function () {
-                var exportStr = deck.data.toJSON();
-                fs.writeFileSync(deckDataPath, exportStr);
-            });
             console.log(deck);
             tankiInterface = new TankiInterface(deck);
             tankiInterface.appendTo(document.body);

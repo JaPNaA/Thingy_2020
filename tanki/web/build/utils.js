@@ -6,6 +6,7 @@ export function wait(millis) {
 export function getCurrMinuteFloored() {
     return Math.floor(Date.now() / 60e3);
 }
+export var setImmediatePolyfill = window.setImmediate || (function (f) { return setTimeout(f, 1); });
 /**
  * Returns the boundary at which isPastCheck first fails
  */

@@ -47,14 +47,27 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 import { Component, Elm } from "./libs/elements.js";
-import { EventHandler, wait } from "./utils.js";
+import { writeOut } from "./storage.js";
+import { EventHandler, setImmediatePolyfill, wait } from "./utils.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
         var _this = _super.call(this, "tankiInterface") || this;
         _this.deckPresenter = new DeckPresenter(deck);
         _this.deckPresenter.appendTo(_this);
+        _this.append(new Elm("button").class("writeOut")
+            .append("Write Out")
+            .on("click", function () {
+            writeOut(deck);
+        }));
         return _this;
     }
     return TankiInterface;
@@ -68,7 +81,7 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.presenting = false;
         _this.cardPresenter = new CardPresenter(_this.deck);
         _this.deckTimeline = new DeckTimeline(_this.deck);
-        _this.deckTimeline.update();
+        deck.loaded.then(function () { return _this.deckTimeline.update(); });
         _this.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
             .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm("button").class("exitButton")
             .append("Exit")
@@ -76,7 +89,9 @@ var DeckPresenter = /** @class */ (function (_super) {
             .append("Enter")
             .on("click", function () { return _this.enterCardPresenter(); }), new Elm("button").class("createNote")
             .append("Create Note")
-            .on("click", function () { return _this.openCreateNoteDialog(); }));
+            .on("click", function () { return _this.openCreateNoteDialog(); }), new Elm("button").class("importNotes")
+            .append("Import Notes")
+            .on("click", function () { return _this.openImportNotesDialog(); }));
         _this.enterCardPresenter();
         return _this;
     }
@@ -137,10 +152,20 @@ var DeckPresenter = /** @class */ (function (_super) {
                             })];
                     case 1:
                         data = _a.sent();
-                        this.deck.addNote(data);
+                        this.deck.addNoteAndUpdate(data);
                         createNoteDialog.remove();
                         return [2 /*return*/];
                 }
+            });
+        });
+    };
+    DeckPresenter.prototype.openImportNotesDialog = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var importNotesDialog;
+            return __generator(this, function (_a) {
+                this.exitCardPresenter();
+                importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                return [2 /*return*/];
             });
         });
     };
@@ -161,6 +186,7 @@ var ModalDialog = /** @class */ (function (_super) {
         _this.class("modalDialog");
         _this.append(new Elm().class("modalBackground")
             .on("click", function () { return _this.remove(); }), _this.foregroundElm = new Elm().class("modalForeground").appendTo(_this.elm));
+        _this.show();
         return _this;
     }
     ModalDialog.prototype.setPositionFixed = function () {
@@ -220,7 +246,6 @@ var CreateNoteDialog = /** @class */ (function (_super) {
             .on("click", function () { return _this.submit(); }));
         _this.loadNoteTypes();
         _this.updateInputsElm();
-        _this.show();
         return _this;
     }
     CreateNoteDialog.prototype.loadNoteTypes = function () {
@@ -231,17 +256,35 @@ var CreateNoteDialog = /** @class */ (function (_super) {
         }
     };
     CreateNoteDialog.prototype.updateInputsElm = function () {
-        var noteTypes = this.deck.data.getNoteTypes();
-        this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
-        this.inputElms = [];
-        this.inputsContainer.clear();
-        var noteType = noteTypes[this.noteTypeIndex];
-        for (var _i = 0, _a = noteType.fieldNames; _i < _a.length; _i++) {
-            var fieldName = _a[_i];
-            var inputElm = new Elm("input").class("cardFieldInput");
-            this.inputElms.push(inputElm);
-            this.inputsContainer.append(new Elm("label").class("cardFieldLabel").append(fieldName, inputElm));
-        }
+        return __awaiter(this, void 0, void 0, function () {
+            var noteTypes, noteType, _i, _a, fieldName, inputElm;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        noteTypes = this.deck.data.getNoteTypes();
+                        this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
+                        this.inputElms = [];
+                        this.inputsContainer.clear();
+                        noteType = noteTypes[this.noteTypeIndex];
+                        _i = 0;
+                        return [4 /*yield*/, this.deck.data.getIntegratedNoteType(noteType.name)];
+                    case 1:
+                        _a = (_b.sent()).fieldNames;
+                        _b.label = 2;
+                    case 2:
+                        if (!(_i < _a.length)) return [3 /*break*/, 4];
+                        fieldName = _a[_i];
+                        inputElm = new Elm("input").class("cardFieldInput");
+                        this.inputElms.push(inputElm);
+                        this.inputsContainer.append(new Elm("label").class("cardFieldLabel").append(fieldName, inputElm));
+                        _b.label = 3;
+                    case 3:
+                        _i++;
+                        return [3 /*break*/, 2];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
     };
     CreateNoteDialog.prototype.submit = function () {
         if (this.noteTypeIndex === undefined || !this.inputElms) {
@@ -258,6 +301,41 @@ var CreateNoteDialog = /** @class */ (function (_super) {
         this.inputElms[0].getHTMLElement().focus();
     };
     return CreateNoteDialog;
+}(ModalDialog));
+var ImportNotesDialog = /** @class */ (function (_super) {
+    __extends(ImportNotesDialog, _super);
+    function ImportNotesDialog(deck) {
+        var _this = _super.call(this, "importNotesDialog") || this;
+        _this.deck = deck;
+        _this.foregroundElm.append(new Elm("h3").append("Import Notes"), _this.sourcesListElm = new Elm().class("sourcesList").append(new Elm("button").append("jishoAPIData (jishoWithHistory)")
+            .on("click", function () { return _this.importFromJishoAPIData(); })));
+        console.log(deck);
+        return _this;
+    }
+    ImportNotesDialog.prototype.importFromJishoAPIData = function () {
+        var _this = this;
+        this.sourcesListElm.remove();
+        var textarea;
+        this.foregroundElm.append(textarea = new Elm("textarea").class("big"), new Elm("button").append("Import")
+            .on("click", function () {
+            var value = textarea.getHTMLElement().value;
+            var parsed = JSON.parse(value);
+            if (_this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name) < 0) {
+                _this.deck.data.addNoteType(ImportNotesDialog.jishoAPIDataImportedNoteType);
+            }
+            var index = _this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
+            for (var _i = 0, parsed_1 = parsed; _i < parsed_1.length; _i++) {
+                var item = parsed_1[_i];
+                _this.deck.data.addNote([index, [JSON.stringify(item)]]);
+            }
+            _this.deck.updateCardArrays();
+        }));
+    };
+    ImportNotesDialog.jishoAPIDataImportedNoteType = {
+        name: "jishoAPIDataImportedNoteType",
+        src: "resources/jishoAPIDataImportedNoteType.json"
+    };
+    return ImportNotesDialog;
 }(ModalDialog));
 var DeckTimeline = /** @class */ (function (_super) {
     __extends(DeckTimeline, _super);
@@ -287,38 +365,44 @@ var CardPresenter = /** @class */ (function (_super) {
     __extends(CardPresenter, _super);
     function CardPresenter(deck) {
         var _this = _super.call(this, "cardPresenter") || this;
+        _this.deck = deck;
         _this.inputGetter = new QuickUserInputGetter();
-        _this.cardContainer = new Elm().class("cardContainer");
-        _this.noteTypes = deck.data.getNoteTypes();
-        _this.append(_this.cardContainer, _this.inputGetter);
+        _this.cardIFrame = new Elm("iframe").class("card");
+        _this.append(_this.cardIFrame, _this.inputGetter);
+        _this.cardIFrame.on("load", function () {
+            var iframeWindow = _this.cardIFrame.getHTMLElement().contentWindow;
+            if (!iframeWindow) {
+                throw new Error("iframe loaded but no window");
+            }
+            _this.cardIFrameDocument = iframeWindow.document;
+            _this.setPropogateKeyEvents(iframeWindow);
+        });
         return _this;
     }
     CardPresenter.prototype.presentCard = function (card) {
         return __awaiter(this, void 0, void 0, function () {
-            var cardElm, noteTypeID, noteType, cardType, noteFieldNames, cardFields, rating;
+            var noteTypes, noteType, cardType, noteFieldNames, cardFields, rating;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.currentState) {
                             this.discardState();
                         }
-                        if (!this.noteTypes) {
-                            throw new Error("Note types not set");
-                        }
-                        cardElm = new Elm().class("card").appendTo(this.cardContainer);
-                        noteTypeID = card.parentNote[0];
-                        noteType = this.noteTypes[noteTypeID];
+                        noteTypes = this.deck.data.getNoteTypes();
+                        return [4 /*yield*/, this.deck.data.getIntegratedNoteType(noteTypes[card.noteType].name)];
+                    case 1:
+                        noteType = _a.sent();
                         cardType = noteType.cardTypes[card.cardTypeID];
                         noteFieldNames = noteType.fieldNames;
                         cardFields = card.parentNote[1];
                         this.currentState = { card: card };
-                        this.createFaceDisplay(cardType.frontTemplate, noteFieldNames, cardFields).appendTo(cardElm);
+                        this.createCardInIFrame(cardType.frontTemplate, noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.frontScript]);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
-                    case 1:
-                        _a.sent();
-                        this.createFaceDisplay(cardType.backTemplate, noteFieldNames, cardFields).appendTo(cardElm);
-                        return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
                     case 2:
+                        _a.sent();
+                        this.createCardInIFrame(cardType.backTemplate, noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.backScript]);
+                        return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
+                    case 3:
                         rating = _a.sent();
                         console.log(rating);
                         this.discardState();
@@ -332,32 +416,43 @@ var CardPresenter = /** @class */ (function (_super) {
             return;
         }
         this.inputGetter.discardState();
-        this.cardContainer.clear();
         this.currentState = undefined;
     };
-    CardPresenter.prototype.createFaceDisplay = function (contentTemplate, fieldNames, fields) {
+    CardPresenter.prototype.createCardInIFrame = function (contentTemplate, fieldNames, fields, styles, scripts) {
+        var _a;
         var regexMatches = /{{(.+?)}}/g;
         var outString = "";
         var lastIndex = 0;
         for (var match = void 0; match = regexMatches.exec(contentTemplate);) {
             outString += contentTemplate.slice(lastIndex, match.index);
             var replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "<<undefined>>";
+            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
             lastIndex = match.index + match[0].length;
         }
         outString += contentTemplate.slice(lastIndex);
-        return new CardFaceDisplay(outString);
+        if (!this.cardIFrameDocument) {
+            throw new Error("Tried to create card in unopened iframe");
+        }
+        this.cardIFrameDocument.body.innerHTML = outString;
+        if (styles) {
+            this.cardIFrameDocument.body.appendChild(new Elm("style").append(styles).getHTMLElement());
+        }
+        try {
+            //* dangerous!
+            (_a = new (Function.bind.apply(Function, __spreadArrays([void 0, "require"], fieldNames, [scripts.join("\n")])))())
+                .call.apply(_a, __spreadArrays([this.cardIFrameDocument, undefined], fields));
+        }
+        catch (err) {
+            console.warn("Error while running script for card", err);
+        }
+    };
+    CardPresenter.prototype.setPropogateKeyEvents = function (iframeWindow) {
+        var _this = this;
+        iframeWindow.addEventListener("keydown", function (e) {
+            setImmediatePolyfill(function () { return _this.cardIFrame.getHTMLElement().dispatchEvent(e); });
+        });
     };
     return CardPresenter;
-}(Component));
-var CardFaceDisplay = /** @class */ (function (_super) {
-    __extends(CardFaceDisplay, _super);
-    function CardFaceDisplay(content) {
-        var _this = _super.call(this, "cardFaceDisplay") || this;
-        _this.elm.innerHTML = content;
-        return _this;
-    }
-    return CardFaceDisplay;
 }(Component));
 /**
  * Can recieve inputs quickly from user
