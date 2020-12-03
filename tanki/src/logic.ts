@@ -5,7 +5,7 @@ export class Deck {
     public data: DeckDataInteract;
     public loaded: Promise<void>;
 
-    private graduatedCards: ScheduledCard[] = [];
+    private graduatedCards: Card[] = [];
     private seenAndLearningCardsSorted: ScheduledCard[] = [];
     private newCards: Card[] = [];
 
@@ -52,7 +52,7 @@ export class Deck {
             scheduledNewCard._attachCardSchedulingDataToParentNote();
             this.updateCardScheduleWithResult(scheduledNewCard, result);
 
-            this.seenAndLearningCardsSorted.push(scheduledNewCard);
+            this.sortCardIntoArray(scheduledNewCard);
         } else if (card instanceof ScheduledCard) {
             this.updateCardScheduleWithResult(card, result);
         } else {
@@ -65,7 +65,7 @@ export class Deck {
     private updateCardScheduleWithResult(card: ScheduledCard, result: number) {
         const schedulingSettings = this.data.getCardSchedulingSettings(card);
 
-        if (card.state === CardState.seen) {
+        if (card.state === CardState.seen || card.state === CardState.graduated) {
             if (result === 1) {
                 card.interval *= schedulingSettings.baseIntervalMultiplier * card.difficultyFactor;
                 card.dueMinutes = getCurrMinuteFloored() + card.interval;
@@ -150,25 +150,27 @@ export class Deck {
                 const card = typeof note[2] === "object" ? note[2][i] : undefined;
 
                 if (card === 0 || card === undefined || card[0] === CardState.new) {
-                    this.newCards.push(
-                        new Card(i, note)
-                    )
-                } else if (card[0] === CardState.graduated) {
-                    this.graduatedCards.push(
-                        new ScheduledCard(card, i, note)
-                    );
-                } else if (card[0] === CardState.seen || card[0] === CardState.learn) {
-                    this.seenAndLearningCardsSorted.push(
-                        new ScheduledCard(card, i, note)
-                    );
+                    this.newCards.push(new Card(i, note))
                 } else {
-                    console.error("Unexpected card", card, note, this.data);
-                    throw new Error("Unexpected card");
+                    this.sortCardIntoArray(new ScheduledCard(card, i, note));
                 }
             }
         }
 
         this.sortSeenAndReviewCards();
+    }
+
+    private sortCardIntoArray(card: ScheduledCard) {
+        if (card.state === CardState.graduated) {
+            this.graduatedCards.push(card);
+        } else if (card.state === CardState.seen || card.state === CardState.learn) {
+            this.seenAndLearningCardsSorted.push(card);
+        } else if (card.state === CardState.new) {
+            this.newCards.push(card);
+        } else {
+            console.error("Unexpected card", card, this.data);
+            throw new Error("Unexpected card");
+        }
     }
 
     /** sort latest due first */
