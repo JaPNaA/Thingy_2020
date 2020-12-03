@@ -5,17 +5,17 @@
     "style": ".line { width: 100%; height: 4px; background-color: #000; } .orange.line { background-color: #ff994f; } .yellow.line { background-color: #ffeb69; } .magenta.line { background-color: #ff698c; } ",
     "cardTypes": [
         {
-            "name": "Word -> Kana",
-            "frontTemplate": "Kana of <br> <h1 id=\"word\"></h1><div class=\"orange line\"></div>",
-            "frontScript": "setWord()",
-            "backTemplate": "{{frontTemplate}}<div id=\"kana\"></div>",
-            "backScript": "setWord(); setKana(); "
-        }, {
             "name": "Word -> Meaning",
             "frontTemplate": "Meaning of <br> <h1 id=\"word\"></h1><div class=\"yellow line\"></div>",
             "frontScript": "setWord()",
             "backTemplate": "{{frontTemplate}}<div id=\"meaning\"></div>",
             "backScript": "setWord(); setMeaning();"
+        }, {
+            "name": "Word -> Kana",
+            "frontTemplate": "Kana of <br> <h1 id=\"word\"></h1><div class=\"orange line\"></div>",
+            "frontScript": "setWord()",
+            "backTemplate": "{{frontTemplate}}<div id=\"kana\"></div>",
+            "backScript": "setWord(); setKana(); "
         }, {
             "name": "Kana + Meaning -> Word",
             "frontTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div><div class=\"magenta line\"></div>",
