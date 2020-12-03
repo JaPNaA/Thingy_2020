@@ -53,7 +53,7 @@ export interface NoteData extends Array<any> {
     /** Fields */
     1: string[];
     /** Card data */
-    2?: (CardData | undefined | 0)[] | undefined | 0;
+    2?: Optional<(Optional<CardData>)[]>;
 }
 
 interface CardDataStandard extends Array<any> {
@@ -66,7 +66,7 @@ interface CardDataStandard extends Array<any> {
     /** Due date in minutes ( [Date#getTime() / 60_000] )*/
     3: number;
     /** Times wrong history (0 for correct) */
-    4: number[] | undefined | 0; //* not used in code yet
+    4: Optional<number[]>; //* not used in code yet
 }
 
 interface CardDataLearning extends CardDataStandard {
@@ -98,4 +98,13 @@ export enum CardState {
     seen = 2,
     /** No longer in short-term reviews */
     graduated = 3
+}
+
+type Optional<T> = T | 0 | undefined | null;
+
+/**
+ * Tests if value is 0, undefined or null
+ */
+export function isEmptyValue<T>(x: T | undefined | null | 0): x is undefined | null | 0 {
+    return x === undefined || x === null || x === 0;
 }

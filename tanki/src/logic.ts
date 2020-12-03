@@ -1,4 +1,4 @@
-import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated } from "./dataTypes.js";
+import { CardData, CardSchedulingSettingsData, CardState, DeckData, isCardLearning, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
@@ -147,9 +147,9 @@ export class Deck {
             const noteType_NumCardType = noteType.cardTypes.length;
 
             for (let i = 0; i < noteType_NumCardType; i++) {
-                const card = typeof note[2] === "object" ? note[2][i] : undefined;
+                const card = isEmptyValue(note[2]) ? undefined : note[2][i];
 
-                if (card === 0 || card === undefined || card[0] === CardState.new) {
+                if (isEmptyValue(card) || card[0] === CardState.new) {
                     this.newCards.push(new Card(i, note))
                 } else {
                     this.sortCardIntoArray(new ScheduledCard(card, i, note));
@@ -277,11 +277,11 @@ class ScheduledCard extends Card {
     public get dueMinutes(): number { return this.data[3]; }
     public set dueMinutes(minutes: number) { this.data[3] = Math.round(minutes); }
     public get timesWrongHistory(): number[] | undefined {
-        if (this.data[4] === 0) { return; }
+        if (isEmptyValue(this.data[4])) { return; }
         return this.data[4];
     }
     public addIncorrectCountToRollingHistory(incorrectCount: number) {
-        if (this.data[4] === 0 || this.data[4] === undefined) {
+        if (isEmptyValue(this.data[4])) {
             this.data[4] = [];
         }
         this.data[4].push(incorrectCount);
@@ -307,7 +307,7 @@ class ScheduledCard extends Card {
         // this.parentNote[2] is cardData of parent note
 
         // optional field, so add if not existing
-        if (typeof this.parentNote[2] !== "object") {
+        if (isEmptyValue(this.parentNote[2])) {
             this.parentNote[2] = [];
         }
 
