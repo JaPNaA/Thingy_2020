@@ -353,7 +353,7 @@ class CardPresenter extends Component {
         await this.inputGetter.options(["Show back"]);
 
         this.createCardInIFrame(
-            cardType.backTemplate,
+            cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate),
             noteFieldNames, cardFields,
             noteType.style,
             [noteType.script, cardType.backScript]

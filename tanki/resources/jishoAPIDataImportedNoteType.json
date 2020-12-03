@@ -2,25 +2,25 @@
     "name": "jishoAPIDataImportedNoteType",
     "fieldNames": ["jsonData", "userNotes"],
     "script": "const $that = this; function $(x) { return $that.querySelector(x); } const data = JSON.parse(jsonData); function setWord() { $('#word').innerText = data.japanese[0].word; } function setMeaning() { $('#meaning').innerText = data.senses.map(e => e.english_definitions.join(', ')).join('\\n'); } function setKana() { $('#kana').innerText = data.japanese[0].reading; }",
-    "style": "h1 { color: red; }",
+    "style": ".line { width: 100%; height: 4px; background-color: #000; } .orange.line { background-color: #ff994f; } .yellow.line { background-color: #ffeb69; } .magenta.line { background-color: #ff698c; } ",
     "cardTypes": [
         {
             "name": "Word -> Kana",
-            "frontTemplate": "Kana of <br> <h1 id=\"word\"></h1>",
+            "frontTemplate": "Kana of <br> <h1 id=\"word\"></h1><div class=\"orange line\"></div>",
             "frontScript": "setWord()",
-            "backTemplate": "Kana of <br> <h1 id=\"word\"></h1><div id=\"kana\"></div>",
+            "backTemplate": "{{frontTemplate}}<div id=\"kana\"></div>",
             "backScript": "setWord(); setKana(); "
         }, {
             "name": "Word -> Meaning",
-            "frontTemplate": "Meaning of <br> <h1 id=\"word\"></h1>",
+            "frontTemplate": "Meaning of <br> <h1 id=\"word\"></h1><div class=\"yellow line\"></div>",
             "frontScript": "setWord()",
-            "backTemplate": "Meaning of <br> <h1 id=\"word\"></h1><div id=\"meaning\"></div>",
+            "backTemplate": "{{frontTemplate}}<div id=\"meaning\"></div>",
             "backScript": "setWord(); setMeaning();"
         }, {
             "name": "Kana + Meaning -> Word",
-            "frontTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div>",
+            "frontTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div><div class=\"magenta line\"></div>",
             "frontScript": "setKana(); setMeaning()",
-            "backTemplate": "Word of <div id=\"kana\"></div><div id=\"meaning\"></div> <h1 id='word'></h1>",
+            "backTemplate": "{{frontTemplate}}<h1 id='word'></h1>",
             "backScript":"setWord(); setKana(); setMeaning();"
         }
     ]
