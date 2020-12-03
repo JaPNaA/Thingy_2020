@@ -1,4 +1,4 @@
-import { isNoteTypeDataIntegrated, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
+import { NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, wait } from "./utils.js";
@@ -305,11 +305,19 @@ class CardPresenter extends Component {
         card: Card;
     };
 
-    private cardContainer = new Elm().class("cardContainer");
+    private cardIFrame = new Elm("iframe").class("card");
+    private cardIFrameDocument?: Document;
 
     constructor(private deck: Deck) {
         super("cardPresenter");
-        this.append(this.cardContainer, this.inputGetter);
+        this.append(this.cardIFrame, this.inputGetter);
+
+        this.cardIFrame.on("load", () => {
+            const iframeWindow = this.cardIFrame.getHTMLElement().contentWindow;
+            if (!iframeWindow) { throw new Error("iframe loaded but no window"); }
+            this.cardIFrameDocument = iframeWindow.document;
+            this.setPropogateKeyEvents(iframeWindow);
+        });
     }
 
     public async presentCard(card: Card): Promise<number> {
@@ -318,9 +326,6 @@ class CardPresenter extends Component {
         }
 
         const noteTypes = this.deck.data.getNoteTypes();
-
-        const cardElm = new Elm().class("card").appendTo(this.cardContainer);
-
 
         const noteType = await this.deck.data.getIntegratedNoteType(
             noteTypes[card.noteType].name);
@@ -331,20 +336,20 @@ class CardPresenter extends Component {
 
         this.currentState = { card };
 
-        this.createFaceDisplay(
+        this.createCardInIFrame(
             cardType.frontTemplate,
             noteFieldNames, cardFields,
             noteType.style,
             [noteType.script, cardType.frontScript]
-        ).appendTo(cardElm);
+        );
         await this.inputGetter.options(["Show back"]);
 
-        this.createFaceDisplay(
+        this.createCardInIFrame(
             cardType.backTemplate,
             noteFieldNames, cardFields,
             noteType.style,
             [noteType.script, cardType.backScript]
-        ).appendTo(cardElm);
+        );
 
         const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
         console.log(rating);
@@ -357,14 +362,13 @@ class CardPresenter extends Component {
     public discardState() {
         if (!this.currentState) { return; }
         this.inputGetter.discardState();
-        this.cardContainer.clear();
         this.currentState = undefined;
     }
 
-    private createFaceDisplay(
+    private createCardInIFrame(
         contentTemplate: string, fieldNames: string[], fields: string[],
         styles: string | undefined, scripts: (string | undefined)[]
-    ): CardFaceDisplay {
+    ): void {
         const regexMatches = /{{(.+?)}}/g;
         let outString = "";
         let lastIndex = 0;
@@ -378,32 +382,34 @@ class CardPresenter extends Component {
 
         outString += contentTemplate.slice(lastIndex);
 
+        if (!this.cardIFrameDocument) { throw new Error("Tried to create card in unopened iframe"); }
 
-        const display = new CardFaceDisplay(outString);
+        this.cardIFrameDocument.body.innerHTML = outString;
         if (styles) {
-            display.append(new Elm("style").append(styles));
+            this.cardIFrameDocument.body.appendChild(
+                new Elm("style").append(styles).getHTMLElement()
+            );
         }
 
         try {
             //* dangerous!
             new Function("require", ...fieldNames, scripts.join("\n"))
-                .call(display.getHTMLElement(), undefined, ...fields);
+                .call(this.cardIFrameDocument, undefined, ...fields);
         } catch (err) {
             console.warn("Error while running script for card", err);
         }
 
-        return display;
+    }
+
+    private setPropogateKeyEvents(iframeWindow: Window) {
+        iframeWindow.addEventListener("keydown", e => {
+            setImmediate(
+                () => this.cardIFrame.getHTMLElement().dispatchEvent(e)
+            );
+        });
     }
 }
 
-
-
-class CardFaceDisplay extends Component {
-    constructor(content: string) {
-        super("cardFaceDisplay");
-        this.elm.innerHTML = content;
-    }
-}
 
 /**
  * Can recieve inputs quickly from user
