@@ -63,7 +63,7 @@ var Deck = /** @class */ (function () {
             return this.seenAndLearningCardsSorted[0];
         }
         else if (this.newCards.length > 0) {
-            return this.newCards[0];
+            return this.newCards[Math.floor(Math.random() * this.newCards.length)];
         }
     };
     /** update data based on results */
