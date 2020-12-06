@@ -24,7 +24,7 @@ export function writeOut(deck: Deck) {
     }
 }
 
-export function readIn(): DeckData {
+export function readIn(): DeckData | undefined {
     let readStr;
 
     if (fs) {
@@ -32,6 +32,8 @@ export function readIn(): DeckData {
     } else {
         readStr = localStorage[localStoragePrefix + resolveLinkAsFile(deckDataPath)];
     }
+
+    if (!readStr) { return; }
 
     return JSON.parse(readStr);
 }

@@ -1,0 +1,38 @@
+{
+    "version": "0.1",
+    "schedulingSettings": {
+        "skipCardIfIsNewButAnsweredCorrectly": false,
+        "learningStepsMinutes": [0, 1, 10],
+        "initialInterval": 206,
+        "baseIntervalMultiplier": 2.5
+    },
+    "noteTypes": [
+        {
+            "name": "Front <-> Back",
+            "fieldNames": ["Front", "Back"],
+            "cardTypes": [
+                {
+                    "name": "Front -> Back",
+                    "frontTemplate": "Front: <b>{{Front}}</b>",
+                    "backTemplate": "Back: {{Back}}"
+                },
+                {
+                    "name": "Back -> Front",
+                    "frontTemplate": "Back: <b>{{Back}}</b>",
+                    "backTemplate": "Front: {{Front}}"
+                }
+            ]
+        }, {
+            "name": "Question -> Answer",
+            "fieldNames": ["Question", "Answer"],
+            "cardTypes": [
+                {
+                    "name": "Question -> Answer",
+                    "frontTemplate": "(oneway) {{Question}}",
+                    "backTemplate": "{{Answer}}"
+                }
+            ]
+        }
+    ],
+    "notes": []
+}

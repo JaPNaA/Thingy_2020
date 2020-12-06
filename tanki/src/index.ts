@@ -4,7 +4,14 @@ import { TankiInterface } from "./userInterface.js";
 
 
 async function main() {
-    const deckData = readIn();
+    let deckData = readIn();
+
+    if (!deckData) {
+        deckData = await fetch("../resources/initialDeckData.json").then(e => e.json());
+    }
+
+    if (!deckData) { throw new Error("Could not load deckData"); }
+
     const deck = new Deck(deckData);
 
     console.log(deck);
