@@ -29,6 +29,27 @@ body {
     padding-top: 1px;
 }
 
+.cardCounts > div {
+    display: inline-block;
+    margin-right: 16px;
+}
+
+.cardCounts .number {
+    display: inline;
+}
+
+.cardCounts .new {
+    color: #143be7;
+}
+
+.cardCounts .due {
+    color: #441eec;
+}
+
+.cardCounts .graduated {
+    color: #a11cee;
+}
+
 .quickUserInputGetter button {
     margin-left: 4px;
     margin-right: 4px;

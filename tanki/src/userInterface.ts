@@ -280,9 +280,9 @@ class ImportNotesDialog extends ModalDialog {
 
 class DeckTimeline extends Component {
     private nextCardInMinutesElm = new Elm("span");
-    private newCardsElm = new Elm().class("new");
-    private dueCardsElm = new Elm().class("seen");
-    private graduatedCardsElm = new Elm().class("graduated");
+    private newCardsElm = new Elm().class("number");
+    private dueCardsElm = new Elm().class("number");
+    private graduatedCardsElm = new Elm().class("number");
 
     constructor(private deck: Deck) {
         super("deckTimeline");
@@ -290,7 +290,15 @@ class DeckTimeline extends Component {
         this.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm, " minutes"),
             new Elm().class("cardCounts").append(
-                this.newCardsElm, this.dueCardsElm, this.graduatedCardsElm
+                new Elm().class("new").append(
+                    "New: ", this.newCardsElm
+                ),
+                new Elm().class("due").append(
+                    "Due: ", this.dueCardsElm
+                ),
+                new Elm().class("graduated").append(
+                    "Graduated: ", this.graduatedCardsElm
+                )
             )
         );
 
