@@ -41,12 +41,24 @@ function main() {
     return __awaiter(this, void 0, void 0, function () {
         var deckData, deck, tankiInterface;
         return __generator(this, function (_a) {
-            deckData = readIn();
-            deck = new Deck(deckData);
-            console.log(deck);
-            tankiInterface = new TankiInterface(deck);
-            tankiInterface.appendTo(document.body);
-            return [2 /*return*/];
+            switch (_a.label) {
+                case 0:
+                    deckData = readIn();
+                    if (!!deckData) return [3 /*break*/, 2];
+                    return [4 /*yield*/, fetch("../resources/initialDeckData.json").then(function (e) { return e.json(); })];
+                case 1:
+                    deckData = _a.sent();
+                    _a.label = 2;
+                case 2:
+                    if (!deckData) {
+                        throw new Error("Could not load deckData");
+                    }
+                    deck = new Deck(deckData);
+                    console.log(deck);
+                    tankiInterface = new TankiInterface(deck);
+                    tankiInterface.appendTo(document.body);
+                    return [2 /*return*/];
+            }
         });
     });
 }

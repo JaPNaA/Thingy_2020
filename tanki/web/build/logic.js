@@ -47,7 +47,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { CardState, isCardLearning, isNoteTypeDataIntegrated } from "./dataTypes.js";
+import { CardState, isCardLearning, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 var Deck = /** @class */ (function () {
     function Deck(data) {
@@ -187,8 +187,8 @@ var Deck = /** @class */ (function () {
                         noteType = _b.sent();
                         noteType_NumCardType = noteType.cardTypes.length;
                         for (i = 0; i < noteType_NumCardType; i++) {
-                            card = typeof note[2] === "object" ? note[2][i] : undefined;
-                            if (card === 0 || card === undefined || card[0] === CardState.new) {
+                            card = isEmptyValue(note[2]) ? undefined : note[2][i];
+                            if (isEmptyValue(card) || card[0] === CardState.new) {
                                 this.newCards.push(new Card(i, note));
                             }
                             else {
@@ -352,7 +352,7 @@ var ScheduledCard = /** @class */ (function (_super) {
     });
     Object.defineProperty(ScheduledCard.prototype, "timesWrongHistory", {
         get: function () {
-            if (this.data[4] === 0) {
+            if (isEmptyValue(this.data[4])) {
                 return;
             }
             return this.data[4];
@@ -361,7 +361,7 @@ var ScheduledCard = /** @class */ (function (_super) {
         configurable: true
     });
     ScheduledCard.prototype.addIncorrectCountToRollingHistory = function (incorrectCount) {
-        if (this.data[4] === 0 || this.data[4] === undefined) {
+        if (isEmptyValue(this.data[4])) {
             this.data[4] = [];
         }
         this.data[4].push(incorrectCount);
@@ -388,7 +388,7 @@ var ScheduledCard = /** @class */ (function (_super) {
     ScheduledCard.prototype._attachCardSchedulingDataToParentNote = function () {
         // this.parentNote[2] is cardData of parent note
         // optional field, so add if not existing
-        if (typeof this.parentNote[2] !== "object") {
+        if (isEmptyValue(this.parentNote[2])) {
             this.parentNote[2] = [];
         }
         this.parentNote[2][this.cardTypeID] = this.data;

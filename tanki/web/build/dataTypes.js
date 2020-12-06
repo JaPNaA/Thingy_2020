@@ -16,3 +16,9 @@ export var CardState;
     /** No longer in short-term reviews */
     CardState[CardState["graduated"] = 3] = "graduated";
 })(CardState || (CardState = {}));
+/**
+ * Tests if value is 0, undefined or null
+ */
+export function isEmptyValue(x) {
+    return x === undefined || x === null || x === 0;
+}

@@ -68,6 +68,7 @@ var TankiInterface = /** @class */ (function (_super) {
             .on("click", function () {
             writeOut(deck);
         }));
+        _this.deckPresenter.onExit.addHandler(function () { return writeOut(deck); });
         return _this;
     }
     return TankiInterface;
@@ -78,6 +79,7 @@ var DeckPresenter = /** @class */ (function (_super) {
     function DeckPresenter(deck) {
         var _this = _super.call(this, "deckPresenter") || this;
         _this.deck = deck;
+        _this.onExit = new EventHandler();
         _this.presenting = false;
         _this.cardPresenter = new CardPresenter(_this.deck);
         _this.deckTimeline = new DeckTimeline(_this.deck);
@@ -130,8 +132,9 @@ var DeckPresenter = /** @class */ (function (_super) {
                         this.deckTimeline.update();
                         return [3 /*break*/, 1];
                     case 8:
-                        this.presenting = false;
                         this.exitCardPresenter();
+                        this.onExit.dispatch();
+                        this.presenting = false;
                         return [2 /*return*/];
                 }
             });
@@ -343,10 +346,10 @@ var DeckTimeline = /** @class */ (function (_super) {
         var _this = _super.call(this, "deckTimeline") || this;
         _this.deck = deck;
         _this.nextCardInMinutesElm = new Elm("span");
-        _this.newCardsElm = new Elm().class("new");
-        _this.dueCardsElm = new Elm().class("seen");
-        _this.graduatedCardsElm = new Elm().class("graduated");
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(_this.newCardsElm, _this.dueCardsElm, _this.graduatedCardsElm));
+        _this.newCardsElm = new Elm().class("number");
+        _this.dueCardsElm = new Elm().class("number");
+        _this.graduatedCardsElm = new Elm().class("number");
+        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Graduated: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         //* temporary quality-of-life
         setInterval(function () { return _this.update(); }, 30e3);
@@ -400,7 +403,7 @@ var CardPresenter = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
                     case 2:
                         _a.sent();
-                        this.createCardInIFrame(cardType.backTemplate, noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.backScript]);
+                        this.createCardInIFrame(cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate), noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.backScript]);
                         return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
                     case 3:
                         rating = _a.sent();

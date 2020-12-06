@@ -25,5 +25,8 @@ export function readIn() {
     else {
         readStr = localStorage[localStoragePrefix + resolveLinkAsFile(deckDataPath)];
     }
+    if (!readStr) {
+        return;
+    }
     return JSON.parse(readStr);
 }
