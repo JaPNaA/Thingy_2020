@@ -106,6 +106,10 @@ class DeckPresenter extends Component {
     private async openImportNotesDialog() {
         this.exitCardPresenter();
         const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        importNotesDialog.onImported.addHandler(() => {
+            this.deckTimeline.update();
+            importNotesDialog.remove();
+        });
     }
 
     private exitCardPresenter() {
@@ -228,6 +232,8 @@ class CreateNoteDialog extends ModalDialog {
 }
 
 class ImportNotesDialog extends ModalDialog {
+    public onImported = new EventHandler();
+
     private sourcesListElm: Elm;
 
     private static jishoAPIDataImportedNoteType: NoteTypeDataExternal = {
@@ -272,7 +278,8 @@ class ImportNotesDialog extends ModalDialog {
                         this.deck.data.addNote([index, [JSON.stringify(item)]]);
                     }
 
-                    this.deck.updateCardArrays();
+                    this.deck.updateCardArrays()
+                        .then(() => this.onImported.dispatch());
                 })
         )
     }
