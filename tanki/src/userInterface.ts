@@ -18,10 +18,14 @@ export class TankiInterface extends Component {
                     writeOut(deck);
                 })
         );
+
+        this.deckPresenter.onExit.addHandler(() => writeOut(deck));
     }
 }
 
 class DeckPresenter extends Component {
+    public onExit = new EventHandler();
+
     private cardPresenter: CardPresenter;
     private deckTimeline: DeckTimeline;
 
@@ -80,8 +84,9 @@ class DeckPresenter extends Component {
             this.deckTimeline.update();
         }
 
-        this.presenting = false;
         this.exitCardPresenter();
+        this.onExit.dispatch();
+        this.presenting = false;
     }
 
     private async openCreateNoteDialog() {

@@ -46,9 +46,9 @@ export function binaryBoundarySearch<T>(
 export interface PromiseRejectFunc { (reason?: any): void; }
 export interface PromiseResolveFunc<T> { (result: T): void; }
 
-type EventHandlerFunction<T> = (data: T) => void;
+type EventHandlerFunction<T = void> = (data: T) => void;
 
-export class EventHandler<T> {
+export class EventHandler<T = void> {
     private handlers: EventHandlerFunction<T>[] = [];
 
     public addHandler(handler: EventHandlerFunction<T>) {
