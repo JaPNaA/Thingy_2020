@@ -165,9 +165,14 @@ var DeckPresenter = /** @class */ (function (_super) {
     DeckPresenter.prototype.openImportNotesDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
             var importNotesDialog;
+            var _this = this;
             return __generator(this, function (_a) {
                 this.exitCardPresenter();
                 importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                importNotesDialog.onImported.addHandler(function () {
+                    _this.deckTimeline.update();
+                    importNotesDialog.remove();
+                });
                 return [2 /*return*/];
             });
         });
@@ -310,6 +315,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
     function ImportNotesDialog(deck) {
         var _this = _super.call(this, "importNotesDialog") || this;
         _this.deck = deck;
+        _this.onImported = new EventHandler();
         _this.foregroundElm.append(new Elm("h3").append("Import Notes"), _this.sourcesListElm = new Elm().class("sourcesList").append(new Elm("button").append("jishoAPIData (jishoWithHistory)")
             .on("click", function () { return _this.importFromJishoAPIData(); })));
         console.log(deck);
@@ -318,10 +324,10 @@ var ImportNotesDialog = /** @class */ (function (_super) {
     ImportNotesDialog.prototype.importFromJishoAPIData = function () {
         var _this = this;
         this.sourcesListElm.remove();
-        var textarea;
-        this.foregroundElm.append(textarea = new Elm("textarea").class("big"), new Elm("button").append("Import")
+        var textarea = new DragAndDropTextarea();
+        this.foregroundElm.append(textarea, new Elm("button").append("Import")
             .on("click", function () {
-            var value = textarea.getHTMLElement().value;
+            var value = textarea.getValue();
             var parsed = JSON.parse(value);
             if (_this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name) < 0) {
                 _this.deck.data.addNoteType(ImportNotesDialog.jishoAPIDataImportedNoteType);
@@ -331,7 +337,8 @@ var ImportNotesDialog = /** @class */ (function (_super) {
                 var item = parsed_1[_i];
                 _this.deck.data.addNote([index, [JSON.stringify(item)]]);
             }
-            _this.deck.updateCardArrays();
+            _this.deck.updateCardArrays()
+                .then(function () { return _this.onImported.dispatch(); });
         }));
     };
     ImportNotesDialog.jishoAPIDataImportedNoteType = {
@@ -340,6 +347,49 @@ var ImportNotesDialog = /** @class */ (function (_super) {
     };
     return ImportNotesDialog;
 }(ModalDialog));
+var DragAndDropTextarea = /** @class */ (function (_super) {
+    __extends(DragAndDropTextarea, _super);
+    function DragAndDropTextarea() {
+        var _this = _super.call(this, "dragAndDropTextarea") || this;
+        _this.textarea = new Elm("textarea");
+        _this.htmlElm = _this.textarea.getHTMLElement();
+        _this.append(_this.textarea);
+        _this.textarea.on("dragover", function (e) {
+            e.preventDefault();
+        });
+        _this.textarea.on("drop", function (e) { return __awaiter(_this, void 0, void 0, function () {
+            var textData, file, _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        if (!e.dataTransfer) {
+                            return [2 /*return*/];
+                        }
+                        e.preventDefault();
+                        textData = e.dataTransfer.getData("text");
+                        if (textData) {
+                            this.htmlElm.value = textData;
+                            return [2 /*return*/];
+                        }
+                        if (!(e.dataTransfer.files.length > 0)) return [3 /*break*/, 2];
+                        file = e.dataTransfer.files.item(0);
+                        if (!file) return [3 /*break*/, 2];
+                        _a = this.htmlElm;
+                        return [4 /*yield*/, file.text()];
+                    case 1:
+                        _a.value = _b.sent();
+                        _b.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        }); });
+        return _this;
+    }
+    DragAndDropTextarea.prototype.getValue = function () {
+        return this.htmlElm.value;
+    };
+    return DragAndDropTextarea;
+}(Component));
 var DeckTimeline = /** @class */ (function (_super) {
     __extends(DeckTimeline, _super);
     function DeckTimeline(deck) {
