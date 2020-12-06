@@ -250,13 +250,13 @@ class ImportNotesDialog extends ModalDialog {
     private importFromJishoAPIData() {
         this.sourcesListElm.remove();
 
-        let textarea: Elm<"textarea">;
+        let textarea = new DragAndDropTextarea();
 
         this.foregroundElm.append(
-            textarea = new Elm("textarea").class("big"),
+            textarea,
             new Elm("button").append("Import")
                 .on("click", () => {
-                    const value = textarea.getHTMLElement().value;
+                    const value = textarea.getValue();
                     const parsed = JSON.parse(value);
                     if (this.deck.data.indexOfNote(
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
@@ -275,6 +275,41 @@ class ImportNotesDialog extends ModalDialog {
                     this.deck.updateCardArrays();
                 })
         )
+    }
+}
+
+class DragAndDropTextarea extends Component {
+    private textarea = new Elm("textarea");
+    private htmlElm = this.textarea.getHTMLElement();
+
+    constructor() {
+        super("dragAndDropTextarea");
+
+        this.append(this.textarea);
+
+        this.textarea.on("dragover", e => {
+            e.preventDefault();
+        });
+        this.textarea.on("drop", async e => {
+            if (!e.dataTransfer) { return; }
+            e.preventDefault();
+            const textData = e.dataTransfer.getData("text");
+            if (textData) {
+                this.htmlElm.value = textData;
+                return;
+            }
+
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files.item(0);
+                if (file) {
+                    this.htmlElm.value = await file.text();
+                }
+            }
+        });
+    }
+
+    public getValue() {
+        return this.htmlElm.value;
     }
 }
 
