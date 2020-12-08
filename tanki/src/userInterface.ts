@@ -1,4 +1,4 @@
-import { NoteData, NoteTypeDataExternal } from "./dataTypes.js";
+import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { writeOut } from "./storage.js";
@@ -256,10 +256,18 @@ class ImportNotesDialog extends ModalDialog {
     private importFromJishoAPIData() {
         this.sourcesListElm.remove();
 
-        let textarea = new DragAndDropTextarea();
+        const textarea = new DragAndDropTextarea();
+        const checkboxes = [
+            this.createCheckedCheckbox("Word -> Meaning"),
+            this.createCheckedCheckbox("Word -> Kana"),
+            this.createCheckedCheckbox("Kana + Meaning -> Word")
+        ];
 
         this.foregroundElm.append(
             textarea,
+            new Elm().class("options").append(
+                ...checkboxes.map(checkbox => checkbox.container)
+            ),
             new Elm("button").append("Import")
                 .on("click", () => {
                     const value = textarea.getValue();
@@ -275,13 +283,31 @@ class ImportNotesDialog extends ModalDialog {
                     );
 
                     for (const item of parsed) {
-                        this.deck.data.addNote([index, [JSON.stringify(item)]]);
+                        this.deck.data.addNote([
+                            index, [JSON.stringify(item)],
+                            checkboxes.map(checkbox =>
+                                checkbox.input.getHTMLElement().checked ?
+                                    undefined : [CardState.new, [CardFlag.suspended]]
+                            )
+                        ]);
                     }
 
                     this.deck.updateCardArrays()
                         .then(() => this.onImported.dispatch());
                 })
         )
+    }
+
+    private createCheckedCheckbox(labelText: string): { input: Elm<"input">, container: Elm } {
+        let input: Elm<"input">;
+        let container = new Elm().append(
+            new Elm("label").append(
+                input = new Elm("input").attribute("type", "checkbox")
+                    .withSelf(e => e.getHTMLElement().checked = true),
+                labelText
+            )
+        );
+        return { input, container };
     }
 }
 
@@ -339,7 +365,7 @@ class DeckTimeline extends Component {
                     "Due: ", this.dueCardsElm
                 ),
                 new Elm().class("graduated").append(
-                    "Graduated: ", this.graduatedCardsElm
+                    "Inactive: ", this.graduatedCardsElm
                 )
             )
         );
@@ -356,7 +382,7 @@ class DeckTimeline extends Component {
         this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
-        this.graduatedCardsElm.replaceContents(counts.graduated);
+        this.graduatedCardsElm.replaceContents(counts.inactive);
     }
 }
 

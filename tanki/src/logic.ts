@@ -115,8 +115,8 @@ export class Deck {
     public getCardCount() {
         return {
             new: this.newCards.length,
-            seen: this.activeCards.length,
-            graduated: this.inactiveCards.length
+            active: this.activeCards.length,
+            inactive: this.inactiveCards.length
         };
     }
 
@@ -163,7 +163,7 @@ export class Deck {
     }
 
     private sortCardIntoArray(card: Card) {
-        if (card.state === CardState.inactive) {
+        if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
             this.inactiveCards.push(card);
         } else if (card.state === CardState.active && card instanceof ActiveCard) {
             this.activeCards.push(card);
