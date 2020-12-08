@@ -1,4 +1,4 @@
-import { CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
@@ -184,7 +184,12 @@ export class Deck {
 class DeckDataInteract {
     private externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
 
-    constructor(private deckData: DeckData) { }
+    constructor(private deckData: DeckData) {
+        if (deckData.version !== dataTypeVersion) {
+            alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
+            throw new Error("Versions don't match");
+        }
+    }
 
     public toJSON() {
         return JSON.stringify(this.deckData);
