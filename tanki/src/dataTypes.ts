@@ -1,3 +1,5 @@
+export const version = "0.2";
+
 export interface DeckData {
     version: string;
     noteTypes: NoteTypeData[];
@@ -54,33 +56,34 @@ export interface NoteData extends Array<any> {
     1: string[];
     /** Card data */
     2?: Optional<(Optional<CardData>)[]>;
+    /** Tags */
+    3?: Optional<string[]>;
 }
 
-interface CardDataStandard extends Array<any> {
+export interface CardDataBasic extends Array<any> {
     /** State */
-    0: CardState;
-    /** Interval in minutes */
-    1: number;
-    /** Difficulty factor */
-    2: number;
+    0: CardState,
+    /** Flags */
+    1: Optional<CardFlag[]>
+}
+
+export interface CardDataActive extends CardDataBasic {
+    0: CardState.active;
     /** Due date in minutes ( [Date#getTime() / 60_000] )*/
+    2: number;
+    /** Interval in minutes */
     3: number;
     /** Times wrong history (0 for correct) */
-    4: Optional<number[]>; //* not used in code yet
-}
-
-interface CardDataLearning extends CardDataStandard {
-    /** State */
-    0: CardState.learn;
+    4?: Optional<number[]>; //* not used in code yet
     /** Current learning interval */
-    5: number; //* not used in code yet
+    5?: Optional<number>;
 }
 
-export function isCardLearning(card: CardData): card is CardDataLearning {
-    return card[0] === CardState.learn;
+export function isCardActive(card: CardData): card is CardDataActive {
+    return card[0] === CardState.active;
 }
 
-export type CardData = CardDataStandard | CardDataLearning;
+export type CardData = CardDataBasic | CardDataActive;
 
 export interface CardSchedulingSettingsData {
     skipCardIfIsNewButAnsweredCorrectly: boolean;
@@ -89,22 +92,39 @@ export interface CardSchedulingSettingsData {
     baseIntervalMultiplier: number;
 }
 
+// export enum CardState {
+//     /** Not yet shown */
+//     new = 0,
+//     /** Just after showing or after 'forgetting' a card */
+//     learn = 1,
+//     /** Passing 'learn' */
+//     seen = 2,
+//     /** No longer in short-term reviews */
+//     graduated = 3,
+//     /** New, but can't be shown */
+//     locked = 4
+// }
+
 export enum CardState {
-    /** Not yet shown */
-    new = 0,
-    /** Just after showing or after 'forgetting' a card */
-    learn = 1,
-    /** Passing 'learn' */
-    seen = 2,
-    /** No longer in short-term reviews */
-    graduated = 3
+    inactive = 0,
+    active = 1,
+    new = 2
 }
 
-type Optional<T> = T | 0 | undefined | null;
+export enum CardFlag {
+    /** Just after showing or after 'forgetting' a card */
+    learn = 1,
+    /** No longer in short-term reviews */
+    graduated = 2,
+    /** New, but can't be shown */
+    suspended = 3
+}
+
+export type Optional<T> = T | undefined | null;
 
 /**
  * Tests if value is 0, undefined or null
  */
-export function isEmptyValue<T>(x: T | undefined | null | 0): x is undefined | null | 0 {
-    return x === undefined || x === null || x === 0;
+export function isEmptyValue<T>(x: T | undefined | null): x is undefined | null {
+    return x === undefined || x === null;
 }
