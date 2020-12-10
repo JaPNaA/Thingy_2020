@@ -425,7 +425,7 @@ class DeckTimeline extends Component {
         const minutesToNextCard = this.deck.getMinutesToNextCard();
 
         this.nextCardInMinutesElm.replaceContents(
-            minutesToNextCard ? minutesToHumanString(minutesToNextCard) : "~"
+            minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard)
         );
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
