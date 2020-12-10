@@ -55,7 +55,10 @@ class DeckPresenter extends Component {
                 .on("click", () => this.openCreateNoteDialog()),
             new Elm("button").class("importNotes")
                 .append("Import Notes")
-                .on("click", () => this.openImportNotesDialog())
+                .on("click", () => this.openImportNotesDialog()),
+            new Elm("button").class("manageNotes")
+                .append("Manage Notes")
+                .on("click", () => this.openManageNotesDialog())
         );
 
         this.enterCardPresenter();
@@ -110,6 +113,12 @@ class DeckPresenter extends Component {
             this.deckTimeline.update();
             importNotesDialog.remove();
         });
+    }
+
+    private openManageNotesDialog() {
+        this.exitCardPresenter();
+
+        new ManageNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
     }
 
     private exitCardPresenter() {
@@ -308,6 +317,41 @@ class ImportNotesDialog extends ModalDialog {
             )
         );
         return { input, container };
+    }
+}
+
+class ManageNotesDialog extends ModalDialog {
+    private notesList: Elm;
+
+    constructor(deck: Deck) {
+        super("manageNotesDialog");
+
+        this.foregroundElm.append(
+            new Elm("h1").append("Manage notes"),
+            this.notesList = new Elm().class("notesList")
+        );
+
+        for (const item of deck.data.getNotes()) {
+            const label = item[1][0].slice(0, 20);
+            new Elm()
+                .append(
+                    new Elm().class("label").append(label),
+                    new Elm().class("cards").withSelf(cards => {
+                        if (item[2]) {
+                            for (const card of item[2]) {
+                                cards.append(
+                                    new Elm().class("card").append(
+                                        card ? CardState[card[0]] : "(new)"
+                                    )
+                                )
+                            }
+                        } else {
+                            cards.append("(all new)");
+                        }
+                    })
+                )
+                .appendTo(this.notesList);
+        }
     }
 }
 

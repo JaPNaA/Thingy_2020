@@ -105,6 +105,9 @@ body {
     max-width: 380px;
     max-height: 80vh;
     padding: 8px;
+
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 .createNoteDialog .cardFieldLabel {
