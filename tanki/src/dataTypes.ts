@@ -92,19 +92,6 @@ export interface CardSchedulingSettingsData {
     baseIntervalMultiplier: number;
 }
 
-// export enum CardState {
-//     /** Not yet shown */
-//     new = 0,
-//     /** Just after showing or after 'forgetting' a card */
-//     learn = 1,
-//     /** Passing 'learn' */
-//     seen = 2,
-//     /** No longer in short-term reviews */
-//     graduated = 3,
-//     /** New, but can't be shown */
-//     locked = 4
-// }
-
 export enum CardState {
     inactive = 0,
     active = 1,
