@@ -54,9 +54,10 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
             r[k] = a[j];
     return r;
 };
+import { CardFlag, CardState } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, setImmediatePolyfill, wait } from "./utils.js";
+import { EventHandler, minutesToHumanString, setImmediatePolyfill, wait } from "./utils.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -93,7 +94,9 @@ var DeckPresenter = /** @class */ (function (_super) {
             .append("Create Note")
             .on("click", function () { return _this.openCreateNoteDialog(); }), new Elm("button").class("importNotes")
             .append("Import Notes")
-            .on("click", function () { return _this.openImportNotesDialog(); }));
+            .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("manageNotes")
+            .append("Manage Notes")
+            .on("click", function () { return _this.openManageNotesDialog(); }));
         _this.enterCardPresenter();
         return _this;
     }
@@ -176,6 +179,10 @@ var DeckPresenter = /** @class */ (function (_super) {
                 return [2 /*return*/];
             });
         });
+    };
+    DeckPresenter.prototype.openManageNotesDialog = function () {
+        this.exitCardPresenter();
+        new ManageNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
     };
     DeckPresenter.prototype.exitCardPresenter = function () {
         this.cardPresenter.discardState();
@@ -322,10 +329,16 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         return _this;
     }
     ImportNotesDialog.prototype.importFromJishoAPIData = function () {
+        var _a;
         var _this = this;
         this.sourcesListElm.remove();
         var textarea = new DragAndDropTextarea();
-        this.foregroundElm.append(textarea, new Elm("button").append("Import")
+        var checkboxes = [
+            this.createCheckedCheckbox("Word -> Meaning"),
+            this.createCheckedCheckbox("Word -> Kana"),
+            this.createCheckedCheckbox("Kana + Meaning -> Word")
+        ];
+        this.foregroundElm.append(textarea, (_a = new Elm().class("options")).append.apply(_a, checkboxes.map(function (checkbox) { return checkbox.container; })), new Elm("button").append("Import")
             .on("click", function () {
             var value = textarea.getValue();
             var parsed = JSON.parse(value);
@@ -335,17 +348,59 @@ var ImportNotesDialog = /** @class */ (function (_super) {
             var index = _this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
             for (var _i = 0, parsed_1 = parsed; _i < parsed_1.length; _i++) {
                 var item = parsed_1[_i];
-                _this.deck.data.addNote([index, [JSON.stringify(item)]]);
+                _this.deck.data.addNote([
+                    index, [JSON.stringify(item)],
+                    checkboxes.map(function (checkbox) {
+                        return checkbox.input.getHTMLElement().checked ?
+                            undefined : [CardState.new, [CardFlag.suspended]];
+                    })
+                ]);
             }
             _this.deck.updateCardArrays()
                 .then(function () { return _this.onImported.dispatch(); });
         }));
+    };
+    ImportNotesDialog.prototype.createCheckedCheckbox = function (labelText) {
+        var input;
+        var container = new Elm().append(new Elm("label").append(input = new Elm("input").attribute("type", "checkbox")
+            .withSelf(function (e) { return e.getHTMLElement().checked = true; }), labelText));
+        return { input: input, container: container };
     };
     ImportNotesDialog.jishoAPIDataImportedNoteType = {
         name: "jishoAPIDataImportedNoteType",
         src: "resources/jishoAPIDataImportedNoteType.json"
     };
     return ImportNotesDialog;
+}(ModalDialog));
+var ManageNotesDialog = /** @class */ (function (_super) {
+    __extends(ManageNotesDialog, _super);
+    function ManageNotesDialog(deck) {
+        var _this = _super.call(this, "manageNotesDialog") || this;
+        _this.foregroundElm.append(new Elm("h1").append("Manage notes"), _this.notesList = new Elm().class("notesList"));
+        var _loop_1 = function (item) {
+            var label = item[1][0].slice(0, 20);
+            new Elm()
+                .append(new Elm().class("label").append(label), new Elm().class("cards").withSelf(function (cards) {
+                if (item[2]) {
+                    for (var _i = 0, _a = item[2]; _i < _a.length; _i++) {
+                        var card = _a[_i];
+                        cards.append(new Elm().class("card").append(card ? CardState[card[0]] : "(new)"));
+                    }
+                }
+                else {
+                    cards.append("(all new)");
+                }
+            }))
+                .appendTo(this_1.notesList);
+        };
+        var this_1 = this;
+        for (var _i = 0, _a = deck.data.getNotes(); _i < _a.length; _i++) {
+            var item = _a[_i];
+            _loop_1(item);
+        }
+        return _this;
+    }
+    return ManageNotesDialog;
 }(ModalDialog));
 var DragAndDropTextarea = /** @class */ (function (_super) {
     __extends(DragAndDropTextarea, _super);
@@ -399,7 +454,7 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.newCardsElm = new Elm().class("number");
         _this.dueCardsElm = new Elm().class("number");
         _this.graduatedCardsElm = new Elm().class("number");
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm, " minutes"), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Graduated: ", _this.graduatedCardsElm)));
+        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         //* temporary quality-of-life
         setInterval(function () { return _this.update(); }, 30e3);
@@ -407,10 +462,11 @@ var DeckTimeline = /** @class */ (function (_super) {
     }
     DeckTimeline.prototype.update = function () {
         var counts = this.deck.getCardCount();
-        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
+        var minutesToNextCard = this.deck.getMinutesToNextCard();
+        this.nextCardInMinutesElm.replaceContents(minutesToNextCard ? minutesToHumanString(minutesToNextCard) : "~");
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
-        this.graduatedCardsElm.replaceContents(counts.graduated);
+        this.graduatedCardsElm.replaceContents(counts.inactive);
     };
     return DeckTimeline;
 }(Component));
@@ -524,7 +580,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             promiseRej = rej;
             promiseRes = res;
         });
-        var _loop_1 = function (i) {
+        var _loop_2 = function (i) {
             var item = items[i];
             var button = document.createElement("button");
             button.innerText = item;
@@ -535,7 +591,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             optionsContainer.appendChild(button);
         };
         for (var i = 0; i < items.length; i++) {
-            _loop_1(i);
+            _loop_2(i);
         }
         this.elm.appendChild(optionsContainer);
         var keydownHandler = function (e) {

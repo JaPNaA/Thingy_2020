@@ -20,7 +20,12 @@ export function writeOut(deck) {
 export function readIn() {
     var readStr;
     if (fs) {
-        readStr = fs.readFileSync(deckDataPath).toString();
+        try {
+            readStr = fs.readFileSync(deckDataPath).toString();
+        }
+        catch (err) {
+            console.warn(err);
+        }
     }
     else {
         readStr = localStorage[localStoragePrefix + resolveLinkAsFile(deckDataPath)];

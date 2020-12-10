@@ -6,6 +6,23 @@ export function wait(millis) {
 export function getCurrMinuteFloored() {
     return Math.floor(Date.now() / 60e3);
 }
+export function minutesToHumanString(minutes) {
+    if (minutes < 60) {
+        return minutes + " minute" + (minutes === 1 ? "" : "s");
+    }
+    else if (minutes < 24 * 60) {
+        var hours = Math.round(minutes / 60);
+        return hours + " hour" + (hours === 1 ? "" : "s");
+    }
+    else if (minutes < 24 * 60 * 7) {
+        var days = Math.round(minutes / 60 / 24);
+        return days + " day" + (days === 1 ? "" : "s");
+    }
+    else {
+        var weeks = Math.round(minutes / 60 / 24 / 7);
+        return weeks + " week" + (weeks === 1 ? "" : "s");
+    }
+}
 export var setImmediatePolyfill = window.setImmediate || (function (f) { return setTimeout(f, 1); });
 /**
  * Returns the boundary at which isPastCheck first fails

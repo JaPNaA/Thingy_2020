@@ -1,24 +1,29 @@
+export var dataTypeVersion = "0.2";
 export function isNoteTypeDataIntegrated(x) {
     // @ts-ignore
     return !x.src;
 }
-export function isCardLearning(card) {
-    return card[0] === CardState.learn;
+export function isCardActive(card) {
+    return card[0] === CardState.active;
 }
 export var CardState;
 (function (CardState) {
-    /** Not yet shown */
-    CardState[CardState["new"] = 0] = "new";
-    /** Just after showing or after 'forgetting' a card */
-    CardState[CardState["learn"] = 1] = "learn";
-    /** Passing 'learn' */
-    CardState[CardState["seen"] = 2] = "seen";
-    /** No longer in short-term reviews */
-    CardState[CardState["graduated"] = 3] = "graduated";
+    CardState[CardState["inactive"] = 0] = "inactive";
+    CardState[CardState["active"] = 1] = "active";
+    CardState[CardState["new"] = 2] = "new";
 })(CardState || (CardState = {}));
+export var CardFlag;
+(function (CardFlag) {
+    /** Just after showing or after 'forgetting' a card */
+    CardFlag[CardFlag["learn"] = 1] = "learn";
+    /** No longer in short-term reviews */
+    CardFlag[CardFlag["graduated"] = 2] = "graduated";
+    /** New, but can't be shown */
+    CardFlag[CardFlag["suspended"] = 3] = "suspended";
+})(CardFlag || (CardFlag = {}));
 /**
  * Tests if value is 0, undefined or null
  */
 export function isEmptyValue(x) {
-    return x === undefined || x === null || x === 0;
+    return x === undefined || x === null;
 }

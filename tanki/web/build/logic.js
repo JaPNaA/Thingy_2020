@@ -47,20 +47,20 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { CardState, isCardLearning, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
+import { CardFlag, CardState, dataTypeVersion, isCardActive, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 var Deck = /** @class */ (function () {
     function Deck(data) {
-        this.graduatedCards = [];
-        this.seenAndLearningCardsSorted = [];
+        this.inactiveCards = [];
+        this.activeCards = [];
         this.newCards = [];
         this.data = new DeckDataInteract(data);
         this.loaded = this.updateCardArrays();
     }
     Deck.prototype.selectCard = function () {
         var nowMinute = getCurrMinuteFloored();
-        if (this.seenAndLearningCardsSorted.length && this.seenAndLearningCardsSorted[0].dueMinutes <= nowMinute) {
-            return this.seenAndLearningCardsSorted[0];
+        if (this.activeCards.length && this.activeCards[0].dueMinutes <= nowMinute) {
+            return this.activeCards[0];
         }
         else if (this.newCards.length > 0) {
             return this.newCards[Math.floor(Math.random() * this.newCards.length)];
@@ -74,28 +74,30 @@ var Deck = /** @class */ (function () {
             if (newCardIndex < 0) {
                 throw new Error("Rated new card that wasn't in new cards array");
             }
-            var newCard = this.newCards.splice(newCardIndex, 1)[0];
-            var state = CardState.learn;
+            var poppedCard = this.newCards.splice(newCardIndex, 1)[0];
+            var updatedCard = void 0;
             if (result === 1 && schedulingSettings.skipCardIfIsNewButAnsweredCorrectly) {
-                state = CardState.graduated;
+                poppedCard.state = CardState.inactive;
+                poppedCard.addFlag(CardFlag.graduated);
+                updatedCard = card;
             }
-            var scheduledNewCard = new ScheduledCard([
-                /** State */
-                state,
-                /** Interval in minutes */
-                schedulingSettings.initialInterval,
-                /** Difficulty factor */
-                1,
-                /** Due date in minutes ( [Date#getTime() / 60_000] )*/
-                0,
-                /** Times wrong history */
-                []
-            ], newCard.cardTypeID, newCard.parentNote);
-            scheduledNewCard._attachCardSchedulingDataToParentNote();
-            this.updateCardScheduleWithResult(scheduledNewCard, result);
-            this.sortCardIntoArray(scheduledNewCard);
+            else {
+                updatedCard = new ActiveCard([
+                    /** State */
+                    CardState.active,
+                    /** Flags */
+                    [CardFlag.learn],
+                    /** Due date in minutes ( [Date#getTime() / 60_000] )*/
+                    0,
+                    /** Interval in minutes */
+                    schedulingSettings.initialInterval
+                ], poppedCard.cardTypeID, poppedCard.parentNote);
+                this.updateCardScheduleWithResult(updatedCard, result);
+            }
+            updatedCard._attachCardSchedulingDataToParentNote();
+            this.sortCardIntoArray(updatedCard);
         }
-        else if (card instanceof ScheduledCard) {
+        else if (card instanceof ActiveCard) {
             this.updateCardScheduleWithResult(card, result);
         }
         else {
@@ -105,16 +107,10 @@ var Deck = /** @class */ (function () {
     };
     Deck.prototype.updateCardScheduleWithResult = function (card, result) {
         var schedulingSettings = this.data.getCardSchedulingSettings(card);
-        if (card.state === CardState.seen || card.state === CardState.graduated) {
-            if (result === 1) {
-                card.interval *= schedulingSettings.baseIntervalMultiplier * card.difficultyFactor;
-                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+        if (card.hasFlag(CardFlag.learn)) {
+            if (!card.learningInterval) {
+                card.learningInterval = 0;
             }
-            else {
-                card.dueMinutes = getCurrMinuteFloored() + card.interval;
-            }
-        }
-        else if (card.state === CardState.learn) {
             if (result === 0) {
                 card.learningInterval = schedulingSettings.learningStepsMinutes[0];
                 card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
@@ -124,8 +120,8 @@ var Deck = /** @class */ (function () {
                 console.log(nextStepIndex);
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
-                    card.state = CardState.seen;
-                    this.updateCardScheduleWithResult(card, result);
+                    card.removeFlag(CardFlag.learn);
+                    card.dueMinutes = getCurrMinuteFloored() + card.interval;
                 }
                 else {
                     card.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
@@ -134,7 +130,13 @@ var Deck = /** @class */ (function () {
             }
         }
         else {
-            throw new Error("lol not supported yet");
+            if (result === 1) {
+                card.interval *= schedulingSettings.baseIntervalMultiplier;
+                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            }
+            else {
+                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            }
         }
     };
     Deck.prototype.addNoteAndUpdate = function (data) {
@@ -143,7 +145,7 @@ var Deck = /** @class */ (function () {
     };
     Deck.prototype.getMinutesToNextCard = function () {
         var nowMinute = getCurrMinuteFloored();
-        var firstCard = this.seenAndLearningCardsSorted[0];
+        var firstCard = this.activeCards[0];
         if (!firstCard) {
             return;
         }
@@ -152,8 +154,8 @@ var Deck = /** @class */ (function () {
     Deck.prototype.getCardCount = function () {
         return {
             new: this.newCards.length,
-            seen: this.seenAndLearningCardsSorted.length,
-            graduated: this.graduatedCards.length
+            active: this.activeCards.length,
+            inactive: this.inactiveCards.length
         };
     };
     /**
@@ -161,11 +163,11 @@ var Deck = /** @class */ (function () {
      * the boundary where a card due that's due becomes not due.
      */
     Deck.prototype.getDueCardsCount = function () {
-        if (this.seenAndLearningCardsSorted.length <= 0) {
+        if (this.activeCards.length <= 0) {
             return 0;
         }
         var currMinute = getCurrMinuteFloored();
-        return binaryBoundarySearch(this.seenAndLearningCardsSorted, function (card) { return card.dueMinutes > currMinute; });
+        return binaryBoundarySearch(this.activeCards, function (card) { return card.dueMinutes > currMinute; });
     };
     // todo: make private again and listen for when cards are added
     Deck.prototype.updateCardArrays = function () {
@@ -174,9 +176,9 @@ var Deck = /** @class */ (function () {
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        this.graduatedCards.length = 0;
+                        this.inactiveCards.length = 0;
                         this.newCards.length = 0;
-                        this.seenAndLearningCardsSorted.length = 0;
+                        this.activeCards.length = 0;
                         _i = 0, _a = this.data.getNotes();
                         _b.label = 1;
                     case 1:
@@ -188,11 +190,11 @@ var Deck = /** @class */ (function () {
                         noteType_NumCardType = noteType.cardTypes.length;
                         for (i = 0; i < noteType_NumCardType; i++) {
                             card = isEmptyValue(note[2]) ? undefined : note[2][i];
-                            if (isEmptyValue(card) || card[0] === CardState.new) {
-                                this.newCards.push(new Card(i, note));
+                            if (!isEmptyValue(card) && isCardActive(card)) {
+                                this.sortCardIntoArray(new ActiveCard(card, i, note));
                             }
                             else {
-                                this.sortCardIntoArray(new ScheduledCard(card, i, note));
+                                this.sortCardIntoArray(new Card(card, i, note));
                             }
                         }
                         _b.label = 3;
@@ -207,23 +209,23 @@ var Deck = /** @class */ (function () {
         });
     };
     Deck.prototype.sortCardIntoArray = function (card) {
-        if (card.state === CardState.graduated) {
-            this.graduatedCards.push(card);
+        if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
+            this.inactiveCards.push(card);
         }
-        else if (card.state === CardState.seen || card.state === CardState.learn) {
-            this.seenAndLearningCardsSorted.push(card);
+        else if (card.state === CardState.active && card instanceof ActiveCard) {
+            this.activeCards.push(card);
         }
         else if (card.state === CardState.new) {
             this.newCards.push(card);
         }
         else {
-            console.error("Unexpected card", card, this.data);
-            throw new Error("Unexpected card");
+            console.error("Unexpected card state", card, this.data);
+            throw new Error("Unexpected card state");
         }
     };
     /** sort latest due first */
     Deck.prototype.sortSeenAndReviewCards = function () {
-        this.seenAndLearningCardsSorted.sort(function (a, b) { return a.dueMinutes - b.dueMinutes; });
+        this.activeCards.sort(function (a, b) { return a.dueMinutes - b.dueMinutes; });
     };
     return Deck;
 }());
@@ -232,6 +234,10 @@ var DeckDataInteract = /** @class */ (function () {
     function DeckDataInteract(deckData) {
         this.deckData = deckData;
         this.externalNoteTypesCache = new Map();
+        if (deckData.version !== dataTypeVersion) {
+            alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
+            throw new Error("Versions don't match");
+        }
     }
     DeckDataInteract.prototype.toJSON = function () {
         return JSON.stringify(this.deckData);
@@ -302,12 +308,14 @@ var DeckDataInteract = /** @class */ (function () {
     return DeckDataInteract;
 }());
 var Card = /** @class */ (function () {
-    function Card(cardTypeID, parentNote) {
+    function Card(data, cardTypeID, parentNote) {
         this.cardTypeID = cardTypeID;
         this.parentNote = parentNote;
+        this.data = data !== null && data !== void 0 ? data : [CardState.new, null];
     }
     Object.defineProperty(Card.prototype, "state", {
-        get: function () { return CardState.new; },
+        get: function () { return this.data[0]; },
+        set: function (state) { this.data[0] = state; },
         enumerable: false,
         configurable: true
     });
@@ -316,41 +324,64 @@ var Card = /** @class */ (function () {
         enumerable: false,
         configurable: true
     });
+    Card.prototype.hasFlag = function (flag) {
+        if (this.data[1]) {
+            return this.data[1].includes(flag);
+        }
+        else {
+            return false;
+        }
+    };
+    Card.prototype.addFlag = function (flag) {
+        if (this.data[1]) {
+            if (this.hasFlag(flag)) {
+                return;
+            }
+            this.data[1].push(flag);
+        }
+        else {
+            this.data[1] = [flag];
+        }
+    };
+    Card.prototype.removeFlag = function (flag) {
+        if (!this.data[1]) {
+            return;
+        }
+        var index = this.data[1].indexOf(flag);
+        if (index < 0) {
+            throw new Error("Tried to remove flag that doesn't exist");
+        }
+        this.data[1].splice(index, 1);
+    };
+    Card.prototype._attachCardSchedulingDataToParentNote = function () {
+        // this.parentNote[2] is cardData of parent note
+        // optional field, so add if not existing
+        if (isEmptyValue(this.parentNote[2])) {
+            this.parentNote[2] = [];
+        }
+        this.parentNote[2][this.cardTypeID] = this.data;
+    };
     return Card;
 }());
 export { Card };
-var ScheduledCard = /** @class */ (function (_super) {
-    __extends(ScheduledCard, _super);
-    function ScheduledCard(data, cardTypeID, parentNote) {
-        var _this = _super.call(this, cardTypeID, parentNote) || this;
-        _this.data = data;
-        return _this;
+var ActiveCard = /** @class */ (function (_super) {
+    __extends(ActiveCard, _super);
+    function ActiveCard(data, cardTypeID, parentNote) {
+        return _super.call(this, data, cardTypeID, parentNote) || this;
     }
-    Object.defineProperty(ScheduledCard.prototype, "state", {
-        get: function () { return this.data[0]; },
-        set: function (state) { this.data[0] = state; },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(ScheduledCard.prototype, "interval", {
-        get: function () { return this.data[1]; },
-        set: function (minutes) { this.data[1] = minutes; },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(ScheduledCard.prototype, "difficultyFactor", {
+    Object.defineProperty(ActiveCard.prototype, "dueMinutes", {
         get: function () { return this.data[2]; },
-        set: function (factor) { this.data[2] = factor; },
+        set: function (minutes) { this.data[2] = Math.round(minutes); },
         enumerable: false,
         configurable: true
     });
-    Object.defineProperty(ScheduledCard.prototype, "dueMinutes", {
+    Object.defineProperty(ActiveCard.prototype, "interval", {
         get: function () { return this.data[3]; },
-        set: function (minutes) { this.data[3] = Math.round(minutes); },
+        set: function (minutes) { this.data[3] = minutes; },
         enumerable: false,
         configurable: true
     });
-    Object.defineProperty(ScheduledCard.prototype, "timesWrongHistory", {
+    Object.defineProperty(ActiveCard.prototype, "timesWrongHistory", {
         get: function () {
             if (isEmptyValue(this.data[4])) {
                 return;
@@ -360,7 +391,7 @@ var ScheduledCard = /** @class */ (function (_super) {
         enumerable: false,
         configurable: true
     });
-    ScheduledCard.prototype.addIncorrectCountToRollingHistory = function (incorrectCount) {
+    ActiveCard.prototype.addIncorrectCountToRollingHistory = function (incorrectCount) {
         if (isEmptyValue(this.data[4])) {
             this.data[4] = [];
         }
@@ -369,29 +400,15 @@ var ScheduledCard = /** @class */ (function (_super) {
             this.data[4].shift();
         }
     };
-    Object.defineProperty(ScheduledCard.prototype, "learningInterval", {
+    Object.defineProperty(ActiveCard.prototype, "learningInterval", {
         get: function () {
-            if (!isCardLearning(this.data)) {
-                throw new Error("Tried to get learning interval for card not in learning");
-            }
             return this.data[5];
         },
         set: function (interval) {
-            if (!isCardLearning(this.data)) {
-                throw new Error("Tried to setting learning interval for card not in learning");
-            }
             this.data[5] = interval;
         },
         enumerable: false,
         configurable: true
     });
-    ScheduledCard.prototype._attachCardSchedulingDataToParentNote = function () {
-        // this.parentNote[2] is cardData of parent note
-        // optional field, so add if not existing
-        if (isEmptyValue(this.parentNote[2])) {
-            this.parentNote[2] = [];
-        }
-        this.parentNote[2][this.cardTypeID] = this.data;
-    };
-    return ScheduledCard;
+    return ActiveCard;
 }(Card));
