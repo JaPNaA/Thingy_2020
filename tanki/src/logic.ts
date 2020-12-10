@@ -84,7 +84,7 @@ export class Deck {
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
                     card.removeFlag(CardFlag.learn)
-                    this.updateCardScheduleWithResult(card, result);
+                    card.dueMinutes = getCurrMinuteFloored() + card.interval;
                 } else {
                     card.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
                     card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
