@@ -2,7 +2,7 @@ import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
+import { EventHandler, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -400,7 +400,7 @@ class DeckTimeline extends Component {
         super("deckTimeline");
 
         this.append(
-            new Elm().append("Next review card in ", this.nextCardInMinutesElm, " minutes"),
+            new Elm().append("Next review card in ", this.nextCardInMinutesElm),
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
                     "New: ", this.newCardsElm
@@ -422,8 +422,11 @@ class DeckTimeline extends Component {
 
     public update() {
         const counts = this.deck.getCardCount();
+        const minutesToNextCard = this.deck.getMinutesToNextCard();
 
-        this.nextCardInMinutesElm.replaceContents(this.deck.getMinutesToNextCard());
+        this.nextCardInMinutesElm.replaceContents(
+            minutesToNextCard ? minutesToHumanString(minutesToNextCard) : "~"
+        );
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
