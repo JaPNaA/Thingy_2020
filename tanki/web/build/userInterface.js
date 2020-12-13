@@ -463,7 +463,7 @@ var DeckTimeline = /** @class */ (function (_super) {
     DeckTimeline.prototype.update = function () {
         var counts = this.deck.getCardCount();
         var minutesToNextCard = this.deck.getMinutesToNextCard();
-        this.nextCardInMinutesElm.replaceContents(minutesToNextCard ? minutesToHumanString(minutesToNextCard) : "~");
+        this.nextCardInMinutesElm.replaceContents(minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard));
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);

@@ -587,6 +587,8 @@ class QuickUserInputGetter extends Component {
         this.elm.appendChild(optionsContainer);
 
         const keydownHandler = (e: KeyboardEvent) => {
+            if (e.repeat) { return; }
+
             const numberKey = parseInt(e.key) - 1;
             let wasValidInput = true;
             if (!isNaN(numberKey) && numberKey < items.length) {
