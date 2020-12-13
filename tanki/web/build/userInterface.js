@@ -595,6 +595,9 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
         }
         this.elm.appendChild(optionsContainer);
         var keydownHandler = function (e) {
+            if (e.repeat) {
+                return;
+            }
             var numberKey = parseInt(e.key) - 1;
             var wasValidInput = true;
             if (!isNaN(numberKey) && numberKey < items.length) {
