@@ -2,7 +2,7 @@ import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
+import { EventHandler, getCurrMinuteFloored, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -395,12 +395,16 @@ class DeckTimeline extends Component {
     private newCardsElm = new Elm().class("number");
     private dueCardsElm = new Elm().class("number");
     private graduatedCardsElm = new Elm().class("number");
+    private timelineCanvasElm = new Elm("canvas").class("timelineCanvas");
+    /** Canvas context for timeline canvas element */
+    private timelineX = this.timelineCanvasElm.getHTMLElement().getContext("2d")!;
 
     constructor(private deck: Deck) {
         super("deckTimeline");
 
         this.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
+            this.timelineCanvasElm,
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
                     "New: ", this.newCardsElm
@@ -430,6 +434,37 @@ class DeckTimeline extends Component {
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
+
+        this.drawTimeline();
+    }
+
+    private drawTimeline() {
+        if (!this.timelineX) { return; }
+
+        const notes = this.deck.data.getNotes();
+        const firstCardMinutes = this.deck.getMinutesToNextCard() ?? 0;
+        const minuteZero = getCurrMinuteFloored() - (
+            firstCardMinutes > 0 ? 0 : firstCardMinutes
+        );
+
+        this.timelineX.canvas.width = innerWidth;
+        this.timelineX.canvas.height = 36;
+        this.timelineX.clearRect(0, 0, 100, 100);
+        this.timelineX.fillStyle = "#00000040";
+        // this.timelineX.fillRect(0, 0, 100, 100);
+
+        for (const note of notes) {
+            //* temp
+            if (note[2]) {
+                const cards = note[2];
+                for (const card of cards) {
+                    if (!card || card[0] !== CardState.active) { continue; }
+                    const relativeDue = card[2] - minuteZero;
+                    this.timelineX.fillRect(relativeDue, 0, 4, 16);
+                    this.timelineX.fillRect(relativeDue / 60, 20, 1, 16);
+                }
+            }
+        }
     }
 }
 
