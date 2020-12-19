@@ -443,7 +443,7 @@ class DeckTimeline extends Component {
 
         const notes = this.deck.data.getNotes();
         const firstCardMinutes = this.deck.getMinutesToNextCard() ?? 0;
-        const minuteZero = getCurrMinuteFloored() - (
+        const minuteZero = getCurrMinuteFloored() + (
             firstCardMinutes > 0 ? 0 : firstCardMinutes
         );
 
