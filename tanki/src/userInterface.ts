@@ -244,6 +244,8 @@ class ImportNotesDialog extends ModalDialog {
     public onImported = new EventHandler();
 
     private sourcesListElm: Elm;
+    /** Flag to prevent double-importing */
+    private imported = false;
 
     private static jishoAPIDataImportedNoteType: NoteTypeDataExternal = {
         name: "jishoAPIDataImportedNoteType",
@@ -264,6 +266,7 @@ class ImportNotesDialog extends ModalDialog {
 
     private importFromJishoAPIData() {
         this.sourcesListElm.remove();
+        this.imported = false;
 
         const textarea = new DragAndDropTextarea();
         const checkboxes = [
@@ -279,6 +282,9 @@ class ImportNotesDialog extends ModalDialog {
             ),
             new Elm("button").append("Import")
                 .on("click", () => {
+                    if (this.imported) { return; }
+                    this.imported = true;
+
                     const value = textarea.getValue();
                     const parsed = JSON.parse(value);
                     if (this.deck.data.indexOfNote(

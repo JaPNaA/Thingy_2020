@@ -57,7 +57,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 import { CardFlag, CardState } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, minutesToHumanString, setImmediatePolyfill, wait } from "./utils.js";
+import { EventHandler, getCurrMinuteFloored, minutesToHumanString, setImmediatePolyfill, wait } from "./utils.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -323,6 +323,8 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         var _this = _super.call(this, "importNotesDialog") || this;
         _this.deck = deck;
         _this.onImported = new EventHandler();
+        /** Flag to prevent double-importing */
+        _this.imported = false;
         _this.foregroundElm.append(new Elm("h3").append("Import Notes"), _this.sourcesListElm = new Elm().class("sourcesList").append(new Elm("button").append("jishoAPIData (jishoWithHistory)")
             .on("click", function () { return _this.importFromJishoAPIData(); })));
         console.log(deck);
@@ -332,6 +334,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         var _a;
         var _this = this;
         this.sourcesListElm.remove();
+        this.imported = false;
         var textarea = new DragAndDropTextarea();
         var checkboxes = [
             this.createCheckedCheckbox("Word -> Meaning"),
@@ -340,6 +343,10 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         ];
         this.foregroundElm.append(textarea, (_a = new Elm().class("options")).append.apply(_a, checkboxes.map(function (checkbox) { return checkbox.container; })), new Elm("button").append("Import")
             .on("click", function () {
+            if (_this.imported) {
+                return;
+            }
+            _this.imported = true;
             var value = textarea.getValue();
             var parsed = JSON.parse(value);
             if (_this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name) < 0) {
@@ -454,7 +461,10 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.newCardsElm = new Elm().class("number");
         _this.dueCardsElm = new Elm().class("number");
         _this.graduatedCardsElm = new Elm().class("number");
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
+        _this.timelineCanvasElm = new Elm("canvas").class("timelineCanvas");
+        /** Canvas context for timeline canvas element */
+        _this.timelineX = _this.timelineCanvasElm.getHTMLElement().getContext("2d");
+        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), _this.timelineCanvasElm, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         //* temporary quality-of-life
         setInterval(function () { return _this.update(); }, 30e3);
@@ -467,6 +477,37 @@ var DeckTimeline = /** @class */ (function (_super) {
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
+        this.drawTimeline();
+    };
+    DeckTimeline.prototype.drawTimeline = function () {
+        var _a;
+        if (!this.timelineX) {
+            return;
+        }
+        var notes = this.deck.data.getNotes();
+        var firstCardMinutes = (_a = this.deck.getMinutesToNextCard()) !== null && _a !== void 0 ? _a : 0;
+        var minuteZero = getCurrMinuteFloored() + (firstCardMinutes > 0 ? 0 : firstCardMinutes);
+        this.timelineX.canvas.width = innerWidth;
+        this.timelineX.canvas.height = 36;
+        this.timelineX.clearRect(0, 0, 100, 100);
+        this.timelineX.fillStyle = "#00000040";
+        // this.timelineX.fillRect(0, 0, 100, 100);
+        for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
+            var note = notes_1[_i];
+            //* temp
+            if (note[2]) {
+                var cards = note[2];
+                for (var _b = 0, cards_1 = cards; _b < cards_1.length; _b++) {
+                    var card = cards_1[_b];
+                    if (!card || card[0] !== CardState.active) {
+                        continue;
+                    }
+                    var relativeDue = card[2] - minuteZero;
+                    this.timelineX.fillRect(relativeDue, 0, 4, 16);
+                    this.timelineX.fillRect(relativeDue / 60, 20, 1, 16);
+                }
+            }
+        }
     };
     return DeckTimeline;
 }(Component));
