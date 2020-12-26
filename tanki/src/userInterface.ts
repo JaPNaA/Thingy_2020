@@ -632,7 +632,7 @@ class QuickUserInputGetter extends Component {
 
             const numberKey = parseInt(e.key) - 1;
             let wasValidInput = true;
-            if (!isNaN(numberKey) && numberKey < items.length) {
+            if (!isNaN(numberKey) && numberKey < items.length && numberKey >= 0) {
                 promiseRes(numberKey);
             } else if (e.key === " " || e.key === "Enter") {
                 promiseRes(defaultIndex ?? 0);

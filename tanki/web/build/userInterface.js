@@ -641,7 +641,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             }
             var numberKey = parseInt(e.key) - 1;
             var wasValidInput = true;
-            if (!isNaN(numberKey) && numberKey < items.length) {
+            if (!isNaN(numberKey) && numberKey < items.length && numberKey >= 0) {
                 promiseRes(numberKey);
             }
             else if (e.key === " " || e.key === "Enter") {
