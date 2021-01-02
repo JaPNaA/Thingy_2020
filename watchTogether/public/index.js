@@ -1,6 +1,6 @@
 /* eslint-disable */
 
-import { EventHandlers } from "./common.js";
+import { EventHandlers, TrackableObject } from "./common.js";
 
 class Server {
     constructor() {
@@ -20,7 +20,7 @@ class Server {
             this._commandHandler(command, data);
         });
 
-        /** @type {EventHandlers<VideoStateDataUpdate>} */
+        /** @type {EventHandlers<Partial<VideoStateData>>} */
         this.onPositionChange = new EventHandlers();
     }
 
@@ -32,7 +32,8 @@ class Server {
         });
     }
 
-    /** @param {Partial<VideoStateDataUpdate>} stateUpdate */
+
+    /** @param {Partial<VideoStateData>} stateUpdate */
     _sendStateUpdate(stateUpdate) {
         this.socket.send("stateUpdate:" + JSON.stringify(stateUpdate));
     }
@@ -57,7 +58,16 @@ class Server {
 const server = new Server();
 
 function onYouTubeIframeAPIReady() {
-    let done = false;
+    let lastPlayerState = null;
+    /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
+    const playerState = new TrackableObject({
+        timestamp: 0,
+        videoId: "",
+        playing: false,
+        ended: false,
+        position: 0,
+        playbackRate: 1
+    });
 
     const player = new YT.Player("player", {
         height: "360",
