@@ -170,10 +170,12 @@ class ChapterFiles {
     }
 }
 
-class PagesDisplay {
+class FileDisplay {
     constructor() {
         /** @type {ChapterFiles[]} */
         this.chapters = [];
+        /** @type {ChapterFiles | undefined} */
+        this.currentChapter = undefined;
 
         this.elm = document.createElement("div");
         this.elm.classList.add("pagesDisplay");
@@ -197,10 +199,18 @@ class PagesDisplay {
         const chapterOption = document.createElement("div");
         chapterOption.innerText = name || "root";
         chapterOption.addEventListener("click", () => {
-            this._clearChapterContainer();
-            this.chapterContainer.appendChild(chapter.elm);
+            this.setChapter(chapter);
         });
         this.chapterSelectElm.appendChild(chapterOption);
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     */
+    setChapter(chapter) {
+        this._clearChapterContainer();
+        this.chapterContainer.appendChild(chapter.elm);
+        this.currentChapter = chapter;
     }
 
     _clearChapterContainer() {
@@ -259,8 +269,8 @@ class FileDirectory {
 const main = document.createElement("div");
 main.classList.add("main");
 
-const pagesDisplay = new PagesDisplay();
-main.appendChild(pagesDisplay.elm);
+const fileDisplay = new FileDisplay();
+main.appendChild(fileDisplay.elm);
 
 const directoryFileInput = document.createElement("input");
 directoryFileInput.type = "file";
@@ -403,7 +413,7 @@ function updateFiles(directory) {
             } else {
                 if (addedDir) { continue; }
                 const chapterFiles = new ChapterFiles(currDir);
-                pagesDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
+                fileDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
                 addedDir = true;
             }
         }
@@ -429,7 +439,7 @@ addEventListener("keydown", function (e) {
         newScroll -= pageHeight;
     }
 
-    // document.documentElement.scrollTop = currentChapter.closestRowY(newScroll);
+    document.documentElement.scrollTop = fileDisplay.currentChapter.closestRowY(newScroll);
 });
 
 let lastWidth = -1;
