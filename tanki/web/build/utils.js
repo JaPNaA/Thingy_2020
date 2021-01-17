@@ -7,21 +7,27 @@ export function getCurrMinuteFloored() {
     return Math.floor(Date.now() / 60e3);
 }
 export function minutesToHumanString(minutes) {
-    if (minutes < 60) {
-        return minutes + " minute" + (minutes === 1 ? "" : "s");
+    var minsAbs = Math.abs(minutes);
+    var resultStr;
+    if (minsAbs < 60) {
+        resultStr = minsAbs + " minute" + (minsAbs === 1 ? "" : "s");
     }
-    else if (minutes < 24 * 60) {
-        var hours = Math.round(minutes / 60);
-        return hours + " hour" + (hours === 1 ? "" : "s");
+    else if (minsAbs < 24 * 60) {
+        var hours = Math.round(minsAbs / 60);
+        resultStr = hours + " hour" + (hours === 1 ? "" : "s");
     }
-    else if (minutes < 24 * 60 * 7) {
-        var days = Math.round(minutes / 60 / 24);
-        return days + " day" + (days === 1 ? "" : "s");
+    else if (minsAbs < 24 * 60 * 7) {
+        var days = Math.round(minsAbs / 60 / 24);
+        resultStr = days + " day" + (days === 1 ? "" : "s");
     }
     else {
-        var weeks = Math.round(minutes / 60 / 24 / 7);
-        return weeks + " week" + (weeks === 1 ? "" : "s");
+        var weeks = Math.round(minsAbs / 60 / 24 / 7);
+        resultStr = weeks + " week" + (weeks === 1 ? "" : "s");
     }
+    if (minutes < 0) {
+        resultStr += " ago";
+    }
+    return resultStr;
 }
 export var setImmediatePolyfill = window.setImmediate || (function (f) { return setTimeout(f, 1); });
 /**

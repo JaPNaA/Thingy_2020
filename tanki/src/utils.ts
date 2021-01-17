@@ -9,18 +9,27 @@ export function getCurrMinuteFloored(): number {
 }
 
 export function minutesToHumanString(minutes: number): string {
-    if (minutes < 60) {
-        return minutes + " minute" + (minutes === 1 ? "" : "s");
-    } else if (minutes < 24 * 60) {
-        const hours = Math.round(minutes / 60);
-        return hours + " hour" + (hours === 1 ? "" : "s");
-    } else if (minutes < 24 * 60 * 7) {
-        const days = Math.round(minutes / 60 / 24);
-        return days + " day" + (days === 1 ? "" : "s");
+    const minsAbs = Math.abs(minutes);
+    let resultStr;
+
+    if (minsAbs < 60) {
+        resultStr = minsAbs + " minute" + (minsAbs === 1 ? "" : "s");
+    } else if (minsAbs < 24 * 60) {
+        const hours = Math.round(minsAbs / 60);
+        resultStr = hours + " hour" + (hours === 1 ? "" : "s");
+    } else if (minsAbs < 24 * 60 * 7) {
+        const days = Math.round(minsAbs / 60 / 24);
+        resultStr = days + " day" + (days === 1 ? "" : "s");
     } else {
-        const weeks = Math.round(minutes / 60 / 24 / 7);
-        return weeks + " week" + (weeks === 1 ? "" : "s");
+        const weeks = Math.round(minsAbs / 60 / 24 / 7);
+        resultStr = weeks + " week" + (weeks === 1 ? "" : "s");
     }
+
+    if (minutes < 0) {
+        resultStr += " ago";
+    }
+
+    return resultStr;
 }
 
 export const setImmediatePolyfill = window.setImmediate || (f => setTimeout(f, 1));
