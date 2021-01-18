@@ -44,6 +44,12 @@ class PageFile {
         this.img.src = URL.createObjectURL(this.file);
         this.img.alt = fileName;
 
+        this.img.addEventListener("load", () => {
+            if (this.img.width > this.img.height) {
+                parentChapter.toggleBlankPageBefore(this);
+            }
+        });
+
         this.img.addEventListener("dblclick", () => {
             parentChapter.toggleBlankPageBefore(this);
         });
@@ -128,11 +134,17 @@ class ChapterFiles {
         for (let i = 0; i < this.pages.length; i += this.pagesPerRow) {
             const rowElm = document.createElement("div");
             rowElm.classList.add("row");
+            let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
                 if (this.pages[i + j]) {
                     rowElm.appendChild(this.pages[i + j].img);
+                    actualPagesInRow++;
                 }
+            }
+
+            if (actualPagesInRow === 1) {
+                rowElm.classList.add("singlePage");
             }
 
             this.elm.appendChild(rowElm);

@@ -32,7 +32,7 @@ body {
     min-height: 24px;
 }
 
-.chapter.portrait .page {
+.chapter.portrait .page, .row.singlePage .page {
     max-width: 100%;
 }
 
