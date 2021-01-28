@@ -16,6 +16,6 @@
   "author": "JaPNaA",
   "license": "ISC",
   "dependencies": {
-    "electron": "^11.0.2"
+    "electron": "^11.1.0"
   }
 }
