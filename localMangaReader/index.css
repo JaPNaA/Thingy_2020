@@ -28,9 +28,11 @@ body {
     max-height: 100vh;
     width: auto;
     height: auto;
+    min-width: 24px;
+    min-height: 24px;
 }
 
-.chapter.portrait .page {
+.chapter.portrait .page, .row.singlePage .page {
     max-width: 100%;
 }
 

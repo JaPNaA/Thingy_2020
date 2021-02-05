@@ -42,6 +42,13 @@ class PageFile {
         this.img = document.createElement("img");
         this.img.classList.add("page");
         this.img.src = URL.createObjectURL(this.file);
+        this.img.alt = fileName;
+
+        this.img.addEventListener("load", () => {
+            if (this.img.width > this.img.height) {
+                parentChapter.toggleBlankPageBefore(this);
+            }
+        });
 
         this.img.addEventListener("dblclick", () => {
             parentChapter.toggleBlankPageBefore(this);
@@ -127,11 +134,17 @@ class ChapterFiles {
         for (let i = 0; i < this.pages.length; i += this.pagesPerRow) {
             const rowElm = document.createElement("div");
             rowElm.classList.add("row");
+            let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
                 if (this.pages[i + j]) {
                     rowElm.appendChild(this.pages[i + j].img);
+                    actualPagesInRow++;
                 }
+            }
+
+            if (actualPagesInRow === 1) {
+                rowElm.classList.add("singlePage");
             }
 
             this.elm.appendChild(rowElm);
@@ -169,9 +182,53 @@ class ChapterFiles {
     }
 }
 
-class PagesDisplay {
+class FileDisplay {
     constructor() {
-        //
+        /** @type {ChapterFiles[]} */
+        this.chapters = [];
+        /** @type {ChapterFiles | undefined} */
+        this.currentChapter = undefined;
+
+        this.elm = document.createElement("div");
+        this.elm.classList.add("pagesDisplay");
+
+        this.chapterSelectElm = document.createElement('div');
+        this.chapterSelectElm.classList.add("chapterSelect");
+        this.elm.appendChild(this.chapterSelectElm);
+
+        this.chapterContainer = document.createElement("diiv");
+        this.chapterContainer.classList.add("chapterContainer");
+        this.elm.appendChild(this.chapterContainer);
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     * @param {string | undefined} name
+     */
+    addChapter(chapter, name) {
+        this.chapters.push(chapter);
+
+        const chapterOption = document.createElement("div");
+        chapterOption.innerText = name || "root";
+        chapterOption.addEventListener("click", () => {
+            this.setChapter(chapter);
+        });
+        this.chapterSelectElm.appendChild(chapterOption);
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     */
+    setChapter(chapter) {
+        this._clearChapterContainer();
+        this.chapterContainer.appendChild(chapter.elm);
+        this.currentChapter = chapter;
+    }
+
+    _clearChapterContainer() {
+        while (this.chapterContainer.firstChild) {
+            this.chapterContainer.removeChild(this.chapterContainer.firstChild);
+        }
     }
 }
 
@@ -179,6 +236,10 @@ class FileDirectory {
     constructor() {
         /** @type {Map<string, Blob | FileDirectory>} */
         this.items = new Map();
+        /** @type {string | undefined} */
+        this.name = undefined;
+        /** @type {string | undefined} */
+        this.parentPath = undefined;
     }
 
     /** @param {File} file */
@@ -203,6 +264,8 @@ class FileDirectory {
             let nextDirectory = currDirectory.items.get(part);
             if (nextDirectory === undefined) {
                 nextDirectory = new FileDirectory();
+                nextDirectory.name = part;
+                nextDirectory.parentPath = (currDirectory.parentPath || "/") + (currDirectory.name || "") + "/";
                 currDirectory.items.set(part, nextDirectory);
             } else if (!(nextDirectory instanceof FileDirectory)) {
                 throw new Error("Cannot create folder, name already taken");
@@ -218,9 +281,8 @@ class FileDirectory {
 const main = document.createElement("div");
 main.classList.add("main");
 
-const chaptersContainer = document.createElement("div");
-chaptersContainer.classList.add("chaptersContainer");
-main.appendChild(chaptersContainer);
+const fileDisplay = new FileDisplay();
+main.appendChild(fileDisplay.elm);
 
 const directoryFileInput = document.createElement("input");
 directoryFileInput.type = "file";
@@ -344,9 +406,6 @@ function isIOS() {
         || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
 }
 
-/** @type {ChapterFiles} */
-let currentChapter = null;
-
 /**
  * @param {FileDirectory} directory
  */
@@ -366,8 +425,7 @@ function updateFiles(directory) {
             } else {
                 if (addedDir) { continue; }
                 const chapterFiles = new ChapterFiles(currDir);
-                chaptersContainer.appendChild(chapterFiles.elm);
-                currentChapter = chapterFiles;
+                fileDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
                 addedDir = true;
             }
         }
@@ -393,7 +451,7 @@ addEventListener("keydown", function (e) {
         newScroll -= pageHeight;
     }
 
-    document.documentElement.scrollTop = currentChapter.closestRowY(newScroll);
+    document.documentElement.scrollTop = fileDisplay.currentChapter.closestRowY(newScroll);
 });
 
 let lastWidth = -1;
