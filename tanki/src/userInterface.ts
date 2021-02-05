@@ -61,6 +61,8 @@ class DeckPresenter extends Component {
                 .on("click", () => this.openManageNotesDialog())
         );
 
+        this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
+
         this.enterCardPresenter();
     }
 
@@ -90,6 +92,20 @@ class DeckPresenter extends Component {
         this.exitCardPresenter();
         this.onExit.dispatch();
         this.presenting = false;
+    }
+
+    private addEscKeyExitHandler() {
+        addEventListener("keydown", this.escKeyExitHandler);
+    }
+
+    private removeEscKeyExitHandler() {
+        removeEventListener("keydown", this.escKeyExitHandler);
+    }
+
+    private escKeyExitHandler(event: KeyboardEvent) {
+        if (event.key === "Escape") {
+            this.exitCardPresenter();
+        }
     }
 
     private async openCreateNoteDialog() {
@@ -123,12 +139,14 @@ class DeckPresenter extends Component {
 
     private exitCardPresenter() {
         this.cardPresenter.discardState();
+        this.removeEscKeyExitHandler();
         this.cardPresenterContainer.class("hidden");
     }
 
     private enterCardPresenter() {
         this.cardPresenterContainer.removeClass("hidden");
         this.presentingLoop();
+        this.addEscKeyExitHandler();
     }
 }
 

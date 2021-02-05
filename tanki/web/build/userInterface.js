@@ -97,6 +97,7 @@ var DeckPresenter = /** @class */ (function (_super) {
             .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("manageNotes")
             .append("Manage Notes")
             .on("click", function () { return _this.openManageNotesDialog(); }));
+        _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
         _this.enterCardPresenter();
         return _this;
     }
@@ -143,6 +144,17 @@ var DeckPresenter = /** @class */ (function (_super) {
             });
         });
     };
+    DeckPresenter.prototype.addEscKeyExitHandler = function () {
+        addEventListener("keydown", this.escKeyExitHandler);
+    };
+    DeckPresenter.prototype.removeEscKeyExitHandler = function () {
+        removeEventListener("keydown", this.escKeyExitHandler);
+    };
+    DeckPresenter.prototype.escKeyExitHandler = function (event) {
+        if (event.key === "Escape") {
+            this.exitCardPresenter();
+        }
+    };
     DeckPresenter.prototype.openCreateNoteDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
             var createNoteDialog, data;
@@ -186,11 +198,13 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     DeckPresenter.prototype.exitCardPresenter = function () {
         this.cardPresenter.discardState();
+        this.removeEscKeyExitHandler();
         this.cardPresenterContainer.class("hidden");
     };
     DeckPresenter.prototype.enterCardPresenter = function () {
         this.cardPresenterContainer.removeClass("hidden");
         this.presentingLoop();
+        this.addEscKeyExitHandler();
     };
     return DeckPresenter;
 }(Component));
