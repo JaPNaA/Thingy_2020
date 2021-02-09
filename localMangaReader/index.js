@@ -29,19 +29,18 @@ langMapProm.then(map => document.title = map.localMangaReaderTitle);
 class PageFile {
     /**
      * @param {ChapterFiles} parentChapter
-     * @param {Blob} blob
+     * @param {LoadableFile} loadableFile
      * @param {string} fileName
      * @param {number} [pageNumber=-1] 
      */
-    constructor(parentChapter, blob, fileName, pageNumber) {
+    constructor(parentChapter, loadableFile, fileName, pageNumber) {
         this.parent = parentChapter;
-        this.file = blob;
         this.fileName = fileName;
+        this.loadableFile = loadableFile;
         this.pageNumber = pageNumber === undefined ? -1 : pageNumber;
 
         this.img = document.createElement("img");
         this.img.classList.add("page");
-        this.img.src = URL.createObjectURL(this.file);
         this.img.alt = fileName;
 
         this.img.addEventListener("load", () => {
@@ -53,6 +52,12 @@ class PageFile {
         this.img.addEventListener("dblclick", () => {
             parentChapter.toggleBlankPageBefore(this);
         });
+    }
+
+    async loadFile() {
+        this.img.src = URL.createObjectURL(
+            await this.loadableFile.loadFile()
+        );
     }
 }
 
@@ -105,7 +110,7 @@ class ChapterFiles {
         const extraPages = [];
 
         for (const [name, file] of this.directory.items) {
-            if (!(file instanceof Blob)) { continue; }
+            if (!(file instanceof LoadableFile)) { continue; }
 
             const match = name.match(pageNumberRegex);
             if (match) {
@@ -232,9 +237,35 @@ class FileDisplay {
     }
 }
 
+class LoadableFile {
+    /**
+     * @typedef {(() => Promise<Blob>} FileLoader
+     * @param {Blob | FileLoader} fileOrLoader
+     */
+    constructor(fileOrLoader) {
+        if (typeof fileOrLoader === "function") {
+            this.loader = fileOrLoader;
+            this.loadedFile = null;
+        } else {
+            this.loader = null;
+            this.loadedFile = fileOrLoader;
+        }
+    }
+
+    /**
+     * @return {Promise<Blob>}
+     */
+    async loadFile() {
+        if (this.loadedFile) { return this.loadedFile; }
+        if (this.loadingPromise) { return this.loadingPromise; }
+        this.loadingPromise = this.loader();
+        this.loadingPromise.then(blob => this.loadedFile = blob);
+    }
+}
+
 class FileDirectory {
     constructor() {
-        /** @type {Map<string, Blob | FileDirectory>} */
+        /** @type {Map<string, LoadableFile | FileDirectory>} */
         this.items = new Map();
         /** @type {string | undefined} */
         this.name = undefined;
@@ -242,7 +273,7 @@ class FileDirectory {
         this.parentPath = undefined;
     }
 
-    /** @param {File} file */
+    /** @param {LoadableFile} file */
     addFile(file) {
         /** @type {string} */ // @ts-ignore
         const path = file.webkitRelativePath;
@@ -252,9 +283,9 @@ class FileDirectory {
 
     /**
      * @param {string} path 
-     * @param {Blob} blob 
+     * @param {LoadableFile} file 
      */
-    addBlob(path, blob) {
+    addBlob(path, file) {
         const pathParts = path.split("/");
         let fileName = pathParts.pop();
 
@@ -274,7 +305,7 @@ class FileDirectory {
             currDirectory = nextDirectory;
         }
 
-        currDirectory.items.set(fileName, blob);
+        currDirectory.items.set(fileName, file);
     }
 }
 
@@ -322,7 +353,7 @@ directoryFileInput.addEventListener("change", function (e) {
     const directory = new FileDirectory();
 
     for (const file of directoryFileInput.files) {
-        directory.addFile(file);
+        directory.addFile(new LoadableFile(file));
     }
 
     updateFiles(directory);
@@ -335,76 +366,14 @@ zipFileInput.addEventListener("change", async function (e) {
 
     const directory = new FileDirectory();
 
-    if (!isIOS()) {
-        let total = 0;
-        let loaded = 0;
+    zip.forEach(function (relPath, file) {
+        directory.addBlob(relPath,
+            new LoadableFile(async () => await file.async("blob"))
+        );
+    });
 
-        zip.forEach(async function (relPath, file) {
-            total++;
-            const blob = await file.async("blob");
-            directory.addBlob(relPath, blob);
-            loaded++;
-            await checkDoneCallback();
-        });
-
-        async function checkDoneCallback() {
-            if (loaded >= total) {
-                updateFiles(directory);
-            }
-
-            if (loaded % 20 === 0) { // loading indication + prevent 'not responding'
-                document.body.appendChild(
-                    document.createTextNode(Math.round(loaded / total * 100) + "% loaded. ")
-                );
-                await new Promise(e => setTimeout(() => e(), 1));
-            }
-        }
-    } else {
-        // slower, but doesn't crash iOS
-        const files = [];
-
-        zip.forEach((relPath, file) => {
-            files.push([relPath, file]);
-        });
-
-        const batchSize = 10;
-
-        for (let i = 0; i < files.length; i += batchSize) {
-            const promises = [];
-
-            for (let j = 0; j < batchSize; j++) {
-                const index = i + j;
-                if (index >= files.length) { break; }
-
-                const [relPath, file] = files[index];
-
-                promises.push(
-                    file.async("blob")
-                        .then(blob => directory.addBlob(relPath, blob))
-                        .then(() => document.body.appendChild(document.createTextNode(relPath + " loaded. ")))
-                );
-            }
-
-            await Promise.all(promises);
-            await new Promise(e => setTimeout(() => e(), 1));
-        }
-
-        updateFiles(directory);
-    }
+    updateFiles(directory);
 });
-
-function isIOS() {
-    return [
-        'iPad Simulator',
-        'iPhone Simulator',
-        'iPod Simulator',
-        'iPad',
-        'iPhone',
-        'iPod'
-    ].includes(navigator.platform)
-        // iPad on iOS 13 detection
-        || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-}
 
 /**
  * @param {FileDirectory} directory
