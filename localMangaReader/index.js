@@ -72,11 +72,10 @@ class ChapterFiles {
         this.directory = directory;
         /** @type {(PageFile | null)[]} */
         this.pages = [];
+        /** @type {(PageFile | null)[][]} */
+        this.displayRows = [];
 
         this.pagesPerRow = 2;
-
-        /** @type {number[]} */
-        this.snapPoints = [];
 
         this.elm = document.createElement("div");
         this.elm.classList.add("chapter");
@@ -135,15 +134,19 @@ class ChapterFiles {
 
     updateElements() {
         while (this.elm.firstElementChild) { this.elm.removeChild(this.elm.firstElementChild); }
+        this.displayRows.length = 0;
 
         for (let i = 0; i < this.pages.length; i += this.pagesPerRow) {
             const rowElm = document.createElement("div");
+            const rowArr = [];
             rowElm.classList.add("row");
             let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
-                if (this.pages[i + j]) {
-                    rowElm.appendChild(this.pages[i + j].img);
+                const page = this.pages[i + j];
+                if (page) {
+                    rowElm.appendChild(page.img);
+                    rowArr.push(page);
                     actualPagesInRow++;
                 }
             }
@@ -153,6 +156,7 @@ class ChapterFiles {
             }
 
             this.elm.appendChild(rowElm);
+            this.displayRows.push(rowArr);
         }
     }
 
