@@ -47,7 +47,7 @@ class PageFile {
             if (this.img.width > this.img.height) {
                 parentChapter.toggleBlankPageBefore(this);
             }
-        });
+        }, { once: true });
 
         this.img.addEventListener("dblclick", () => {
             parentChapter.toggleBlankPageBefore(this);
@@ -55,9 +55,7 @@ class PageFile {
     }
 
     async loadFile() {
-        this.img.src = URL.createObjectURL(
-            await this.loadableFile.loadFile()
-        );
+        this.img.src = URL.createObjectURL(await this.loadableFile.loadFile());
     }
 }
 
@@ -72,10 +70,15 @@ class ChapterFiles {
         this.directory = directory;
         /** @type {(PageFile | null)[]} */
         this.pages = [];
-        /** @type {(PageFile | null)[][]} */
-        this.displayRows = [];
+        /** @type {(PageFile | null)[]} */
+        this.displayPages = [];
 
         this.pagesPerRow = 2;
+
+        this.pagesLoaded = 0;
+        this.pageLoadBufferMin = 2;
+        this.pageLoadBufferStep = 50;
+        this.scrollLazyLoadTriggerTreshold = 0;
 
         this.elm = document.createElement("div");
         this.elm.classList.add("chapter");
@@ -83,8 +86,9 @@ class ChapterFiles {
         resizeSubscribers.push(() => this.resizeHandler());
         this.resizeHandler();
 
-        this.createAndOrganizePageFiles();
+        this.initializeAndOrganizePageFiles();
         this.updateElements();
+        this.loadFilesUpTo(0);
     }
 
     resizeHandler() {
@@ -101,7 +105,7 @@ class ChapterFiles {
         }
     }
 
-    createAndOrganizePageFiles() {
+    initializeAndOrganizePageFiles() {
         /** @type {PageFile[]} */
         const mainPages = [];
 
@@ -122,28 +126,28 @@ class ChapterFiles {
         mainPages.sort((a, b) => a.pageNumber - b.pageNumber);
         extraPages.sort((a, b) => a.fileName < b.fileName ? -1 : 1);
 
-        this.pages.push(null);
-
         for (const page of mainPages) {
             this.pages.push(page);
         }
         for (const page of extraPages) {
             this.pages.push(page);
         }
+
+        this.displayPages = this.pages.slice();
+        this.displayPages.unshift(null);
     }
 
     updateElements() {
         while (this.elm.firstElementChild) { this.elm.removeChild(this.elm.firstElementChild); }
-        this.displayRows.length = 0;
 
-        for (let i = 0; i < this.pages.length; i += this.pagesPerRow) {
+        for (let i = 0; i < this.displayPages.length; i += this.pagesPerRow) {
             const rowElm = document.createElement("div");
             const rowArr = [];
             rowElm.classList.add("row");
             let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
-                const page = this.pages[i + j];
+                const page = this.displayPages[i + j];
                 if (page) {
                     rowElm.appendChild(page.img);
                     rowArr.push(page);
@@ -156,36 +160,69 @@ class ChapterFiles {
             }
 
             this.elm.appendChild(rowElm);
-            this.displayRows.push(rowArr);
         }
     }
 
     /** @returns {number} */
     closestRowY(yPosition) {
-        const yRelative = yPosition - this.elm.offsetTop;
-
-        /** @type {HTMLDivElement} */ // @ts-ignore
-        const firstRow = this.elm.firstChild;
-        const pageHeight = firstRow.getBoundingClientRect().height + 16; // 16 is margin-bottom
-        const approximateRowIndex = Math.round(yRelative / pageHeight);
+        const approximateRowIndex = this.closestRowIndexAtY(yPosition);
         /** @type {HTMLDivElement} */ // @ts-ignore
         const row = this.elm.children[approximateRowIndex];
 
         if (row) {
             return row.offsetTop;
         } else {
-            return approximateRowIndex * pageHeight;
+            return approximateRowIndex * this.getPageHeight();
         }
+    }
+
+    /** @param {number} yPosition */
+    closestRowIndexAtY(yPosition) {
+        const yRelative = yPosition - this.elm.offsetTop;
+        const approximateRowIndex = Math.round(yRelative / this.getPageHeight());
+
+        return approximateRowIndex;
+    }
+
+    getPageHeight() {
+        const firstRow = this.elm.firstElementChild;
+        return firstRow.getBoundingClientRect().height + 16; // 16 is margin-bottom
+    }
+
+    /** @param {number} yPosition */
+    loadFilesUpTo(yPosition) {
+        if (yPosition < this.scrollLazyLoadTriggerTreshold) { return; }
+        console.log("scroll");
+
+        const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
+        const displayPageIndex = this.pagesPerRow * closestRowY;
+        const pageIndex = this.pages.indexOf(this.displayPages[displayPageIndex]) + this.pageLoadBufferMin;
+
+        if (pageIndex < this.pagesLoaded) {
+            this.scrollLazyLoadTriggerTreshold =
+                Math.max(yPosition + innerHeight, this.scrollLazyLoadTriggerTreshold);
+            return;
+        }
+
+        const pagesToLoad = Math.min(pageIndex + this.pageLoadBufferStep, this.pages.length);
+
+        for (let i = this.pagesLoaded; i < pagesToLoad; i++) {
+            this.pages[i].loadFile();
+        }
+        console.log("Loading pages up to " + pagesToLoad);
+
+        this.pagesLoaded = pagesToLoad;
+        this.scrollLazyLoadTriggerTreshold =
+            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight();
     }
 
     /** @param {PageFile} page */
     toggleBlankPageBefore(page) {
-        const index = this.pages.indexOf(page);
-        console.log(index);
-        if (this.pages[index - 1] === null) {
-            this.pages.splice(index - 1, 1);
+        const index = this.displayPages.indexOf(page);
+        if (this.displayPages[index - 1] === null) {
+            this.displayPages.splice(index - 1, 1);
         } else {
-            this.pages.splice(index, 0, null);
+            this.displayPages.splice(index, 0, null);
         }
         this.updateElements();
     }
@@ -257,13 +294,14 @@ class LoadableFile {
     }
 
     /**
-     * @return {Promise<Blob>}
+     * @return {Promise<Blob> | Blob}
      */
-    async loadFile() {
+    loadFile() {
         if (this.loadedFile) { return this.loadedFile; }
         if (this.loadingPromise) { return this.loadingPromise; }
         this.loadingPromise = this.loader();
         this.loadingPromise.then(blob => this.loadedFile = blob);
+        return this.loadingPromise;
     }
 }
 
@@ -425,6 +463,10 @@ addEventListener("keydown", function (e) {
     }
 
     document.documentElement.scrollTop = fileDisplay.currentChapter.closestRowY(newScroll);
+});
+
+addEventListener("scroll", function () {
+    fileDisplay.currentChapter.loadFilesUpTo(document.documentElement.scrollTop);
 });
 
 let lastWidth = -1;
