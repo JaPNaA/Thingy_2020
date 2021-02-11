@@ -29,30 +29,33 @@ langMapProm.then(map => document.title = map.localMangaReaderTitle);
 class PageFile {
     /**
      * @param {ChapterFiles} parentChapter
-     * @param {Blob} blob
+     * @param {LoadableFile} loadableFile
      * @param {string} fileName
      * @param {number} [pageNumber=-1] 
      */
-    constructor(parentChapter, blob, fileName, pageNumber) {
+    constructor(parentChapter, loadableFile, fileName, pageNumber) {
         this.parent = parentChapter;
-        this.file = blob;
         this.fileName = fileName;
+        this.loadableFile = loadableFile;
         this.pageNumber = pageNumber === undefined ? -1 : pageNumber;
 
         this.img = document.createElement("img");
         this.img.classList.add("page");
-        this.img.src = URL.createObjectURL(this.file);
         this.img.alt = fileName;
 
         this.img.addEventListener("load", () => {
             if (this.img.width > this.img.height) {
                 parentChapter.toggleBlankPageBefore(this);
             }
-        });
+        }, { once: true });
 
         this.img.addEventListener("dblclick", () => {
             parentChapter.toggleBlankPageBefore(this);
         });
+    }
+
+    async loadFile() {
+        this.img.src = URL.createObjectURL(await this.loadableFile.loadFile());
     }
 }
 
@@ -67,11 +70,15 @@ class ChapterFiles {
         this.directory = directory;
         /** @type {(PageFile | null)[]} */
         this.pages = [];
+        /** @type {(PageFile | null)[]} */
+        this.displayPages = [];
 
         this.pagesPerRow = 2;
 
-        /** @type {number[]} */
-        this.snapPoints = [];
+        this.pagesLoaded = 0;
+        this.pageLoadBufferMin = 2;
+        this.pageLoadBufferStep = 50;
+        this.scrollLazyLoadTriggerTreshold = 0;
 
         this.elm = document.createElement("div");
         this.elm.classList.add("chapter");
@@ -79,8 +86,9 @@ class ChapterFiles {
         resizeSubscribers.push(() => this.resizeHandler());
         this.resizeHandler();
 
-        this.createAndOrganizePageFiles();
+        this.initializeAndOrganizePageFiles();
         this.updateElements();
+        this.loadFilesUpTo(0);
     }
 
     resizeHandler() {
@@ -97,7 +105,7 @@ class ChapterFiles {
         }
     }
 
-    createAndOrganizePageFiles() {
+    initializeAndOrganizePageFiles() {
         /** @type {PageFile[]} */
         const mainPages = [];
 
@@ -105,7 +113,7 @@ class ChapterFiles {
         const extraPages = [];
 
         for (const [name, file] of this.directory.items) {
-            if (!(file instanceof Blob)) { continue; }
+            if (!(file instanceof LoadableFile)) { continue; }
 
             const match = name.match(pageNumberRegex);
             if (match) {
@@ -118,27 +126,31 @@ class ChapterFiles {
         mainPages.sort((a, b) => a.pageNumber - b.pageNumber);
         extraPages.sort((a, b) => a.fileName < b.fileName ? -1 : 1);
 
-        this.pages.push(null);
-
         for (const page of mainPages) {
             this.pages.push(page);
         }
         for (const page of extraPages) {
             this.pages.push(page);
         }
+
+        this.displayPages = this.pages.slice();
+        this.displayPages.unshift(null);
     }
 
     updateElements() {
         while (this.elm.firstElementChild) { this.elm.removeChild(this.elm.firstElementChild); }
 
-        for (let i = 0; i < this.pages.length; i += this.pagesPerRow) {
+        for (let i = 0; i < this.displayPages.length; i += this.pagesPerRow) {
             const rowElm = document.createElement("div");
+            const rowArr = [];
             rowElm.classList.add("row");
             let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
-                if (this.pages[i + j]) {
-                    rowElm.appendChild(this.pages[i + j].img);
+                const page = this.displayPages[i + j];
+                if (page) {
+                    rowElm.appendChild(page.img);
+                    rowArr.push(page);
                     actualPagesInRow++;
                 }
             }
@@ -153,30 +165,64 @@ class ChapterFiles {
 
     /** @returns {number} */
     closestRowY(yPosition) {
-        const yRelative = yPosition - this.elm.offsetTop;
-
-        /** @type {HTMLDivElement} */ // @ts-ignore
-        const firstRow = this.elm.firstChild;
-        const pageHeight = firstRow.getBoundingClientRect().height + 16; // 16 is margin-bottom
-        const approximateRowIndex = Math.round(yRelative / pageHeight);
+        const approximateRowIndex = this.closestRowIndexAtY(yPosition);
         /** @type {HTMLDivElement} */ // @ts-ignore
         const row = this.elm.children[approximateRowIndex];
 
         if (row) {
             return row.offsetTop;
         } else {
-            return approximateRowIndex * pageHeight;
+            return approximateRowIndex * this.getPageHeight();
         }
+    }
+
+    /** @param {number} yPosition */
+    closestRowIndexAtY(yPosition) {
+        const yRelative = yPosition - this.elm.offsetTop;
+        const approximateRowIndex = Math.round(yRelative / this.getPageHeight());
+
+        return approximateRowIndex;
+    }
+
+    getPageHeight() {
+        const firstRow = this.elm.firstElementChild;
+        return firstRow.getBoundingClientRect().height + 16; // 16 is margin-bottom
+    }
+
+    /** @param {number} yPosition */
+    loadFilesUpTo(yPosition) {
+        if (yPosition < this.scrollLazyLoadTriggerTreshold) { return; }
+        console.log("scroll");
+
+        const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
+        const displayPageIndex = this.pagesPerRow * closestRowY;
+        const pageIndex = this.pages.indexOf(this.displayPages[displayPageIndex]) + this.pageLoadBufferMin;
+
+        if (pageIndex < this.pagesLoaded) {
+            this.scrollLazyLoadTriggerTreshold =
+                Math.max(yPosition + innerHeight, this.scrollLazyLoadTriggerTreshold);
+            return;
+        }
+
+        const pagesToLoad = Math.min(pageIndex + this.pageLoadBufferStep, this.pages.length);
+
+        for (let i = this.pagesLoaded; i < pagesToLoad; i++) {
+            this.pages[i].loadFile();
+        }
+        console.log("Loading pages up to " + pagesToLoad);
+
+        this.pagesLoaded = pagesToLoad;
+        this.scrollLazyLoadTriggerTreshold =
+            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight();
     }
 
     /** @param {PageFile} page */
     toggleBlankPageBefore(page) {
-        const index = this.pages.indexOf(page);
-        console.log(index);
-        if (this.pages[index - 1] === null) {
-            this.pages.splice(index - 1, 1);
+        const index = this.displayPages.indexOf(page);
+        if (this.displayPages[index - 1] === null) {
+            this.displayPages.splice(index - 1, 1);
         } else {
-            this.pages.splice(index, 0, null);
+            this.displayPages.splice(index, 0, null);
         }
         this.updateElements();
     }
@@ -232,9 +278,36 @@ class FileDisplay {
     }
 }
 
+class LoadableFile {
+    /**
+     * @typedef {(() => Promise<Blob>} FileLoader
+     * @param {Blob | FileLoader} fileOrLoader
+     */
+    constructor(fileOrLoader) {
+        if (typeof fileOrLoader === "function") {
+            this.loader = fileOrLoader;
+            this.loadedFile = null;
+        } else {
+            this.loader = null;
+            this.loadedFile = fileOrLoader;
+        }
+    }
+
+    /**
+     * @return {Promise<Blob> | Blob}
+     */
+    loadFile() {
+        if (this.loadedFile) { return this.loadedFile; }
+        if (this.loadingPromise) { return this.loadingPromise; }
+        this.loadingPromise = this.loader();
+        this.loadingPromise.then(blob => this.loadedFile = blob);
+        return this.loadingPromise;
+    }
+}
+
 class FileDirectory {
     constructor() {
-        /** @type {Map<string, Blob | FileDirectory>} */
+        /** @type {Map<string, LoadableFile | FileDirectory>} */
         this.items = new Map();
         /** @type {string | undefined} */
         this.name = undefined;
@@ -242,7 +315,7 @@ class FileDirectory {
         this.parentPath = undefined;
     }
 
-    /** @param {File} file */
+    /** @param {LoadableFile} file */
     addFile(file) {
         /** @type {string} */ // @ts-ignore
         const path = file.webkitRelativePath;
@@ -252,9 +325,9 @@ class FileDirectory {
 
     /**
      * @param {string} path 
-     * @param {Blob} blob 
+     * @param {LoadableFile} file 
      */
-    addBlob(path, blob) {
+    addBlob(path, file) {
         const pathParts = path.split("/");
         let fileName = pathParts.pop();
 
@@ -274,7 +347,7 @@ class FileDirectory {
             currDirectory = nextDirectory;
         }
 
-        currDirectory.items.set(fileName, blob);
+        currDirectory.items.set(fileName, file);
     }
 }
 
@@ -322,7 +395,7 @@ directoryFileInput.addEventListener("change", function (e) {
     const directory = new FileDirectory();
 
     for (const file of directoryFileInput.files) {
-        directory.addFile(file);
+        directory.addFile(new LoadableFile(file));
     }
 
     updateFiles(directory);
@@ -335,76 +408,14 @@ zipFileInput.addEventListener("change", async function (e) {
 
     const directory = new FileDirectory();
 
-    if (!isIOS()) {
-        let total = 0;
-        let loaded = 0;
+    zip.forEach(function (relPath, file) {
+        directory.addBlob(relPath,
+            new LoadableFile(async () => await file.async("blob"))
+        );
+    });
 
-        zip.forEach(async function (relPath, file) {
-            total++;
-            const blob = await file.async("blob");
-            directory.addBlob(relPath, blob);
-            loaded++;
-            await checkDoneCallback();
-        });
-
-        async function checkDoneCallback() {
-            if (loaded >= total) {
-                updateFiles(directory);
-            }
-
-            if (loaded % 20 === 0) { // loading indication + prevent 'not responding'
-                document.body.appendChild(
-                    document.createTextNode(Math.round(loaded / total * 100) + "% loaded. ")
-                );
-                await new Promise(e => setTimeout(() => e(), 1));
-            }
-        }
-    } else {
-        // slower, but doesn't crash iOS
-        const files = [];
-
-        zip.forEach((relPath, file) => {
-            files.push([relPath, file]);
-        });
-
-        const batchSize = 10;
-
-        for (let i = 0; i < files.length; i += batchSize) {
-            const promises = [];
-
-            for (let j = 0; j < batchSize; j++) {
-                const index = i + j;
-                if (index >= files.length) { break; }
-
-                const [relPath, file] = files[index];
-
-                promises.push(
-                    file.async("blob")
-                        .then(blob => directory.addBlob(relPath, blob))
-                        .then(() => document.body.appendChild(document.createTextNode(relPath + " loaded. ")))
-                );
-            }
-
-            await Promise.all(promises);
-            await new Promise(e => setTimeout(() => e(), 1));
-        }
-
-        updateFiles(directory);
-    }
+    updateFiles(directory);
 });
-
-function isIOS() {
-    return [
-        'iPad Simulator',
-        'iPhone Simulator',
-        'iPod Simulator',
-        'iPad',
-        'iPhone',
-        'iPod'
-    ].includes(navigator.platform)
-        // iPad on iOS 13 detection
-        || (navigator.userAgent.includes("Mac") && "ontouchend" in document);
-}
 
 /**
  * @param {FileDirectory} directory
@@ -452,6 +463,10 @@ addEventListener("keydown", function (e) {
     }
 
     document.documentElement.scrollTop = fileDisplay.currentChapter.closestRowY(newScroll);
+});
+
+addEventListener("scroll", function () {
+    fileDisplay.currentChapter.loadFilesUpTo(document.documentElement.scrollTop);
 });
 
 let lastWidth = -1;
