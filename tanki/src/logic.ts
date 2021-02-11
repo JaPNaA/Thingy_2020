@@ -20,7 +20,7 @@ export class Deck {
         if (this.activeCards.length && this.activeCards[0].dueMinutes <= nowMinute) {
             return this.activeCards[0];
         } else if (this.newCards.length > 0) {
-            return this.newCards[Math.floor(Math.random() * this.newCards.length)];
+            return this.newCards[Math.floor(Math.random() * Math.min(this.newCards.length, 6))];
         }
     }
 
