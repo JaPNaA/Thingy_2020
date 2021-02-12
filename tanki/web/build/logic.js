@@ -63,7 +63,10 @@ var Deck = /** @class */ (function () {
             return this.activeCards[0];
         }
         else if (this.newCards.length > 0) {
-            return this.newCards[Math.floor(Math.random() * Math.min(this.newCards.length, 6))];
+            var poolSize = Math.min(this.newCards.length, 6);
+            var poolIndex = Math.floor(Math.random() * poolSize);
+            var index = this.newCards.length - 1 - poolIndex; // newest first
+            return this.newCards[index];
         }
     };
     /** update data based on results */

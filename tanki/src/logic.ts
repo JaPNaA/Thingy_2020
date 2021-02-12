@@ -20,7 +20,11 @@ export class Deck {
         if (this.activeCards.length && this.activeCards[0].dueMinutes <= nowMinute) {
             return this.activeCards[0];
         } else if (this.newCards.length > 0) {
-            return this.newCards[Math.floor(Math.random() * Math.min(this.newCards.length, 6))];
+            const poolSize = Math.min(this.newCards.length, 6);
+            const poolIndex = Math.floor(Math.random() * poolSize);
+            const index = this.newCards.length - 1 - poolIndex; // newest first
+
+            return this.newCards[index];
         }
     }
 
