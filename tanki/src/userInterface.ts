@@ -1,7 +1,7 @@
 import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Card, Deck } from "./logic.js";
-import { writeOut } from "./storage.js";
+import { readIn, writeOut } from "./storage.js";
 import { EventHandler, getCurrMinuteFloored, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
@@ -58,7 +58,24 @@ class DeckPresenter extends Component {
                 .on("click", () => this.openImportNotesDialog()),
             new Elm("button").class("manageNotes")
                 .append("Manage Notes")
-                .on("click", () => this.openManageNotesDialog())
+                .on("click", () => this.openManageNotesDialog()),
+            // new Elm("button").class("graduateNotes")
+            //     .append("Graduate Notes")
+            //     .on("click", () => {
+            //         const notes = this.deck.data.getNotes();
+            //         for (const note of notes) {
+            //             const cards = note[2];
+            //             if (!cards) { continue; }
+            //             for (const card of cards) {
+            //                 if (card && isCardActive(card)) {
+            //                     if (card[3] > 7 * 24 * 60) {
+            //                         card[0] = CardState.inactive;
+            //                     }
+            //                 }
+            //             }
+            //         }
+            //         this.deckTimeline.update();
+            //     })
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
@@ -428,7 +445,8 @@ class DeckTimeline extends Component {
 
         this.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
-            this.timelineCanvasElm,
+            new Elm().class("timelineCanvasContainer")
+                .append(this.timelineCanvasElm),
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
                     "New: ", this.newCardsElm
@@ -465,29 +483,42 @@ class DeckTimeline extends Component {
     private drawTimeline() {
         if (!this.timelineX) { return; }
 
-        const notes = this.deck.data.getNotes();
         const firstCardMinutes = this.deck.getMinutesToNextCard() ?? 0;
         const minuteZero = getCurrMinuteFloored() + (
             firstCardMinutes > 0 ? 0 : firstCardMinutes
         );
 
-        this.timelineX.canvas.width = innerWidth;
-        this.timelineX.canvas.height = 36;
+        this.timelineX.canvas.width = 720;
+        this.timelineX.canvas.height = 256;
         this.timelineX.clearRect(0, 0, 100, 100);
-        this.timelineX.fillStyle = "#00000040";
+        this.timelineX.fillStyle = "#000000aa";
         // this.timelineX.fillRect(0, 0, 100, 100);
 
-        for (const note of notes) {
-            //* temp
-            if (note[2]) {
-                const cards = note[2];
-                for (const card of cards) {
-                    if (!card || card[0] !== CardState.active) { continue; }
-                    const relativeDue = card[2] - minuteZero;
-                    this.timelineX.fillRect(relativeDue, 0, 4, 16);
-                    this.timelineX.fillRect(relativeDue / 60, 20, 1, 16);
-                }
+        const activeCards = this.deck.getActiveCards();
+        const fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
+        const twelveHourBuckets = new Array(128).fill(0);
+
+        for (const card of activeCards) {
+            const relativeDue = card.dueMinutes - minuteZero;
+            const fourMinuteBucketIndex = Math.floor(relativeDue / 4);
+            const twelveHourBucketIndex = Math.floor(relativeDue / (60 * 12));
+
+            if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
+                fourMinuteBuckets[Math.floor(relativeDue / 4)]++;
             }
+            if (twelveHourBucketIndex < twelveHourBuckets.length) {
+                twelveHourBuckets[Math.floor(relativeDue / (60 * 12))]++;
+            } else {
+                twelveHourBuckets[twelveHourBuckets.length - 1]++;
+            }
+        }
+
+        for (let i = 0; i < fourMinuteBuckets.length; i++) {
+            this.timelineX.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
+        }
+
+        for (let i = 0; i < twelveHourBuckets.length; i++) {
+            this.timelineX.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
         }
     }
 }

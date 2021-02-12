@@ -478,7 +478,8 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.timelineCanvasElm = new Elm("canvas").class("timelineCanvas");
         /** Canvas context for timeline canvas element */
         _this.timelineX = _this.timelineCanvasElm.getHTMLElement().getContext("2d");
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), _this.timelineCanvasElm, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
+        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().class("timelineCanvasContainer")
+            .append(_this.timelineCanvasElm), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         //* temporary quality-of-life
         setInterval(function () { return _this.update(); }, 30e3);
@@ -498,29 +499,36 @@ var DeckTimeline = /** @class */ (function (_super) {
         if (!this.timelineX) {
             return;
         }
-        var notes = this.deck.data.getNotes();
         var firstCardMinutes = (_a = this.deck.getMinutesToNextCard()) !== null && _a !== void 0 ? _a : 0;
         var minuteZero = getCurrMinuteFloored() + (firstCardMinutes > 0 ? 0 : firstCardMinutes);
-        this.timelineX.canvas.width = innerWidth;
-        this.timelineX.canvas.height = 36;
+        this.timelineX.canvas.width = 720;
+        this.timelineX.canvas.height = 256;
         this.timelineX.clearRect(0, 0, 100, 100);
-        this.timelineX.fillStyle = "#00000040";
+        this.timelineX.fillStyle = "#000000aa";
         // this.timelineX.fillRect(0, 0, 100, 100);
-        for (var _i = 0, notes_1 = notes; _i < notes_1.length; _i++) {
-            var note = notes_1[_i];
-            //* temp
-            if (note[2]) {
-                var cards = note[2];
-                for (var _b = 0, cards_1 = cards; _b < cards_1.length; _b++) {
-                    var card = cards_1[_b];
-                    if (!card || card[0] !== CardState.active) {
-                        continue;
-                    }
-                    var relativeDue = card[2] - minuteZero;
-                    this.timelineX.fillRect(relativeDue, 0, 4, 16);
-                    this.timelineX.fillRect(relativeDue / 60, 20, 1, 16);
-                }
+        var activeCards = this.deck.getActiveCards();
+        var fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
+        var twelveHourBuckets = new Array(128).fill(0);
+        for (var _i = 0, activeCards_1 = activeCards; _i < activeCards_1.length; _i++) {
+            var card = activeCards_1[_i];
+            var relativeDue = card.dueMinutes - minuteZero;
+            var fourMinuteBucketIndex = Math.floor(relativeDue / 4);
+            var twelveHourBucketIndex = Math.floor(relativeDue / (60 * 12));
+            if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
+                fourMinuteBuckets[Math.floor(relativeDue / 4)]++;
             }
+            if (twelveHourBucketIndex < twelveHourBuckets.length) {
+                twelveHourBuckets[Math.floor(relativeDue / (60 * 12))]++;
+            }
+            else {
+                twelveHourBuckets[twelveHourBuckets.length - 1]++;
+            }
+        }
+        for (var i = 0; i < fourMinuteBuckets.length; i++) {
+            this.timelineX.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
+        }
+        for (var i = 0; i < twelveHourBuckets.length; i++) {
+            this.timelineX.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
         }
     };
     return DeckTimeline;

@@ -69,6 +69,9 @@ var Deck = /** @class */ (function () {
             return this.newCards[index];
         }
     };
+    Deck.prototype.getActiveCards = function () {
+        return this.activeCards;
+    };
     /** update data based on results */
     Deck.prototype.applyResultToCard = function (card, result) {
         if (card.state === CardState.new) {

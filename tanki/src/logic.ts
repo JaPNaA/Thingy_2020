@@ -28,6 +28,10 @@ export class Deck {
         }
     }
 
+    public getActiveCards(): readonly ActiveCard[] {
+        return this.activeCards;
+    }
+
     /** update data based on results */
     public applyResultToCard(card: Card, result: number) {
         if (card.state === CardState.new) {
