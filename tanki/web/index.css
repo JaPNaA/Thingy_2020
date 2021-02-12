@@ -119,3 +119,12 @@ body {
 .createNoteDialog .cardFieldInput {
     display: block;
 }
+
+.deckTimeline .timelineCanvasContainer {
+    width: 100vw;
+    overflow-x: auto;
+}
+
+.deckTimeline .timelineCanvasContainer canvas {
+    background-color: #0000000c;
+}
