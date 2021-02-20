@@ -504,10 +504,10 @@ class DeckTimeline extends Component {
             const twelveHourBucketIndex = Math.floor(relativeDue / (60 * 12));
 
             if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
-                fourMinuteBuckets[Math.floor(relativeDue / 4)]++;
+                fourMinuteBuckets[fourMinuteBucketIndex]++;
             }
             if (twelveHourBucketIndex < twelveHourBuckets.length) {
-                twelveHourBuckets[Math.floor(relativeDue / (60 * 12))]++;
+                twelveHourBuckets[twelveHourBucketIndex]++;
             } else {
                 twelveHourBuckets[twelveHourBuckets.length - 1]++;
             }
