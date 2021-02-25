@@ -348,7 +348,7 @@ Lookup.useProxy = false;
  * @param {string} url 
  */
 Lookup.getProxyUrl = function (url) {
-    return "https://cors-anywhere.herokuapp.com/" + url;
+    return "https://stark-spire-77632.herokuapp.com/" + url;
 };
 
 class ProxyWarning extends Component {
