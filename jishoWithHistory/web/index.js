@@ -229,7 +229,7 @@ class Lookup extends Component {
             /** @type {HTMLInputElement} */ // @ts-ignore
             const input = this.input.elm;
             input.value = searchString;
-            this._makeLookup(searchString);
+            alertIfErrorInPromise(this._makeLookup(searchString));
         }
     }
 
@@ -271,7 +271,7 @@ class Lookup extends Component {
         }
 
         this._removeLastLookup();
-        this._makeLookup(input.value);
+        alertIfErrorInPromise(this._makeLookup(input.value));
     }
 
     _removeLastLookup() {
@@ -287,15 +287,19 @@ class Lookup extends Component {
         if (!inputValue) { return; }
         const encodedInputValue = encodeURIComponent(inputValue);
         const url = "https://jisho.org/api/v1/search/words?keyword=" + encodedInputValue;
+        const result = await this._requestMaybeUsingProxy(url);
+        if (result.status !== 200) { throw new Error("Network error " + result.status); }
 
         /** @type {JishoApiData} */
-        const result = await this._requestMaybeUsingProxy(url).then(e => e.json());
-        if (result.meta.status !== 200) { throw new Error("Unexpected status " + result.meta.status); }
+        const resultParsed = await result.json();
+        if (resultParsed.meta.status !== 200) {
+            throw new Error("Unexpected status " + resultParsed.meta.status);
+        }
 
         this._removeLastLookup(); // do it again in case results have been added since
         const lookupResults = new Elm().class("lookupResults").appendTo(this);
 
-        for (const item of result.data) {
+        for (const item of resultParsed.data) {
             new LookupResult(item)
                 .appendTo(lookupResults)
                 .setClickHandler(() => this.returnHandler(item));
@@ -304,7 +308,7 @@ class Lookup extends Component {
         this.lastLookupResults = lookupResults;
         this.lastInputValue = inputValue;
 
-        console.log(result);
+        console.log(resultParsed);
     }
 
     /**
@@ -373,7 +377,7 @@ class ProxyWarning extends Component {
 
             this.tooltipElm = new Elm().class("tooltip", "shadow")
                 .append(
-                    new Elm().append("Requests to jisho.org are being passed though a third party proxy (" + Lookup.getProxyUrl("") + ")."),
+                    new Elm().append("Requests to jisho.org are being passed though a proxy (" + Lookup.getProxyUrl("") + ")."),
                     new Elm().append("Searches will be slower."),
                     new Elm().append("Use electron-based desktop app to avoid using a proxy.")
                 )
@@ -768,6 +772,16 @@ function arrayEquals(arr1, arr2) {
     }
 
     return true;
+}
+
+/**
+ * @param {Promise} promise 
+ */
+function alertIfErrorInPromise(promise) {
+    promise.catch(
+        err =>
+            alert("Oh... an error occured.\n" + err.toString())
+    );
 }
 
 const main = new Main();
