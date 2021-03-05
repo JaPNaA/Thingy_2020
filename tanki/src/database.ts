@@ -1,4 +1,5 @@
-import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { arrayRemoveTrailingUndefinedOrNull } from "./utils.js";
 
 export class TankiDatabase {
     public cards: Card[] = [];
@@ -60,7 +61,21 @@ export class TankiDatabase {
 
     // todo: process changed cards
     public toJSON(): string {
-        return JSON.stringify(this.deckData);
+        const start = performance.now();
+        const noteTypeIndexMap = new Map<NoteType, number>();
+        for (let i = 0; i < this.noteTypes.length; i++) {
+            noteTypeIndexMap.set(this.noteTypes[i], i);
+        }
+
+        const deckData: DeckData = {
+            version: dataTypeVersion,
+            schedulingSettings: this.deckData.schedulingSettings,
+            noteTypes: this.noteTypes.map(noteType => noteType.serialize()),
+            notes: this.notes.map(note => note.serialize(noteTypeIndexMap))
+        };
+        console.log(performance.now() - start, " milliseconds to serialize");
+
+        return JSON.stringify(deckData);
     }
 }
 
@@ -73,6 +88,21 @@ export class Note {
         public tags: string[]
     ) {
         this.cards = [];
+    }
+
+    public serialize(noteTypeIndexMap: Map<NoteType, number>): NoteData {
+        const cards = arrayRemoveTrailingUndefinedOrNull(
+            this.cards.map(card => card.serialize())
+        );
+        const noteTypeIndex = noteTypeIndexMap.get(this.type);
+        if (noteTypeIndex === undefined) { throw new Error("Tried to serialize Note who's type wasn't registered."); }
+
+        return arrayRemoveTrailingUndefinedOrNull([
+            noteTypeIndex,
+            this.fields,
+            cards.length > 0 ? cards : undefined,
+            this.tags.length > 0 ? this.tags : undefined
+        ]);
     }
 
     public static fromData(database: TankiDatabase, noteData: NoteData): Note {
@@ -133,6 +163,10 @@ export class NoteType {
             noteTypeData.cardTypes.length : noteTypeData.numCardTypes;
     }
 
+    public serialize(): NoteTypeData {
+        return this.noteTypeData;
+    }
+
     public async getIntegratedNoteType(): Promise<Readonly<NoteTypeDataIntegrated>> {
         return NoteType.getIntegratedNoteType(this);
     }
@@ -156,7 +190,7 @@ export class NoteType {
 
 export class Card {
     public state: CardState;
-    private flags: CardFlag[];
+    protected flags: CardFlag[];
 
     constructor(
         _data: Optional<CardDataBasic>,
@@ -182,6 +216,11 @@ export class Card {
         if (index < 0) { throw new Error("Tried to remove flag that doesn't exist"); }
         this.flags.splice(index, 1);
     }
+
+    public serialize(): CardDataBasic | undefined {
+        if (this.state === CardState.new && this.flags.length === 0) { return; }
+        return [this.state, this.flags];
+    }
 }
 
 export class ActiveCard extends Card {
@@ -200,5 +239,17 @@ export class ActiveCard extends Card {
         this.interval = data[3];
         this.timesWrongHistory = data[4] || [];
         this.learningInterval = data[5];
+    }
+
+    public serialize(): CardDataActive {
+        if (this.state !== CardState.active) { throw new Error("Tried serializing ActiveCard that wasn't active"); }
+        return [
+            this.state,
+            this.flags,
+            Math.round(this.dueMinutes),
+            Math.round(this.interval),
+            this.timesWrongHistory,
+            this.learningInterval
+        ];
     }
 }

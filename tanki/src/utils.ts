@@ -67,6 +67,18 @@ export function binaryBoundarySearch<T>(
     throw new Error("Looped too many times. Is array sorted (smallest first)?");
 }
 
+export function arrayRemoveTrailingUndefinedOrNull<T extends Array<any>>(arr: T): T {
+    let i;
+    for (i = arr.length - 1; i >= 0; i--) {
+        if (arr[i] !== undefined && arr[i] !== null) {
+            break;
+        }
+    }
+
+    // @ts-ignore
+    return arr.slice(0, i + 1);
+}
+
 export interface PromiseRejectFunc { (reason?: any): void; }
 export interface PromiseResolveFunc<T> { (result: T): void; }
 
