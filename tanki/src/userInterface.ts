@@ -1,7 +1,8 @@
+import { Card } from "./database.js";
 import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
-import { Card, Deck } from "./logic.js";
-import { readIn, writeOut } from "./storage.js";
+import { Deck } from "./logic.js";
+import { writeOut } from "./storage.js";
 import { EventHandler, getCurrMinuteFloored, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
@@ -250,7 +251,7 @@ class CreateNoteDialog extends ModalDialog {
         const noteType = noteTypes[this.noteTypeIndex];
 
         for (const fieldName of
-            (await this.deck.data.getIntegratedNoteType(noteType.name)).fieldNames
+            (await this.deck.database.getIntegratedNoteType(noteType.name)).fieldNames
         ) {
             const inputElm = new Elm("input").class("cardFieldInput");
 
@@ -284,7 +285,8 @@ class ImportNotesDialog extends ModalDialog {
 
     private static jishoAPIDataImportedNoteType: NoteTypeDataExternal = {
         name: "jishoAPIDataImportedNoteType",
-        src: "resources/jishoAPIDataImportedNoteType.json"
+        src: "resources/jishoAPIDataImportedNoteType.json",
+        numCardTypes: 3
     };
 
     constructor(private deck: Deck) {
@@ -551,14 +553,12 @@ class CardPresenter extends Component {
             this.discardState();
         }
 
-        const noteTypes = this.deck.data.getNoteTypes();
-
-        const noteType = await this.deck.data.getIntegratedNoteType(
-            noteTypes[card.noteType].name);
+        const noteType = await this.deck.database.getIntegratedNoteType(
+            card.parentNote.type.name);
         const cardType = noteType.cardTypes[card.cardTypeID];
 
         const noteFieldNames = noteType.fieldNames;
-        const cardFields = card.parentNote[1]; // .fields
+        const cardFields = card.parentNote.fields;
 
         this.currentState = { card };
 

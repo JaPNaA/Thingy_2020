@@ -10,6 +10,7 @@ export interface DeckData {
 export interface NoteTypeDataExternal {
     name: string;
     src: string;
+    numCardTypes: number;
 }
 
 export interface NoteTypeDataIntegrated {
