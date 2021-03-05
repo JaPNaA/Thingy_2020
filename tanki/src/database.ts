@@ -1,10 +1,19 @@
 import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
+interface Overwritable {
+    overwriteWith(target: Immutable<this>): void;
+}
+
 export class TankiDatabase {
     private cards: Card[] = [];
     private notes: Note[] = [];
     private noteTypes: NoteType[];
+
+    private writeHistory: {
+        target: Overwritable,
+        original: Overwritable
+    }[] = [];
 
     private static currUid = 0;
 
@@ -28,6 +37,21 @@ export class TankiDatabase {
 
     public getNoteTypes(): Immutable<NoteType[]> {
         return this.noteTypes;
+    }
+
+    public writeCard(existing: Immutable<Card>, copying: Immutable<Card>) {
+        this.writeHistory.push({
+            target: existing,
+            original: existing.clone()
+        });
+        existing.overwriteWith(copying);
+    }
+
+    public undo() {
+        const writeAction = this.writeHistory.pop();
+        if (!writeAction) { return; }
+        const { target, original } = writeAction;
+        target.overwriteWith(original);
     }
 
     public static getUid(): number {
@@ -209,12 +233,11 @@ export class NoteType {
     }
 }
 
-export class Card {
+export class Card implements Overwritable {
     public state: CardState;
     public cardTypeID: number;
     public parentNote: Immutable<Note>;
-
-    protected flags: CardFlag[];
+    public flags: CardFlag[];
 
     constructor(
         _data: Optional<CardDataBasic>,
@@ -230,6 +253,13 @@ export class Card {
 
     public static fromData(_data: Optional<CardDataBasic>, cardTypeID: number, parentNote: Immutable<Note>) {
         return new Card(_data, cardTypeID, parentNote);
+    }
+
+    public overwriteWith(card: Immutable<Card>) {
+        this.state = card.state;
+        this.cardTypeID = card.cardTypeID;
+        this.parentNote = card.parentNote;
+        this.flags = card.flags.slice();
     }
 
     public hasFlag(flag: CardFlag): boolean {
@@ -273,6 +303,14 @@ export class ActiveCard extends Card {
         this.interval = data[3];
         this.timesWrongHistory = data[4] || [];
         this.learningInterval = data[5];
+    }
+
+    public overwriteWith(card: Immutable<ActiveCard>) {
+        super.overwriteWith(card);
+        this.dueMinutes = card.dueMinutes;
+        this.interval = card.interval;
+        this.timesWrongHistory = card.timesWrongHistory.slice();
+        this.learningInterval = card.learningInterval;
     }
 
     public serialize(): CardDataActive {

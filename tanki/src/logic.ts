@@ -48,6 +48,7 @@ export class Deck {
                 updatedCard = poppedCard.clone();
                 updatedCard.state = CardState.inactive;
                 updatedCard.addFlag(CardFlag.graduated);
+                this.database.writeCard(poppedCard, updatedCard);
             } else {
                 updatedCard = new ActiveCard([
                     /** State */
@@ -74,41 +75,43 @@ export class Deck {
         this.sortSeenAndReviewCards();
     }
 
-    private updateCardScheduleWithResult(card_: Immutable<ActiveCard>, result: number) {
-        const card = card_.clone();
-        const schedulingSettings = this.database.getCardSchedulingSettings(card);
+    private updateCardScheduleWithResult(card: Immutable<ActiveCard>, result: number) {
+        const mutCard = card.clone();
+        const schedulingSettings = this.database.getCardSchedulingSettings(mutCard);
 
-        if (card.hasFlag(CardFlag.learn)) {
-            if (!card.learningInterval) { card.learningInterval = 0; }
+        if (mutCard.hasFlag(CardFlag.learn)) {
+            if (!mutCard.learningInterval) { mutCard.learningInterval = 0; }
 
             if (result === 0) {
-                card.learningInterval = schedulingSettings.learningStepsMinutes[0];
-                card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+                mutCard.learningInterval = schedulingSettings.learningStepsMinutes[0];
+                mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.learningInterval;
             } else if (result === 1) {
                 const nextStepIndex = binaryBoundarySearch(
                     schedulingSettings.learningStepsMinutes,
-                    step => step > card.learningInterval!
+                    step => step > mutCard.learningInterval!
                 );
 
                 console.log(nextStepIndex);
 
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
-                    card.removeFlag(CardFlag.learn)
-                    card.dueMinutes = getCurrMinuteFloored() + card.interval;
+                    mutCard.removeFlag(CardFlag.learn)
+                    mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
                 } else {
-                    card.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
-                    card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+                    mutCard.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
+                    mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.learningInterval;
                 }
             }
         } else {
             if (result === 1) {
-                card.interval *= schedulingSettings.baseIntervalMultiplier;
+                mutCard.interval *= schedulingSettings.baseIntervalMultiplier;
             } else {
-                card.interval /= schedulingSettings.baseIntervalMultiplier;
+                mutCard.interval /= schedulingSettings.baseIntervalMultiplier;
             }
-            card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
         }
+
+        this.database.writeCard(card, mutCard);
     }
 
     public addNoteAndUpdate(data: Note) {
