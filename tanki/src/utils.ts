@@ -82,6 +82,19 @@ export function arrayRemoveTrailingUndefinedOrNull<T extends Array<any>>(arr: T)
 export interface PromiseRejectFunc { (reason?: any): void; }
 export interface PromiseResolveFunc<T> { (result: T): void; }
 
+export type Immutable<T> =
+    T extends (infer R)[] ? ImmutableArray<R> :
+    T extends Function ? T :
+    T extends ImmutableArray<any> ? T :
+    T extends object ? ImmutableObject<T> :
+    T;
+
+interface ImmutableArray<T> extends ReadonlyArray<Immutable<T>> { }
+
+type ImmutableObject<T> = {
+    readonly [P in keyof T]: Immutable<T[P]>;
+};
+
 type EventHandlerFunction<T = void> = (data: T) => void;
 
 export class EventHandler<T = void> {

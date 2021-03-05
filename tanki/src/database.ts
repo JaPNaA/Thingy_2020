@@ -1,10 +1,12 @@
 import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
-import { arrayRemoveTrailingUndefinedOrNull } from "./utils.js";
+import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
 export class TankiDatabase {
-    public cards: Card[] = [];
-    public notes: Note[] = [];
-    public noteTypes: NoteType[];
+    private cards: Card[] = [];
+    private notes: Note[] = [];
+    private noteTypes: NoteType[];
+
+    private static currUid = 0;
 
     constructor(private readonly deckData: Readonly<DeckData>) {
         if (deckData.version !== dataTypeVersion) {
@@ -16,27 +18,23 @@ export class TankiDatabase {
         this.initCards();
     }
 
-    private initNoteTypes(): NoteType[] {
-        const noteTypes = [];
-
-        for (const noteTypeData of this.deckData.noteTypes) {
-            noteTypes.push(new NoteType(noteTypeData));
-        }
-
-        return noteTypes;
+    public getCards(): Immutable<Card[]> {
+        return this.cards;
     }
 
-    private initCards() {
-        for (const note of this.deckData.notes) {
-            const obj = Note.fromData(this, note);
-            for (const card of obj.cards) {
-                this.cards.push(card);
-            }
-            this.notes.push(obj);
-        }
+    public getNotes(): Immutable<Note[]> {
+        return this.notes;
     }
 
-    public addNote(note: Note) {
+    public getNoteTypes(): Immutable<NoteType[]> {
+        return this.noteTypes;
+    }
+
+    public static getUid(): number {
+        return this.currUid++;
+    }
+
+    public addNote(note: Note): void {
         this.notes.push(note);
         for (const card of note.cards) {
             this.cards.push(card);
@@ -55,7 +53,7 @@ export class TankiDatabase {
         this.noteTypes.push(noteType);
     }
 
-    public getCardSchedulingSettings(card: Card): CardSchedulingSettingsData {
+    public getCardSchedulingSettings(card: Immutable<Card>): CardSchedulingSettingsData {
         return this.deckData.schedulingSettings;
     }
 
@@ -77,20 +75,63 @@ export class TankiDatabase {
 
         return JSON.stringify(deckData);
     }
+
+    private initNoteTypes(): NoteType[] {
+        const noteTypes = [];
+
+        for (const noteTypeData of this.deckData.noteTypes) {
+            noteTypes.push(new NoteType(noteTypeData));
+        }
+
+        return noteTypes;
+    }
+
+    private initCards(): void {
+        for (const note of this.deckData.notes) {
+            const obj = Note.fromData(this, note);
+            for (const card of obj.cards) {
+                this.cards.push(card);
+            }
+            this.notes.push(obj);
+        }
+    }
 }
 
 export class Note {
     public cards: Card[];
 
     constructor(
-        public type: NoteType,
+        public type: Immutable<NoteType>,
         public fields: string[],
         public tags: string[]
     ) {
         this.cards = [];
     }
 
-    public serialize(noteTypeIndexMap: Map<NoteType, number>): NoteData {
+    public static fromData(database: TankiDatabase, noteData: Immutable<NoteData>): Note {
+        const note = new Note(
+            this.getNoteType(database, noteData[0]),
+            noteData[1],
+            noteData[3] || [],
+        );
+
+        note.cards = note.getCards(noteData[2] || []);
+
+        return note;
+    }
+
+    public static create(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
+        const note = new Note(
+            type, fields,
+            tags || [],
+        );
+
+        note.cards = note.getCards([]);
+
+        return note;
+    }
+
+    public serialize(noteTypeIndexMap: Map<Immutable<NoteType>, number>): NoteData {
         const cards = arrayRemoveTrailingUndefinedOrNull(
             this.cards.map(card => card.serialize())
         );
@@ -105,31 +146,8 @@ export class Note {
         ]);
     }
 
-    public static fromData(database: TankiDatabase, noteData: NoteData): Note {
-        const note = new Note(
-            this.getNoteType(database, noteData[0]),
-            noteData[1],
-            noteData[3] || [],
-        );
-
-        note.cards = note.getCards(noteData[2] || []);
-
-        return note;
-    }
-
-    public static create(type: NoteType, fields: string[], tags?: string[]) {
-        const note = new Note(
-            type, fields,
-            tags || [],
-        );
-
-        note.cards = note.getCards([]);
-
-        return note;
-    }
-
-    private static getNoteType(database: TankiDatabase, id: number): NoteType {
-        return database.noteTypes[id];
+    private static getNoteType(database: TankiDatabase, id: number): Immutable<NoteType> {
+        return database.getNoteTypes()[id];
     }
 
     private getCards(cardDatas: Optional<CardData>[]): Card[] {
@@ -167,11 +185,14 @@ export class NoteType {
         return this.noteTypeData;
     }
 
-    public async getIntegratedNoteType(): Promise<Readonly<NoteTypeDataIntegrated>> {
+    public async getIntegratedNoteType(): Promise<Immutable<NoteTypeDataIntegrated>> {
         return NoteType.getIntegratedNoteType(this);
     }
 
-    public static async getIntegratedNoteType(noteType: NoteType) {
+    public static async getIntegratedNoteType(_noteType: Immutable<NoteType>): Promise<Immutable<NoteTypeDataIntegrated>> {
+        // Fix typescript getting confused
+        const noteType = _noteType as NoteType;
+
         if (isNoteTypeDataIntegrated(noteType.noteTypeData)) {
             return noteType.noteTypeData;
         }
@@ -190,16 +211,25 @@ export class NoteType {
 
 export class Card {
     public state: CardState;
+    public cardTypeID: number;
+    public parentNote: Immutable<Note>;
+
     protected flags: CardFlag[];
 
     constructor(
         _data: Optional<CardDataBasic>,
-        public cardTypeID: number,
-        public parentNote: Note,
+        cardTypeId: number,
+        parentNote: Immutable<Note>
     ) {
         let data = _data ?? [CardState.new, null];
         this.state = data[0];
         this.flags = data[1] || [];
+        this.cardTypeID = cardTypeId;
+        this.parentNote = parentNote;
+    }
+
+    public static fromData(_data: Optional<CardDataBasic>, cardTypeID: number, parentNote: Immutable<Note>) {
+        return new Card(_data, cardTypeID, parentNote);
     }
 
     public hasFlag(flag: CardFlag): boolean {
@@ -221,6 +251,10 @@ export class Card {
         if (this.state === CardState.new && this.flags.length === 0) { return; }
         return [this.state, this.flags];
     }
+
+    public clone(): Card {
+        return new Card([this.state, this.flags.slice()], this.cardTypeID, this.parentNote);
+    }
 }
 
 export class ActiveCard extends Card {
@@ -232,7 +266,7 @@ export class ActiveCard extends Card {
     constructor(
         data: CardDataActive,
         cardTypeID: number,
-        parentNote: Note
+        parentNote: Immutable<Note>
     ) {
         super(data, cardTypeID, parentNote);
         this.dueMinutes = data[2];
@@ -251,5 +285,13 @@ export class ActiveCard extends Card {
             this.timesWrongHistory,
             this.learningInterval
         ];
+    }
+
+    public clone(): ActiveCard {
+        if (this.state !== CardState.active) { throw new Error("Tried cloning ActiveCard that wasn't active"); }
+        return new ActiveCard(
+            [this.state, this.flags.slice(), this.dueMinutes, this.interval, this.timesWrongHistory, this.learningInterval],
+            this.cardTypeID, this.parentNote
+        );
     }
 }

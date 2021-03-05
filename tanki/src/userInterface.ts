@@ -3,7 +3,7 @@ import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes
 import { Component, Elm } from "./libs/elements.js";
 import { Deck } from "./logic.js";
 import { writeOut } from "./storage.js";
-import { EventHandler, getCurrMinuteFloored, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
+import { EventHandler, getCurrMinuteFloored, Immutable, minutesToHumanString, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "./utils.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -232,7 +232,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private loadNoteTypes() {
-        const noteTypes = this.deck.database.noteTypes;
+        const noteTypes = this.deck.database.getNoteTypes();
 
         for (let i = 0; i < noteTypes.length; i++) {
             const noteType = noteTypes[i];
@@ -243,7 +243,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private async updateInputsElm() {
-        const noteTypes = this.deck.database.noteTypes;
+        const noteTypes = this.deck.database.getNoteTypes();
 
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
         this.inputElms = [];
@@ -266,7 +266,7 @@ class CreateNoteDialog extends ModalDialog {
     private submit() {
         if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
         this.onNoteCreated.dispatch(Note.create(
-            this.deck.database.noteTypes[this.noteTypeIndex],
+            this.deck.database.getNoteTypes()[this.noteTypeIndex],
             this.inputElms.map(e => e.getHTMLElement().value))
         );
 
@@ -348,7 +348,7 @@ class ImportNotesDialog extends ModalDialog {
                         this.deck.database.addNote(note);
                     }
 
-                    this.deck.updateCardArrays()
+                    this.deck.updateCache()
                         .then(() => this.onImported.dispatch());
                 })
         )
@@ -378,7 +378,7 @@ class ManageNotesDialog extends ModalDialog {
             this.notesList = new Elm().class("notesList")
         );
 
-        for (const item of deck.database.notes) {
+        for (const item of deck.database.getNotes()) {
             const label = item.fields[0].slice(0, 20);
             new Elm()
                 .append(
@@ -530,7 +530,7 @@ class CardPresenter extends Component {
 
     private inputGetter = new QuickUserInputGetter();
     private currentState?: {
-        card: Card;
+        card: Immutable<Card>;
     };
 
     private cardIFrame = new Elm("iframe").class("card");
@@ -548,7 +548,7 @@ class CardPresenter extends Component {
         });
     }
 
-    public async presentCard(card: Card): Promise<number> {
+    public async presentCard(card: Immutable<Card>): Promise<number> {
         if (this.currentState) {
             this.discardState();
         }
@@ -591,7 +591,7 @@ class CardPresenter extends Component {
     }
 
     private createCardInIFrame(
-        contentTemplate: string, fieldNames: string[], fields: string[],
+        contentTemplate: string, fieldNames: Immutable<string[]>, fields: Immutable<string[]>,
         styles: string | undefined, scripts: (string | undefined)[]
     ): void {
         const regexMatches = /{{(.+?)}}/g;
