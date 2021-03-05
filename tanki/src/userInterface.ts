@@ -325,7 +325,7 @@ class ImportNotesDialog extends ModalDialog {
 
                     const value = textarea.getValue();
                     const parsed = JSON.parse(value);
-                    if (this.deck.database.getNoteTypeByName(
+                    if (!this.deck.database.getNoteTypeByName(
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
                     )) {
                         this.deck.database.addNoteType(
