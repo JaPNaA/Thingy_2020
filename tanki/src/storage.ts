@@ -14,7 +14,7 @@ function resolveLinkAsFile(href: string) {
 }
 
 export function writeOut(deck: Deck) {
-    const exportStr = deck.data.toJSON();
+    const exportStr = deck.database.toJSON();
 
     if (fs) {
         fs.writeFileSync(deckDataPath, exportStr);

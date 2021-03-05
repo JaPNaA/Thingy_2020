@@ -1,9 +1,8 @@
-import { ActiveCard, Card, TankiDatabase } from "./database.js";
-import { CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataIntegrated } from "./dataTypes.js";
+import { ActiveCard, Card, Note, TankiDatabase } from "./database.js";
+import { CardFlag, CardState, DeckData } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 
 export class Deck {
-    public data: DeckDataInteract;
     public loaded: Promise<void>;
 
     public database: TankiDatabase;
@@ -14,7 +13,6 @@ export class Deck {
 
     constructor(data: DeckData) {
         this.database = new TankiDatabase(data);
-        this.data = new DeckDataInteract(data);
         this.loaded = this.updateCardArrays();
     }
 
@@ -39,7 +37,7 @@ export class Deck {
     /** update data based on results */
     public applyResultToCard(card: Card, result: number) {
         if (card.state === CardState.new) {
-            const schedulingSettings = this.data.getCardSchedulingSettings(card);
+            const schedulingSettings = this.database.getCardSchedulingSettings(card);
             const newCardIndex = this.newCards.indexOf(card);
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
             const poppedCard = this.newCards.splice(newCardIndex, 1)[0];
@@ -77,7 +75,7 @@ export class Deck {
     }
 
     private updateCardScheduleWithResult(card: ActiveCard, result: number) {
-        const schedulingSettings = this.data.getCardSchedulingSettings(card);
+        const schedulingSettings = this.database.getCardSchedulingSettings(card);
 
         if (card.hasFlag(CardFlag.learn)) {
             if (!card.learningInterval) { card.learningInterval = 0; }
@@ -112,8 +110,8 @@ export class Deck {
         }
     }
 
-    public addNoteAndUpdate(data: NoteData) {
-        this.data.addNote(data);
+    public addNoteAndUpdate(data: Note) {
+        this.database.addNote(data);
         this.updateCardArrays();
     }
 
@@ -155,8 +153,6 @@ export class Deck {
         this.newCards.length = 0;
         this.activeCards.length = 0;
 
-        // await this.database.readyPromise;
-
         for (const card of this.database.cards) {
             this.sortCardIntoArray(card);
         }
@@ -172,7 +168,7 @@ export class Deck {
         } else if (card.state === CardState.new) {
             this.newCards.push(card);
         } else {
-            console.error("Unexpected card state", card, this.data);
+            console.error("Unexpected card state", card, this.database);
             throw new Error("Unexpected card state");
         }
     }
@@ -182,48 +178,3 @@ export class Deck {
         this.activeCards.sort((a, b) => a.dueMinutes - b.dueMinutes);
     }
 }
-
-class DeckDataInteract {
-
-    constructor(private deckData: DeckData) {
-        if (deckData.version !== dataTypeVersion) {
-            alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
-            throw new Error("Versions don't match");
-        }
-    }
-
-    public toJSON() {
-        return JSON.stringify(this.deckData);
-    }
-
-    public getNoteTypes(): Readonly<NoteTypeData[]> {
-        return this.deckData.noteTypes;
-    }
-
-    public indexOfNote(noteName: string): number {
-        for (let i = 0; i < this.deckData.noteTypes.length; i++) {
-            const type = this.deckData.noteTypes[i];
-            if (type.name === noteName) { return i; }
-        }
-
-        return -1;
-    }
-
-    public getNotes(): Readonly<NoteData[]> {
-        return this.deckData.notes;
-    }
-
-    public getCardSchedulingSettings(card: Card): CardSchedulingSettingsData {
-        return this.deckData.schedulingSettings;
-    }
-
-    public addNoteType(noteType: NoteTypeData): void {
-        this.deckData.noteTypes.push(noteType);
-    }
-
-    public addNote(note: NoteData): void {
-        this.deckData.notes.push(note);
-    }
-}
-
-

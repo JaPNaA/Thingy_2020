@@ -1,4 +1,4 @@
-import { Card, Note } from "./database.js";
+import { Card, Note, NoteType } from "./database.js";
 import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Deck } from "./logic.js";
@@ -130,12 +130,13 @@ class DeckPresenter extends Component {
         this.exitCardPresenter();
 
         const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-        const data = await new Promise<NoteData>(function (res) {
-            createNoteDialog.onNoteCreated.addHandler(function (data) {
-                res(data);
+        const note = await new Promise<Note>(function (res) {
+            createNoteDialog.onNoteCreated.addHandler(function (note) {
+                res(note);
             })
         });
-        this.deck.addNoteAndUpdate(data);
+        this.deck.addNoteAndUpdate(note);
+        this.deckTimeline.update();
 
         createNoteDialog.remove();
     }
@@ -206,7 +207,7 @@ abstract class ModalDialog extends Component {
 }
 
 class CreateNoteDialog extends ModalDialog {
-    public onNoteCreated = new EventHandler<NoteData>();
+    public onNoteCreated = new EventHandler<Note>();
 
     private inputsContainer: Elm;
     private typeSelectElm: Elm<"select">;
@@ -231,7 +232,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private loadNoteTypes() {
-        const noteTypes = this.deck.data.getNoteTypes();
+        const noteTypes = this.deck.database.noteTypes;
 
         for (let i = 0; i < noteTypes.length; i++) {
             const noteType = noteTypes[i];
@@ -242,7 +243,7 @@ class CreateNoteDialog extends ModalDialog {
     }
 
     private async updateInputsElm() {
-        const noteTypes = this.deck.data.getNoteTypes();
+        const noteTypes = this.deck.database.noteTypes;
 
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
         this.inputElms = [];
@@ -251,7 +252,7 @@ class CreateNoteDialog extends ModalDialog {
         const noteType = noteTypes[this.noteTypeIndex];
 
         for (const fieldName of
-            (await Note.getIntegratedNoteType(noteType.name)).fieldNames
+            (await NoteType.getIntegratedNoteType(noteType)).fieldNames
         ) {
             const inputElm = new Elm("input").class("cardFieldInput");
 
@@ -264,10 +265,10 @@ class CreateNoteDialog extends ModalDialog {
 
     private submit() {
         if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
-        this.onNoteCreated.dispatch([
-            this.noteTypeIndex,
-            this.inputElms.map(e => e.getHTMLElement().value)
-        ]);
+        this.onNoteCreated.dispatch(Note.create(
+            this.deck.database.noteTypes[this.noteTypeIndex],
+            this.inputElms.map(e => e.getHTMLElement().value))
+        );
 
         for (const inputElm of this.inputElms) {
             inputElm.getHTMLElement().value = "";
@@ -324,24 +325,27 @@ class ImportNotesDialog extends ModalDialog {
 
                     const value = textarea.getValue();
                     const parsed = JSON.parse(value);
-                    if (this.deck.data.indexOfNote(
+                    if (this.deck.database.getNoteTypeByName(
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
-                    ) < 0) {
-                        this.deck.data.addNoteType(ImportNotesDialog.jishoAPIDataImportedNoteType)
+                    )) {
+                        this.deck.database.addNoteType(
+                            new NoteType(ImportNotesDialog.jishoAPIDataImportedNoteType))
                     }
 
-                    const index = this.deck.data.indexOfNote(
+                    const cardType = this.deck.database.getNoteTypeByName(
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
-                    );
+                    )!;
 
                     for (const item of parsed) {
-                        this.deck.data.addNote([
-                            index, [JSON.stringify(item)],
-                            checkboxes.map(checkbox =>
-                                checkbox.input.getHTMLElement().checked ?
-                                    undefined : [CardState.new, [CardFlag.suspended]]
-                            )
-                        ]);
+                        const note = Note.create(cardType, [JSON.stringify(item)]);
+                        for (let i = 0; i < checkboxes.length; i++) {
+                            const checkbox = checkboxes[i];
+                            if (!checkbox.input.getHTMLElement().checked) {
+                                note.cards[i].addFlag(CardFlag.suspended);
+                            }
+                        }
+
+                        this.deck.database.addNote(note);
                     }
 
                     this.deck.updateCardArrays()
@@ -374,22 +378,18 @@ class ManageNotesDialog extends ModalDialog {
             this.notesList = new Elm().class("notesList")
         );
 
-        for (const item of deck.data.getNotes()) {
-            const label = item[1][0].slice(0, 20);
+        for (const item of deck.database.notes) {
+            const label = item.fields[0].slice(0, 20);
             new Elm()
                 .append(
                     new Elm().class("label").append(label),
                     new Elm().class("cards").withSelf(cards => {
-                        if (item[2]) {
-                            for (const card of item[2]) {
-                                cards.append(
-                                    new Elm().class("card").append(
-                                        card ? CardState[card[0]] : "(new)"
-                                    )
+                        for (const card of item.cards) {
+                            cards.append(
+                                new Elm().class("card").append(
+                                    card ? CardState[card.state] : "(new)"
                                 )
-                            }
-                        } else {
-                            cards.append("(all new)");
+                            )
                         }
                     })
                 )
@@ -553,7 +553,7 @@ class CardPresenter extends Component {
             this.discardState();
         }
 
-        const noteType = await card.parentNote.getIntegratedNoteType();
+        const noteType = await card.parentNote.type.getIntegratedNoteType();
         const cardType = noteType.cardTypes[card.cardTypeID];
 
         const noteFieldNames = noteType.fieldNames;
