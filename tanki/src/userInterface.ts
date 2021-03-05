@@ -1,4 +1,4 @@
-import { Card } from "./database.js";
+import { Card, Note } from "./database.js";
 import { CardFlag, CardState, NoteData, NoteTypeDataExternal } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { Deck } from "./logic.js";
@@ -251,7 +251,7 @@ class CreateNoteDialog extends ModalDialog {
         const noteType = noteTypes[this.noteTypeIndex];
 
         for (const fieldName of
-            (await this.deck.database.getIntegratedNoteType(noteType.name)).fieldNames
+            (await Note.getIntegratedNoteType(noteType.name)).fieldNames
         ) {
             const inputElm = new Elm("input").class("cardFieldInput");
 
@@ -553,8 +553,7 @@ class CardPresenter extends Component {
             this.discardState();
         }
 
-        const noteType = await this.deck.database.getIntegratedNoteType(
-            card.parentNote.type.name);
+        const noteType = await card.parentNote.getIntegratedNoteType();
         const cardType = noteType.cardTypes[card.cardTypeID];
 
         const noteFieldNames = noteType.fieldNames;

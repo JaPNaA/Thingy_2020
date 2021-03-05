@@ -2,11 +2,8 @@ import { CardData, CardDataActive, CardDataBasic, CardFlag, CardState, DeckData,
 
 export class TankiDatabase {
     public cards: Card[] = [];
+    public notes: Note[] = [];
     public noteTypes: NoteTypeData[];
-
-    // public readyPromise: Promise<void>;
-
-    private externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
 
     constructor(private readonly deckData: Readonly<DeckData>) {
         this.noteTypes = deckData.noteTypes;
@@ -19,40 +16,8 @@ export class TankiDatabase {
             for (const card of obj.cards) {
                 this.cards.push(card);
             }
+            this.notes.push(obj);
         }
-    }
-
-    // todo: make private
-    public async getIntegratedNoteType(noteName: string): Promise<Readonly<NoteTypeDataIntegrated>> {
-        let src: string | undefined;
-
-        for (const type of this.deckData.noteTypes) {
-            if (type.name !== noteName) { continue; }
-
-            if (isNoteTypeDataIntegrated(type)) {
-                return type;
-            } else {
-                src = type.src;
-                break;
-            }
-        }
-
-        if (!src) { throw new Error("Invalid note name"); }
-
-        const alreadyLoaded = this.externalNoteTypesCache.get(src);
-        if (alreadyLoaded) {
-            return alreadyLoaded;
-        }
-
-        const fetchResult = await fetch("../" + src).then(e => e.json());
-        this.externalNoteTypesCache.set(src, fetchResult);
-        return fetchResult;
-    }
-
-
-    private noteGetNoteType(note: NoteData): Readonly<NoteTypeData> {
-        const noteTypeIndex = note[0];
-        return this.deckData.noteTypes[noteTypeIndex];
     }
 }
 
@@ -61,6 +26,8 @@ export class Note {
     public fields: string[];
     public cards: Card[];
     public tags: string[];
+
+    private static externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
 
     constructor(database: TankiDatabase, noteData: NoteData) {
         this.type = this.getNoteType(database, noteData[0]);
@@ -86,6 +53,25 @@ export class Note {
         }
 
         return cards;
+    }
+
+    public async getIntegratedNoteType(): Promise<Readonly<NoteTypeDataIntegrated>> {
+        if (isNoteTypeDataIntegrated(this.type)) {
+            return this.type;
+        }
+
+        return Note.getIntegratedNoteType(this.type.src);
+    }
+
+    public static async getIntegratedNoteType(src: string) {
+        const alreadyLoaded = Note.externalNoteTypesCache.get(src);
+        if (alreadyLoaded) {
+            return alreadyLoaded;
+        }
+
+        const fetchResult = await fetch("../" + src).then(e => e.json());
+        Note.externalNoteTypesCache.set(src, fetchResult);
+        return fetchResult;
     }
 
     private getNoteType(database: TankiDatabase, id: number): NoteTypeData {
