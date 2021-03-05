@@ -101,12 +101,12 @@ export class Deck {
         } else {
             if (result === 1) {
                 card.interval *= schedulingSettings.baseIntervalMultiplier;
-                card.dueMinutes = getCurrMinuteFloored() + card.interval;
             } else {
+                card.interval /= schedulingSettings.baseIntervalMultiplier;
+            }
                 card.dueMinutes = getCurrMinuteFloored() + card.interval;
             }
         }
-    }
 
     public addNoteAndUpdate(data: NoteData) {
         this.data.addNote(data);
