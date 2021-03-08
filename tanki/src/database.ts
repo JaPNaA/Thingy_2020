@@ -1,8 +1,9 @@
 import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
-interface Overwritable {
+interface WriteableImmutable {
     overwriteWith(target: Immutable<this>): void;
+    clone(): WriteableImmutable;
 }
 
 export class TankiDatabase {
@@ -11,8 +12,8 @@ export class TankiDatabase {
     private noteTypes: NoteType[];
 
     private writeHistory: {
-        target: Overwritable,
-        original: Overwritable
+        target: WriteableImmutable,
+        original: WriteableImmutable
     }[] = [];
 
     private static currUid = 0;
@@ -39,12 +40,30 @@ export class TankiDatabase {
         return this.noteTypes;
     }
 
-    public writeCard(existing: Immutable<Card>, copying: Immutable<Card>) {
+    public writeEdit(existing: Immutable<WriteableImmutable>, copying: Immutable<WriteableImmutable>) {
+        console.log("Write", existing, copying);
         this.writeHistory.push({
             target: existing,
             original: existing.clone()
         });
         existing.overwriteWith(copying);
+    }
+
+    public activateCard(card: Immutable<Card>): Immutable<ActiveCard> {
+        if (card instanceof ActiveCard) { return card; }
+        const schedulingSettings = this.getCardSchedulingSettings(card);
+
+        // todo: activeCard not added to this.cards; old card not removed
+        const activeCard = new ActiveCard(
+            [CardState.active, [], 0, schedulingSettings.initialInterval],
+            card.cardTypeID, card.parentNote
+        );
+
+        const newNote = card.parentNote.clone();
+        newNote.cards[card.cardTypeID] = activeCard;
+        this.writeEdit(card.parentNote, newNote);
+
+        return card.parentNote.cards[card.cardTypeID] as ActiveCard;
     }
 
     public undo() {
@@ -121,7 +140,7 @@ export class TankiDatabase {
     }
 }
 
-export class Note {
+export class Note implements WriteableImmutable {
     public cards: Card[];
 
     constructor(
@@ -145,14 +164,26 @@ export class Note {
     }
 
     public static create(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
-        const note = new Note(
-            type, fields,
-            tags || [],
-        );
-
+        const note = Note.createWithoutCards(type, fields, tags);
         note.cards = note.getCards([]);
-
         return note;
+    }
+
+    public clone(): Note {
+        const note = Note.createWithoutCards(
+            this.type,
+            this.fields.slice(),
+            this.tags.slice()
+        );
+        note.cards = this.cards.slice();
+        return note;
+    }
+
+    public overwriteWith(target: Immutable<Note>) {
+        this.type = target.type;
+        this.fields = target.fields.slice();
+        this.tags = target.tags.slice();
+        this.cards = target.cards.map(card => card.clone());
     }
 
     public serialize(noteTypeIndexMap: Map<Immutable<NoteType>, number>): NoteData {
@@ -168,6 +199,13 @@ export class Note {
             cards.length > 0 ? cards : undefined,
             this.tags.length > 0 ? this.tags : undefined
         ]);
+    }
+
+    private static createWithoutCards(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
+        return new Note(
+            type, fields,
+            tags || [],
+        );
     }
 
     private static getNoteType(database: TankiDatabase, id: number): Immutable<NoteType> {
@@ -233,7 +271,7 @@ export class NoteType {
     }
 }
 
-export class Card implements Overwritable {
+export class Card implements WriteableImmutable {
     public state: CardState;
     public cardTypeID: number;
     public parentNote: Immutable<Note>;
