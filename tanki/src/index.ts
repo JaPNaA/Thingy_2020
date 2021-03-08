@@ -13,11 +13,13 @@ async function main() {
     if (!deckData) { throw new Error("Could not load deckData"); }
 
     const deck = new Deck(deckData);
-
-    console.log(deck);
-
     const tankiInterface = new TankiInterface(deck);
     tankiInterface.appendTo(document.body);
+
+    // nice for debugging
+    const g: any = global;
+    g.deck = deck;
+    g.tankiInterface = tankiInterface;
 }
 
 main();
