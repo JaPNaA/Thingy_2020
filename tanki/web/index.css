@@ -2,6 +2,11 @@ body {
     margin: 0;
 }
 
+.tankiInterface {
+    width: 100%;
+    overflow-x: hidden;
+}
+
 .hidden {
     display: none;
 }
