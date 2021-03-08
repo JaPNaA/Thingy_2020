@@ -6,6 +6,8 @@ var __extends = (this && this.__extends) || (function () {
         return extendStatics(d, b);
     };
     return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
         extendStatics(d, b);
         function __() { this.constructor = d; }
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
@@ -138,11 +140,11 @@ var Deck = /** @class */ (function () {
         else {
             if (result === 1) {
                 card.interval *= schedulingSettings.baseIntervalMultiplier;
-                card.dueMinutes = getCurrMinuteFloored() + card.interval;
             }
             else {
-                card.dueMinutes = getCurrMinuteFloored() + card.interval;
+                card.interval /= schedulingSettings.baseIntervalMultiplier;
             }
+            card.dueMinutes = getCurrMinuteFloored() + card.interval;
         }
     };
     Deck.prototype.addNoteAndUpdate = function (data) {
