@@ -42,28 +42,23 @@ export class Deck {
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
             const poppedCard = this.newCardCache.splice(newCardIndex, 1)[0];
 
-            let updatedCard;
+            let updatedCard = poppedCard;
 
             if (result === 1 && schedulingSettings.skipCardIfIsNewButAnsweredCorrectly) {
-                updatedCard = poppedCard.clone();
-                updatedCard.state = CardState.inactive;
-                updatedCard.addFlag(CardFlag.graduated);
-                this.database.writeCard(poppedCard, updatedCard);
+                const mutCard = poppedCard.clone();
+                mutCard.state = CardState.inactive;
+                mutCard.addFlag(CardFlag.graduated);
+                this.database.writeEdit(poppedCard, mutCard);
             } else {
-                updatedCard = new ActiveCard([
-                    /** State */
-                    CardState.active,
-                    /** Flags */
-                    [CardFlag.learn],
-                    /** Due date in minutes ( [Date#getTime() / 60_000] )*/
-                    0,
-                    /** Interval in minutes */
-                    schedulingSettings.initialInterval
-                ], poppedCard.cardTypeID, poppedCard.parentNote);
-                this.updateCardScheduleWithResult(updatedCard, result);
-            }
+                const activatedCard = this.database.activateCard(poppedCard);
+                updatedCard = activatedCard;
 
-            // updatedCard._attachCardSchedulingDataToParentNote();
+                const activatedCardMut = activatedCard.clone();
+                activatedCardMut.addFlag(CardFlag.learn);
+                this.database.writeEdit(activatedCard, activatedCardMut);
+
+                this.updateCardScheduleWithResult(activatedCard, result);
+            }
 
             this.sortCardIntoCache(updatedCard);
         } else if (card instanceof ActiveCard) {
@@ -77,9 +72,9 @@ export class Deck {
 
     private updateCardScheduleWithResult(card: Immutable<ActiveCard>, result: number) {
         const mutCard = card.clone();
-        const schedulingSettings = this.database.getCardSchedulingSettings(mutCard);
+        const schedulingSettings = this.database.getCardSchedulingSettings(card);
 
-        if (mutCard.hasFlag(CardFlag.learn)) {
+        if (card.hasFlag(CardFlag.learn)) {
             if (!mutCard.learningInterval) { mutCard.learningInterval = 0; }
 
             if (result === 0) {
@@ -95,7 +90,7 @@ export class Deck {
 
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
-                    mutCard.removeFlag(CardFlag.learn)
+                    mutCard.removeFlag(CardFlag.learn);
                     mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
                 } else {
                     mutCard.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
@@ -111,7 +106,7 @@ export class Deck {
             mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
         }
 
-        this.database.writeCard(card, mutCard);
+        this.database.writeEdit(card, mutCard);
     }
 
     public addNoteAndUpdate(data: Note) {
