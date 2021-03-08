@@ -341,7 +341,8 @@ class ImportNotesDialog extends ModalDialog {
                         for (let i = 0; i < checkboxes.length; i++) {
                             const checkbox = checkboxes[i];
                             if (!checkbox.input.getHTMLElement().checked) {
-                                note.cards[i].addFlag(CardFlag.suspended);
+                                const card = this.deck.database.getCardByUid(note.cardUids[i]);
+                                card.addFlag(CardFlag.suspended);
                             }
                         }
 
@@ -384,11 +385,10 @@ class ManageNotesDialog extends ModalDialog {
                 .append(
                     new Elm().class("label").append(label),
                     new Elm().class("cards").withSelf(cards => {
-                        for (const card of item.cards) {
+                        for (const cardUid of item.cardUids) {
+                            const card = deck.database.getCardByUid(cardUid);
                             cards.append(
-                                new Elm().class("card").append(
-                                    card ? CardState[card.state] : "(new)"
-                                )
+                                new Elm().class("card").append(CardState[card.state])
                             )
                         }
                     })

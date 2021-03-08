@@ -36,6 +36,8 @@ export class Deck {
 
     /** update data based on results */
     public applyResultToCard(card: Immutable<Card>, result: number) {
+        console.log("apply result to", card);
+
         if (card.state === CardState.new) {
             const schedulingSettings = this.database.getCardSchedulingSettings(card);
             const newCardIndex = this.newCardCache.indexOf(card);
@@ -48,14 +50,14 @@ export class Deck {
                 const mutCard = poppedCard.clone();
                 mutCard.state = CardState.inactive;
                 mutCard.addFlag(CardFlag.graduated);
-                this.database.writeEdit(poppedCard, mutCard);
+                this.database.writeEdit(mutCard);
             } else {
                 const activatedCard = this.database.activateCard(poppedCard);
                 updatedCard = activatedCard;
 
-                const activatedCardMut = activatedCard.clone();
-                activatedCardMut.addFlag(CardFlag.learn);
-                this.database.writeEdit(activatedCard, activatedCardMut);
+                const mutActivatedCard = activatedCard.clone();
+                mutActivatedCard.addFlag(CardFlag.learn);
+                this.database.writeEdit(mutActivatedCard);
 
                 this.updateCardScheduleWithResult(activatedCard, result);
             }
@@ -106,7 +108,7 @@ export class Deck {
             mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
         }
 
-        this.database.writeEdit(card, mutCard);
+        this.database.writeEdit(mutCard);
     }
 
     public addNoteAndUpdate(data: Note) {

@@ -1,9 +1,10 @@
 import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
-interface WriteableImmutable {
-    overwriteWith(target: Immutable<this>): void;
-    clone(): WriteableImmutable;
+abstract class DatabaseObject {
+    public _uid: number = -1;
+    abstract overwriteWith(target: Immutable<this>): void;
+    abstract clone(): DatabaseObject;
 }
 
 export class TankiDatabase {
@@ -11,12 +12,12 @@ export class TankiDatabase {
     private notes: Note[] = [];
     private noteTypes: NoteType[];
 
-    private writeHistory: {
-        target: WriteableImmutable,
-        original: WriteableImmutable
-    }[] = [];
+    private objects: DatabaseObject[] = [];
 
-    private static currUid = 0;
+    private writeHistory: {
+        target: DatabaseObject,
+        original: DatabaseObject
+    }[] = [];
 
     constructor(private readonly deckData: Readonly<DeckData>) {
         if (deckData.version !== dataTypeVersion) {
@@ -40,7 +41,22 @@ export class TankiDatabase {
         return this.noteTypes;
     }
 
-    public writeEdit(existing: Immutable<WriteableImmutable>, copying: Immutable<WriteableImmutable>) {
+    public getNoteByUid(uid: number): Note {
+        const o = this.objects[uid];
+        if (!(o instanceof Note)) { throw new Error("Object mismatch"); }
+        return o;
+    }
+
+    public getCardByUid(uid: number): Card {
+        const o = this.objects[uid];
+        if (!(o instanceof Card)) { throw new Error("Object mismatch"); }
+        return o;
+    }
+
+    public writeEdit(copying: Immutable<DatabaseObject>) {
+        if (copying._uid < 0) { throw new Error("Trying to write to unregisted object"); }
+        const existing = this.objects[copying._uid];
+
         console.log("Write", existing, copying);
         this.writeHistory.push({
             target: existing,
@@ -58,12 +74,13 @@ export class TankiDatabase {
             [CardState.active, [], 0, schedulingSettings.initialInterval],
             card.cardTypeID, card.parentNote
         );
+        this.registerObject(activeCard);
 
         const newNote = card.parentNote.clone();
-        newNote.cards[card.cardTypeID] = activeCard;
-        this.writeEdit(card.parentNote, newNote);
+        newNote.cardUids[card.cardTypeID] = activeCard._uid;
+        this.writeEdit(newNote);
 
-        return card.parentNote.cards[card.cardTypeID] as ActiveCard;
+        return activeCard;
     }
 
     public undo() {
@@ -73,15 +90,9 @@ export class TankiDatabase {
         target.overwriteWith(original);
     }
 
-    public static getUid(): number {
-        return this.currUid++;
-    }
-
     public addNote(note: Note): void {
         this.notes.push(note);
-        for (const card of note.cards) {
-            this.cards.push(card);
-        }
+        this.initNote(note);
     }
 
     public getNoteTypeByName(name: string): NoteType | undefined {
@@ -112,7 +123,7 @@ export class TankiDatabase {
             version: dataTypeVersion,
             schedulingSettings: this.deckData.schedulingSettings,
             noteTypes: this.noteTypes.map(noteType => noteType.serialize()),
-            notes: this.notes.map(note => note.serialize(noteTypeIndexMap))
+            notes: this.notes.map(note => note.serialize(noteTypeIndexMap, this))
         };
         console.log(performance.now() - start, " milliseconds to serialize");
 
@@ -130,25 +141,40 @@ export class TankiDatabase {
     }
 
     private initCards(): void {
-        for (const note of this.deckData.notes) {
-            const obj = Note.fromData(this, note);
-            for (const card of obj.cards) {
-                this.cards.push(card);
-            }
-            this.notes.push(obj);
+        for (const noteData of this.deckData.notes) {
+            const note = Note.fromData(this, noteData);
+            this.initNote(note);
+            this.notes.push(note);
         }
+    }
+
+    private initNote(note: Note): void {
+        this.registerObject(note);
+
+        const cards = note._initCards();
+        for (const card of cards) {
+            this.cards.push(card);
+            note.cardUids.push(this.registerObject(card)!);
+        }
+    }
+
+    private registerObject(obj: DatabaseObject): number | undefined {
+        if (obj._uid >= 0) { return; }
+        return obj._uid = this.objects.push(obj) - 1;
     }
 }
 
-export class Note implements WriteableImmutable {
-    public cards: Card[];
+export class Note extends DatabaseObject {
+    public cardUids: number[];
+    private cardDatas?: Optional<CardData>[];
 
     constructor(
         public type: Immutable<NoteType>,
         public fields: string[],
         public tags: string[]
     ) {
-        this.cards = [];
+        super();
+        this.cardUids = [];
     }
 
     public static fromData(database: TankiDatabase, noteData: Immutable<NoteData>): Note {
@@ -158,14 +184,13 @@ export class Note implements WriteableImmutable {
             noteData[3] || [],
         );
 
-        note.cards = note.getCards(noteData[2] || []);
+        note.cardDatas = noteData[2];
 
         return note;
     }
 
     public static create(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
         const note = Note.createWithoutCards(type, fields, tags);
-        note.cards = note.getCards([]);
         return note;
     }
 
@@ -175,7 +200,8 @@ export class Note implements WriteableImmutable {
             this.fields.slice(),
             this.tags.slice()
         );
-        note.cards = this.cards.slice();
+        note.cardUids = this.cardUids.slice();
+        note._uid = this._uid;
         return note;
     }
 
@@ -183,12 +209,12 @@ export class Note implements WriteableImmutable {
         this.type = target.type;
         this.fields = target.fields.slice();
         this.tags = target.tags.slice();
-        this.cards = target.cards.map(card => card.clone());
+        this.cardUids = target.cardUids.slice();
     }
 
-    public serialize(noteTypeIndexMap: Map<Immutable<NoteType>, number>): NoteData {
+    public serialize(noteTypeIndexMap: Map<Immutable<NoteType>, number>, db: TankiDatabase): NoteData {
         const cards = arrayRemoveTrailingUndefinedOrNull(
-            this.cards.map(card => card.serialize())
+            this.cardUids.map(uid => db.getCardByUid(uid).serialize())
         );
         const noteTypeIndex = noteTypeIndexMap.get(this.type);
         if (noteTypeIndex === undefined) { throw new Error("Tried to serialize Note who's type wasn't registered."); }
@@ -212,13 +238,13 @@ export class Note implements WriteableImmutable {
         return database.getNoteTypes()[id];
     }
 
-    private getCards(cardDatas: Optional<CardData>[]): Card[] {
+    public _initCards(): Card[] {
         const cards = [];
 
         const numCardTypes = this.type.numCardTypes;
 
         for (let i = 0; i < numCardTypes; i++) {
-            const card = isEmptyValue(cardDatas) ? undefined : cardDatas[i];
+            const card = isEmptyValue(this.cardDatas) ? undefined : this.cardDatas[i];
 
             if (!isEmptyValue(card) && isCardActive(card)) {
                 cards.push(new ActiveCard(card, i, this));
@@ -271,7 +297,7 @@ export class NoteType {
     }
 }
 
-export class Card implements WriteableImmutable {
+export class Card extends DatabaseObject {
     public state: CardState;
     public cardTypeID: number;
     public parentNote: Immutable<Note>;
@@ -282,6 +308,7 @@ export class Card implements WriteableImmutable {
         cardTypeId: number,
         parentNote: Immutable<Note>
     ) {
+        super();
         let data = _data ?? [CardState.new, null];
         this.state = data[0];
         this.flags = data[1] || [];
@@ -321,7 +348,9 @@ export class Card implements WriteableImmutable {
     }
 
     public clone(): Card {
-        return new Card([this.state, this.flags.slice()], this.cardTypeID, this.parentNote);
+        const card = new Card([this.state, this.flags.slice()], this.cardTypeID, this.parentNote);
+        card._uid = this._uid;
+        return card;
     }
 }
 
@@ -365,9 +394,11 @@ export class ActiveCard extends Card {
 
     public clone(): ActiveCard {
         if (this.state !== CardState.active) { throw new Error("Tried cloning ActiveCard that wasn't active"); }
-        return new ActiveCard(
+        const card = new ActiveCard(
             [this.state, this.flags.slice(), this.dueMinutes, this.interval, this.timesWrongHistory, this.learningInterval],
             this.cardTypeID, this.parentNote
         );
+        card._uid = this._uid;
+        return card;
     }
 }
