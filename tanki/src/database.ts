@@ -8,16 +8,13 @@ abstract class DatabaseObject {
 }
 
 export class TankiDatabase {
+    public undoLog: UndoLog;
+
     private cards: Card[] = [];
     private notes: Note[] = [];
     private noteTypes: NoteType[];
 
     private objects: DatabaseObject[] = [];
-
-    private writeHistory: {
-        target: DatabaseObject,
-        original: DatabaseObject
-    }[] = [];
 
     constructor(private readonly deckData: Readonly<DeckData>) {
         if (deckData.version !== dataTypeVersion) {
@@ -25,8 +22,13 @@ export class TankiDatabase {
             throw new Error("Versions don't match");
         }
 
+        this.undoLog = new UndoLog();
+        this.undoLog.freeze = true;
+
         this.noteTypes = this.initNoteTypes();
         this.initCards();
+
+        this.undoLog.freeze = false;
     }
 
     public getCards(): Immutable<Card[]> {
@@ -53,12 +55,24 @@ export class TankiDatabase {
         return o;
     }
 
+    public getNoteTypeByName(name: string): NoteType | undefined {
+        for (const noteType of this.noteTypes) {
+            if (noteType.name === name) {
+                return noteType;
+            }
+        }
+    }
+
+    public getCardSchedulingSettings(card: Immutable<Card>): CardSchedulingSettingsData {
+        return this.deckData.schedulingSettings;
+    }
+
     public writeEdit(copying: Immutable<DatabaseObject>) {
         if (copying._uid < 0) { throw new Error("Trying to write to unregisted object"); }
         const existing = this.objects[copying._uid];
 
         console.log("Write", existing, copying);
-        this.writeHistory.push({
+        this.undoLog.logEdit({
             target: existing,
             original: existing.clone()
         });
@@ -83,32 +97,14 @@ export class TankiDatabase {
         return activeCard;
     }
 
-    public undo() {
-        const writeAction = this.writeHistory.pop();
-        if (!writeAction) { return; }
-        const { target, original } = writeAction;
-        target.overwriteWith(original);
-    }
-
     public addNote(note: Note): void {
-        this.notes.push(note);
+        this.undoLog.startGroup();
         this.initNote(note);
-    }
-
-    public getNoteTypeByName(name: string): NoteType | undefined {
-        for (const noteType of this.noteTypes) {
-            if (noteType.name === name) {
-                return noteType;
-            }
-        }
+        this.undoLog.endGroup();
     }
 
     public addNoteType(noteType: NoteType): void {
         this.noteTypes.push(noteType);
-    }
-
-    public getCardSchedulingSettings(card: Immutable<Card>): CardSchedulingSettingsData {
-        return this.deckData.schedulingSettings;
     }
 
     // todo: process changed cards
@@ -144,16 +140,26 @@ export class TankiDatabase {
         for (const noteData of this.deckData.notes) {
             const note = Note.fromData(this, noteData);
             this.initNote(note);
-            this.notes.push(note);
         }
     }
 
     private initNote(note: Note): void {
+        this.undoLog.logAdd({
+            index: this.notes.push(note) - 1,
+            location: this.notes,
+            target: note,
+        });
+
         this.registerObject(note);
 
         const cards = note._initCards();
         for (const card of cards) {
-            this.cards.push(card);
+            this.undoLog.logAdd({
+                index: this.cards.push(card) - 1,
+                location: this.cards,
+                target: card,
+            });
+
             note.cardUids.push(this.registerObject(card)!);
         }
     }
@@ -161,6 +167,101 @@ export class TankiDatabase {
     private registerObject(obj: DatabaseObject): number | undefined {
         if (obj._uid >= 0) { return; }
         return obj._uid = this.objects.push(obj) - 1;
+    }
+}
+
+interface EditLog {
+    target: DatabaseObject,
+    original: DatabaseObject
+}
+
+interface AddLog {
+    target: DatabaseObject;
+    location: any[];
+    index: number;
+}
+
+interface RemoveLog extends AddLog { }
+
+interface LogGroup {
+    adds: AddLog[];
+    edits: EditLog[];
+    removes: RemoveLog[];
+}
+
+
+class UndoLog {
+    public freeze: boolean = false;
+
+    private currentLogGroup: LogGroup = this.createLogGroup();
+    private logGroupHistory: LogGroup[] = [];
+    private groupDepth: number = 0;
+
+    public logEdit(edit: EditLog) {
+        if (this.freeze) { return; }
+        this.currentLogGroup.edits.push(edit);
+    }
+
+    public logAdd(add: AddLog) {
+        if (this.freeze) { return; }
+        this.currentLogGroup.adds.push(add);
+    }
+
+    public logRemove(remove: RemoveLog) {
+        if (this.freeze) { return; }
+        this.currentLogGroup.removes.push(remove);
+    }
+
+    public startGroup() {
+        this.groupDepth++;
+    }
+
+    public endGroup() {
+        this.groupDepth--;
+        if (this.groupDepth > 0) { return; }
+        if (this.groupDepth < 0) { throw new Error("No more groups to end"); }
+        console.log("group ended");
+
+        this.flushLogGroupToHistory();
+    }
+
+    public undo() {
+        this.flushLogGroupToHistory();
+
+        const logGroup = this.logGroupHistory.pop();
+        if (!logGroup) { return; }
+        const { adds, edits, removes } = logGroup;
+
+        for (let i = removes.length - 1; i >= 0; i--) {
+            const remove = removes[i];
+            if (remove.location[remove.index] !== undefined) { throw new Error("Tried to undo remove, but encountered another object at recovery location"); }
+            remove.location.splice(remove.index, 0, remove.target);
+        }
+
+        for (let i = edits.length - 1; i >= 0; i--) {
+            const edit = edits[i];
+            edit.target.overwriteWith(edit.original);
+        }
+
+        for (let i = adds.length - 1; i >= 0; i--) {
+            const add = adds[i];
+            if (add.location[add.index] !== add.target) { throw new Error("Tried to undo add, but encountered unexpected object at location"); }
+            add.location.splice(add.index, 1);
+        }
+    }
+
+    private flushLogGroupToHistory() {
+        if (this.currentLogGroup.adds.length <= 0 &&
+            this.currentLogGroup.edits.length <= 0) {
+            return;
+        }
+
+        this.logGroupHistory.push(this.currentLogGroup);
+        this.currentLogGroup = this.createLogGroup();
+    }
+
+    private createLogGroup(): LogGroup {
+        return { adds: [], edits: [], removes: [] };
     }
 }
 

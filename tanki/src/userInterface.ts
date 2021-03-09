@@ -20,6 +20,15 @@ export class TankiInterface extends Component {
                 })
         );
 
+        //* for testing
+        addEventListener("keydown", e => {
+            if (e.code === "KeyZ") {
+                deck.database.undoLog.undo();
+                deck.updateCache();
+                this.deckPresenter.deckTimeline.update();
+            }
+        });
+
         this.deckPresenter.onExit.addHandler(() => writeOut(deck));
     }
 }
@@ -99,7 +108,9 @@ class DeckPresenter extends Component {
                     break;
                 }
 
+                this.deck.database.undoLog.startGroup();
                 this.deck.applyResultToCard(selectedCard, result);
+                this.deck.database.undoLog.endGroup();
             } else {
                 break;
             }
@@ -130,19 +141,23 @@ class DeckPresenter extends Component {
         this.exitCardPresenter();
 
         const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-        const note = await new Promise<Note>(function (res) {
-            createNoteDialog.onNoteCreated.addHandler(function (note) {
+        const note = await new Promise<Note>(res => {
+            createNoteDialog.onNoteCreated.addHandler(note => {
                 res(note);
-            })
+            });
         });
-        this.deck.addNoteAndUpdate(note);
-        this.deckTimeline.update();
 
+        this.deck.database.undoLog.startGroup();
+        this.deck.addNoteAndUpdate(note);
+        this.deck.database.undoLog.endGroup();
+
+        this.deckTimeline.update();
         createNoteDialog.remove();
     }
 
     private async openImportNotesDialog() {
         this.exitCardPresenter();
+
         const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
         importNotesDialog.onImported.addHandler(() => {
             this.deckTimeline.update();
@@ -336,18 +351,21 @@ class ImportNotesDialog extends ModalDialog {
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
                     )!;
 
+                    this.deck.database.undoLog.startGroup();
                     for (const item of parsed) {
                         const note = Note.create(cardType, [JSON.stringify(item)]);
+                        this.deck.database.addNote(note);
+
                         for (let i = 0; i < checkboxes.length; i++) {
                             const checkbox = checkboxes[i];
                             if (!checkbox.input.getHTMLElement().checked) {
-                                const card = this.deck.database.getCardByUid(note.cardUids[i]);
+                                const card = this.deck.database.getCardByUid(note.cardUids[i]).clone();
                                 card.addFlag(CardFlag.suspended);
+                                this.deck.database.writeEdit(card);
                             }
                         }
-
-                        this.deck.database.addNote(note);
                     }
+                    this.deck.database.undoLog.endGroup();
 
                     this.deck.updateCache()
                         .then(() => this.onImported.dispatch());
