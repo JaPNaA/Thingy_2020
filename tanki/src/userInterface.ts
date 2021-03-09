@@ -25,7 +25,7 @@ export class TankiInterface extends Component {
             if (e.code === "KeyZ") {
                 deck.database.undoLog.undo();
                 deck.updateCache();
-                this.deckPresenter.deckTimeline.update();
+                this.deckPresenter.update();
             }
         });
 
@@ -91,6 +91,10 @@ class DeckPresenter extends Component {
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
 
         this.enterCardPresenter();
+    }
+
+    public update() {
+        this.deckTimeline.update();
     }
 
     private async presentingLoop() {
