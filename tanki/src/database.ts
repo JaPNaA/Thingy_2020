@@ -14,6 +14,12 @@ export class TankiDatabase {
     private notes: Note[] = [];
     private noteTypes: NoteType[];
 
+    /**
+     * Array that maps uid -> object
+     * 
+     * Operations that shift objects (splice, unshift, shift, etc.) should
+     * not be used on this array!
+     */
     private objects: DatabaseObject[] = [];
 
     constructor(private readonly deckData: Readonly<DeckData>) {
@@ -43,19 +49,19 @@ export class TankiDatabase {
         return this.noteTypes;
     }
 
-    public getNoteByUid(uid: number): Note {
+    public getNoteByUid(uid: number): Immutable<Note> {
         const o = this.objects[uid];
         if (!(o instanceof Note)) { throw new Error("Object mismatch"); }
         return o;
     }
 
-    public getCardByUid(uid: number): Card {
+    public getCardByUid(uid: number): Immutable<Card> {
         const o = this.objects[uid];
         if (!(o instanceof Card)) { throw new Error("Object mismatch"); }
         return o;
     }
 
-    public getNoteTypeByName(name: string): NoteType | undefined {
+    public getNoteTypeByName(name: string): Immutable<NoteType> | undefined {
         for (const noteType of this.noteTypes) {
             if (noteType.name === name) {
                 return noteType;
@@ -81,18 +87,35 @@ export class TankiDatabase {
 
     public activateCard(card: Immutable<Card>): Immutable<ActiveCard> {
         if (card instanceof ActiveCard) { return card; }
+        this.undoLog.startGroup();
+
         const schedulingSettings = this.getCardSchedulingSettings(card);
 
-        // todo: activeCard not added to this.cards; old card not removed
+        const originalCard = this.getCardByUid(card._uid) as Card;
+        const cardIndex = this.cards.indexOf(originalCard);
         const activeCard = new ActiveCard(
             [CardState.active, [], 0, schedulingSettings.initialInterval],
             card.cardTypeID, card.parentNote
         );
         this.registerObject(activeCard);
+        this.cards[cardIndex] = activeCard;
+
+        this.undoLog.logRemove({
+            index: cardIndex,
+            location: this.cards,
+            target: originalCard
+        });
+        this.undoLog.logAdd({
+            index: cardIndex,
+            location: this.cards,
+            target: activeCard
+        });
 
         const newNote = card.parentNote.clone();
         newNote.cardUids[card.cardTypeID] = activeCard._uid;
         this.writeEdit(newNote);
+
+        this.undoLog.endGroup();
 
         return activeCard;
     }
@@ -232,10 +255,10 @@ class UndoLog {
         if (!logGroup) { return; }
         const { adds, edits, removes } = logGroup;
 
-        for (let i = removes.length - 1; i >= 0; i--) {
-            const remove = removes[i];
-            if (remove.location[remove.index] !== undefined) { throw new Error("Tried to undo remove, but encountered another object at recovery location"); }
-            remove.location.splice(remove.index, 0, remove.target);
+        for (let i = adds.length - 1; i >= 0; i--) {
+            const add = adds[i];
+            if (add.location[add.index] !== add.target) { throw new Error("Tried to undo add, but encountered unexpected object at location"); }
+            add.location.splice(add.index, 1);
         }
 
         for (let i = edits.length - 1; i >= 0; i--) {
@@ -243,10 +266,9 @@ class UndoLog {
             edit.target.overwriteWith(edit.original);
         }
 
-        for (let i = adds.length - 1; i >= 0; i--) {
-            const add = adds[i];
-            if (add.location[add.index] !== add.target) { throw new Error("Tried to undo add, but encountered unexpected object at location"); }
-            add.location.splice(add.index, 1);
+        for (let i = removes.length - 1; i >= 0; i--) {
+            const remove = removes[i];
+            remove.location.splice(remove.index, 0, remove.target);
         }
     }
 
