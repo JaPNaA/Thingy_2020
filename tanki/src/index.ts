@@ -16,6 +16,18 @@ async function main() {
     const tankiInterface = new TankiInterface(deck);
     tankiInterface.appendTo(document.body);
 
+    if (window.require !== undefined) {
+        const ipc = require("electron").ipcRenderer;
+
+        addEventListener("mousedown", function (e) {
+            console.log(e.button);
+            if (e.button === 2) {
+                ipc.send("openContextMenu");
+            }
+        });
+    }
+
+
     // nice for debugging
     const g: any = global;
     g.deck = deck;

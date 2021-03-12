@@ -1,4 +1,4 @@
-const { BrowserWindow, app, session } = require("electron");
+const { BrowserWindow, app, session, Menu, ipcMain } = require("electron");
 
 function createWindow() {
     const window = new BrowserWindow({
@@ -9,6 +9,10 @@ function createWindow() {
             enableRemoteModule: true
         },
         // titleBarStyle: "hidden"
+    });
+
+    ipcMain.on("openContextMenu", function () {
+        Menu.getApplicationMenu().popup();
     });
 
     // window.removeMenu();
