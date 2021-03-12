@@ -791,11 +791,19 @@ console.log(main);
 history.scrollRestoration = "manual";
 
 if (/\sElectron\//.test(navigator.userAgent) && window.require) {
+    const ipc = require("electron").ipcRenderer;
+
     addEventListener("keydown", e => {
         if (e.key.toLowerCase() === "r" && e.ctrlKey) {
             location.reload();
         } else if (e.key.toLowerCase() === "i" && e.ctrlKey && e.shiftKey) {
-            require("electron").remote.getCurrentWindow().webContents.openDevTools();
+            ipc.send("openDevTools");
+        }
+    });
+
+    addEventListener("mousedown", e => {
+        if (e.button === 2) {
+            ipc.send("openContextMenu");
         }
     });
 }

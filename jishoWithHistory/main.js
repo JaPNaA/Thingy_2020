@@ -1,4 +1,4 @@
-const { BrowserWindow, app, session } = require("electron");
+const { BrowserWindow, app, session, ipcMain, Menu } = require("electron");
 
 function createWindow() {
     const window = new BrowserWindow({
@@ -10,6 +10,9 @@ function createWindow() {
         },
         titleBarStyle: "hidden"
     });
+
+    ipcMain.on("openDevTools", () => window.webContents.openDevTools());
+    ipcMain.on("openContextMenu", () => Menu.getApplicationMenu().popup());
 
     window.removeMenu();
     window.loadFile("web/index.html");
