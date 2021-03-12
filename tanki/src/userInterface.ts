@@ -69,6 +69,11 @@ class DeckPresenter extends Component {
             new Elm("button").class("manageNotes")
                 .append("Manage Notes")
                 .on("click", () => this.openManageNotesDialog()),
+            new Elm("button").class("JishoWithHistory")
+                .append("Jisho With History")
+                .on("click", () => {
+                    window.open("jishoWithHistory/index.html");
+                })
             // new Elm("button").class("graduateNotes")
             //     .append("Graduate Notes")
             //     .on("click", () => {
