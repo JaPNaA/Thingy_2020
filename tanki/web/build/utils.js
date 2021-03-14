@@ -56,6 +56,16 @@ export function binaryBoundarySearch(array, isPastCheck) {
     }
     throw new Error("Looped too many times. Is array sorted (smallest first)?");
 }
+export function arrayRemoveTrailingUndefinedOrNull(arr) {
+    var i;
+    for (i = arr.length - 1; i >= 0; i--) {
+        if (arr[i] !== undefined && arr[i] !== null) {
+            break;
+        }
+    }
+    // @ts-ignore
+    return arr.slice(0, i + 1);
+}
 var EventHandler = /** @class */ (function () {
     function EventHandler() {
         this.handlers = [];

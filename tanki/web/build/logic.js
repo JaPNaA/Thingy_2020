@@ -1,18 +1,3 @@
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        if (typeof b !== "function" && b !== null)
-            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -49,61 +34,58 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { CardFlag, CardState, dataTypeVersion, isCardActive, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
+import { ActiveCard, TankiDatabase } from "./database.js";
+import { CardFlag, CardState } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 var Deck = /** @class */ (function () {
     function Deck(data) {
-        this.inactiveCards = [];
-        this.activeCards = [];
-        this.newCards = [];
-        this.data = new DeckDataInteract(data);
-        this.loaded = this.updateCardArrays();
+        this.inactiveCardCache = [];
+        this.activeCardCache = [];
+        this.newCardCache = [];
+        this.database = new TankiDatabase(data);
+        this.loaded = this.updateCache();
     }
     Deck.prototype.selectCard = function () {
         var nowMinute = getCurrMinuteFloored();
-        if (this.activeCards.length && this.activeCards[0].dueMinutes <= nowMinute) {
-            return this.activeCards[0];
+        if (this.activeCardCache.length && this.activeCardCache[0].dueMinutes <= nowMinute) {
+            return this.activeCardCache[0];
         }
-        else if (this.newCards.length > 0) {
-            var poolSize = Math.min(this.newCards.length, 6);
+        else if (this.newCardCache.length > 0) {
+            var poolSize = Math.min(this.newCardCache.length, 6);
             var poolIndex = Math.floor(Math.random() * poolSize);
-            var index = this.newCards.length - 1 - poolIndex; // newest first
-            return this.newCards[index];
+            var index = this.newCardCache.length - 1 - poolIndex; // newest first
+            return this.newCardCache[index];
         }
     };
     Deck.prototype.getActiveCards = function () {
-        return this.activeCards;
+        return this.activeCardCache;
     };
     /** update data based on results */
     Deck.prototype.applyResultToCard = function (card, result) {
+        console.log("apply result to", card);
         if (card.state === CardState.new) {
-            var schedulingSettings = this.data.getCardSchedulingSettings(card);
-            var newCardIndex = this.newCards.indexOf(card);
+            var schedulingSettings = this.database.getCardSchedulingSettings(card);
+            var newCardIndex = this.newCardCache.indexOf(card);
             if (newCardIndex < 0) {
                 throw new Error("Rated new card that wasn't in new cards array");
             }
-            var poppedCard = this.newCards.splice(newCardIndex, 1)[0];
-            var updatedCard = void 0;
+            var poppedCard = this.newCardCache.splice(newCardIndex, 1)[0];
+            var updatedCard = poppedCard;
             if (result === 1 && schedulingSettings.skipCardIfIsNewButAnsweredCorrectly) {
-                poppedCard.state = CardState.inactive;
-                poppedCard.addFlag(CardFlag.graduated);
-                updatedCard = card;
+                var mutCard = poppedCard.clone();
+                mutCard.state = CardState.inactive;
+                mutCard.addFlag(CardFlag.graduated);
+                this.database.writeEdit(mutCard);
             }
             else {
-                updatedCard = new ActiveCard([
-                    /** State */
-                    CardState.active,
-                    /** Flags */
-                    [CardFlag.learn],
-                    /** Due date in minutes ( [Date#getTime() / 60_000] )*/
-                    0,
-                    /** Interval in minutes */
-                    schedulingSettings.initialInterval
-                ], poppedCard.cardTypeID, poppedCard.parentNote);
-                this.updateCardScheduleWithResult(updatedCard, result);
+                var activatedCard = this.database.activateCard(poppedCard);
+                updatedCard = activatedCard;
+                var mutActivatedCard = activatedCard.clone();
+                mutActivatedCard.addFlag(CardFlag.learn);
+                this.database.writeEdit(mutActivatedCard);
+                this.updateCardScheduleWithResult(activatedCard, result);
             }
-            updatedCard._attachCardSchedulingDataToParentNote();
-            this.sortCardIntoArray(updatedCard);
+            this.sortCardIntoCache(updatedCard);
         }
         else if (card instanceof ActiveCard) {
             this.updateCardScheduleWithResult(card, result);
@@ -114,46 +96,48 @@ var Deck = /** @class */ (function () {
         this.sortSeenAndReviewCards();
     };
     Deck.prototype.updateCardScheduleWithResult = function (card, result) {
-        var schedulingSettings = this.data.getCardSchedulingSettings(card);
+        var mutCard = card.clone();
+        var schedulingSettings = this.database.getCardSchedulingSettings(card);
         if (card.hasFlag(CardFlag.learn)) {
-            if (!card.learningInterval) {
-                card.learningInterval = 0;
+            if (!mutCard.learningInterval) {
+                mutCard.learningInterval = 0;
             }
             if (result === 0) {
-                card.learningInterval = schedulingSettings.learningStepsMinutes[0];
-                card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+                mutCard.learningInterval = schedulingSettings.learningStepsMinutes[0];
+                mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.learningInterval;
             }
             else if (result === 1) {
-                var nextStepIndex = binaryBoundarySearch(schedulingSettings.learningStepsMinutes, function (step) { return step > card.learningInterval; });
+                var nextStepIndex = binaryBoundarySearch(schedulingSettings.learningStepsMinutes, function (step) { return step > mutCard.learningInterval; });
                 console.log(nextStepIndex);
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
-                    card.removeFlag(CardFlag.learn);
-                    card.dueMinutes = getCurrMinuteFloored() + card.interval;
+                    mutCard.removeFlag(CardFlag.learn);
+                    mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
                 }
                 else {
-                    card.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
-                    card.dueMinutes = getCurrMinuteFloored() + card.learningInterval;
+                    mutCard.learningInterval = schedulingSettings.learningStepsMinutes[nextStepIndex];
+                    mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.learningInterval;
                 }
             }
         }
         else {
             if (result === 1) {
-                card.interval *= schedulingSettings.baseIntervalMultiplier;
+                mutCard.interval *= schedulingSettings.baseIntervalMultiplier;
             }
             else {
-                card.interval /= schedulingSettings.baseIntervalMultiplier;
+                mutCard.interval /= schedulingSettings.baseIntervalMultiplier;
             }
-            card.dueMinutes = getCurrMinuteFloored() + card.interval;
+            mutCard.dueMinutes = getCurrMinuteFloored() + mutCard.interval;
         }
+        this.database.writeEdit(mutCard);
     };
     Deck.prototype.addNoteAndUpdate = function (data) {
-        this.data.addNote(data);
-        this.updateCardArrays();
+        this.database.addNote(data);
+        this.updateCache();
     };
     Deck.prototype.getMinutesToNextCard = function () {
         var nowMinute = getCurrMinuteFloored();
-        var firstCard = this.activeCards[0];
+        var firstCard = this.activeCardCache[0];
         if (!firstCard) {
             return;
         }
@@ -161,9 +145,9 @@ var Deck = /** @class */ (function () {
     };
     Deck.prototype.getCardCount = function () {
         return {
-            new: this.newCards.length,
-            active: this.activeCards.length,
-            inactive: this.inactiveCards.length
+            new: this.newCardCache.length,
+            active: this.activeCardCache.length,
+            inactive: this.inactiveCardCache.length
         };
     };
     /**
@@ -171,252 +155,48 @@ var Deck = /** @class */ (function () {
      * the boundary where a card due that's due becomes not due.
      */
     Deck.prototype.getDueCardsCount = function () {
-        if (this.activeCards.length <= 0) {
+        if (this.activeCardCache.length <= 0) {
             return 0;
         }
         var currMinute = getCurrMinuteFloored();
-        return binaryBoundarySearch(this.activeCards, function (card) { return card.dueMinutes > currMinute; });
+        return binaryBoundarySearch(this.activeCardCache, function (card) { return card.dueMinutes > currMinute; });
     };
     // todo: make private again and listen for when cards are added
-    Deck.prototype.updateCardArrays = function () {
+    Deck.prototype.updateCache = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _i, _a, note, noteType, noteType_NumCardType, i, card;
+            var _i, _a, card;
             return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        this.inactiveCards.length = 0;
-                        this.newCards.length = 0;
-                        this.activeCards.length = 0;
-                        _i = 0, _a = this.data.getNotes();
-                        _b.label = 1;
-                    case 1:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        note = _a[_i];
-                        return [4 /*yield*/, this.data.getIntegratedNoteType(this.data.noteGetNoteType(note).name)];
-                    case 2:
-                        noteType = _b.sent();
-                        noteType_NumCardType = noteType.cardTypes.length;
-                        for (i = 0; i < noteType_NumCardType; i++) {
-                            card = isEmptyValue(note[2]) ? undefined : note[2][i];
-                            if (!isEmptyValue(card) && isCardActive(card)) {
-                                this.sortCardIntoArray(new ActiveCard(card, i, note));
-                            }
-                            else {
-                                this.sortCardIntoArray(new Card(card, i, note));
-                            }
-                        }
-                        _b.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 1];
-                    case 4:
-                        this.sortSeenAndReviewCards();
-                        return [2 /*return*/];
+                this.inactiveCardCache.length = 0;
+                this.newCardCache.length = 0;
+                this.activeCardCache.length = 0;
+                for (_i = 0, _a = this.database.getCards(); _i < _a.length; _i++) {
+                    card = _a[_i];
+                    this.sortCardIntoCache(card);
                 }
+                this.sortSeenAndReviewCards();
+                return [2 /*return*/];
             });
         });
     };
-    Deck.prototype.sortCardIntoArray = function (card) {
+    Deck.prototype.sortCardIntoCache = function (card) {
         if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
-            this.inactiveCards.push(card);
+            this.inactiveCardCache.push(card);
         }
         else if (card.state === CardState.active && card instanceof ActiveCard) {
-            this.activeCards.push(card);
+            this.activeCardCache.push(card);
         }
         else if (card.state === CardState.new) {
-            this.newCards.push(card);
+            this.newCardCache.push(card);
         }
         else {
-            console.error("Unexpected card state", card, this.data);
+            console.error("Unexpected card state", card, this.database);
             throw new Error("Unexpected card state");
         }
     };
     /** sort latest due first */
     Deck.prototype.sortSeenAndReviewCards = function () {
-        this.activeCards.sort(function (a, b) { return a.dueMinutes - b.dueMinutes; });
+        this.activeCardCache.sort(function (a, b) { return a.dueMinutes - b.dueMinutes; });
     };
     return Deck;
 }());
 export { Deck };
-var DeckDataInteract = /** @class */ (function () {
-    function DeckDataInteract(deckData) {
-        this.deckData = deckData;
-        this.externalNoteTypesCache = new Map();
-        if (deckData.version !== dataTypeVersion) {
-            alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
-            throw new Error("Versions don't match");
-        }
-    }
-    DeckDataInteract.prototype.toJSON = function () {
-        return JSON.stringify(this.deckData);
-    };
-    DeckDataInteract.prototype.getNoteTypes = function () {
-        return this.deckData.noteTypes;
-    };
-    DeckDataInteract.prototype.indexOfNote = function (noteName) {
-        for (var i = 0; i < this.deckData.noteTypes.length; i++) {
-            var type = this.deckData.noteTypes[i];
-            if (type.name === noteName) {
-                return i;
-            }
-        }
-        return -1;
-    };
-    DeckDataInteract.prototype.getIntegratedNoteType = function (noteName) {
-        return __awaiter(this, void 0, void 0, function () {
-            var src, _i, _a, type, alreadyLoaded, fetchResult;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        for (_i = 0, _a = this.deckData.noteTypes; _i < _a.length; _i++) {
-                            type = _a[_i];
-                            if (type.name !== noteName) {
-                                continue;
-                            }
-                            if (isNoteTypeDataIntegrated(type)) {
-                                return [2 /*return*/, type];
-                            }
-                            else {
-                                src = type.src;
-                                break;
-                            }
-                        }
-                        if (!src) {
-                            throw new Error("Invalid note name");
-                        }
-                        alreadyLoaded = this.externalNoteTypesCache.get(src);
-                        if (alreadyLoaded) {
-                            return [2 /*return*/, alreadyLoaded];
-                        }
-                        return [4 /*yield*/, fetch("../" + src).then(function (e) { return e.json(); })];
-                    case 1:
-                        fetchResult = _b.sent();
-                        this.externalNoteTypesCache.set(src, fetchResult);
-                        return [2 /*return*/, fetchResult];
-                }
-            });
-        });
-    };
-    DeckDataInteract.prototype.getNotes = function () {
-        return this.deckData.notes;
-    };
-    DeckDataInteract.prototype.noteGetNoteType = function (note) {
-        var noteTypeIndex = note[0];
-        return this.deckData.noteTypes[noteTypeIndex];
-    };
-    DeckDataInteract.prototype.getCardSchedulingSettings = function (card) {
-        return this.deckData.schedulingSettings;
-    };
-    DeckDataInteract.prototype.addNoteType = function (noteType) {
-        this.deckData.noteTypes.push(noteType);
-    };
-    DeckDataInteract.prototype.addNote = function (note) {
-        this.deckData.notes.push(note);
-    };
-    return DeckDataInteract;
-}());
-var Card = /** @class */ (function () {
-    function Card(data, cardTypeID, parentNote) {
-        this.cardTypeID = cardTypeID;
-        this.parentNote = parentNote;
-        this.data = data !== null && data !== void 0 ? data : [CardState.new, null];
-    }
-    Object.defineProperty(Card.prototype, "state", {
-        get: function () { return this.data[0]; },
-        set: function (state) { this.data[0] = state; },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(Card.prototype, "noteType", {
-        get: function () { return this.parentNote[0]; },
-        enumerable: false,
-        configurable: true
-    });
-    Card.prototype.hasFlag = function (flag) {
-        if (this.data[1]) {
-            return this.data[1].includes(flag);
-        }
-        else {
-            return false;
-        }
-    };
-    Card.prototype.addFlag = function (flag) {
-        if (this.data[1]) {
-            if (this.hasFlag(flag)) {
-                return;
-            }
-            this.data[1].push(flag);
-        }
-        else {
-            this.data[1] = [flag];
-        }
-    };
-    Card.prototype.removeFlag = function (flag) {
-        if (!this.data[1]) {
-            return;
-        }
-        var index = this.data[1].indexOf(flag);
-        if (index < 0) {
-            throw new Error("Tried to remove flag that doesn't exist");
-        }
-        this.data[1].splice(index, 1);
-    };
-    Card.prototype._attachCardSchedulingDataToParentNote = function () {
-        // this.parentNote[2] is cardData of parent note
-        // optional field, so add if not existing
-        if (isEmptyValue(this.parentNote[2])) {
-            this.parentNote[2] = [];
-        }
-        this.parentNote[2][this.cardTypeID] = this.data;
-    };
-    return Card;
-}());
-export { Card };
-var ActiveCard = /** @class */ (function (_super) {
-    __extends(ActiveCard, _super);
-    function ActiveCard(data, cardTypeID, parentNote) {
-        return _super.call(this, data, cardTypeID, parentNote) || this;
-    }
-    Object.defineProperty(ActiveCard.prototype, "dueMinutes", {
-        get: function () { return this.data[2]; },
-        set: function (minutes) { this.data[2] = Math.round(minutes); },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(ActiveCard.prototype, "interval", {
-        get: function () { return this.data[3]; },
-        set: function (minutes) { this.data[3] = minutes; },
-        enumerable: false,
-        configurable: true
-    });
-    Object.defineProperty(ActiveCard.prototype, "timesWrongHistory", {
-        get: function () {
-            if (isEmptyValue(this.data[4])) {
-                return;
-            }
-            return this.data[4];
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ActiveCard.prototype.addIncorrectCountToRollingHistory = function (incorrectCount) {
-        if (isEmptyValue(this.data[4])) {
-            this.data[4] = [];
-        }
-        this.data[4].push(incorrectCount);
-        if (this.data[4].length > 5) {
-            this.data[4].shift();
-        }
-    };
-    Object.defineProperty(ActiveCard.prototype, "learningInterval", {
-        get: function () {
-            return this.data[5];
-        },
-        set: function (interval) {
-            this.data[5] = interval;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return ActiveCard;
-}(Card));

@@ -54,6 +54,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
         to[j] = from[i];
     return to;
 };
+import { Note, NoteType } from "./database.js";
 import { CardFlag, CardState } from "./dataTypes.js";
 import { Component, Elm } from "./libs/elements.js";
 import { writeOut } from "./storage.js";
@@ -69,6 +70,14 @@ var TankiInterface = /** @class */ (function (_super) {
             .on("click", function () {
             writeOut(deck);
         }));
+        //* for testing
+        addEventListener("keydown", function (e) {
+            if (e.code === "KeyZ") {
+                deck.database.undoLog.undo();
+                deck.updateCache();
+                _this.deckPresenter.update();
+            }
+        });
         _this.deckPresenter.onExit.addHandler(function () { return writeOut(deck); });
         return _this;
     }
@@ -96,11 +105,36 @@ var DeckPresenter = /** @class */ (function (_super) {
             .append("Import Notes")
             .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("manageNotes")
             .append("Manage Notes")
-            .on("click", function () { return _this.openManageNotesDialog(); }));
+            .on("click", function () { return _this.openManageNotesDialog(); }), new Elm("button").class("JishoWithHistory")
+            .append("Jisho With History")
+            .on("click", function () {
+            window.open("jishoWithHistory/index.html", "", "width=612,height=706");
+        })
+        // new Elm("button").class("graduateNotes")
+        //     .append("Graduate Notes")
+        //     .on("click", () => {
+        //         const notes = this.deck.data.getNotes();
+        //         for (const note of notes) {
+        //             const cards = note[2];
+        //             if (!cards) { continue; }
+        //             for (const card of cards) {
+        //                 if (card && isCardActive(card)) {
+        //                     if (card[3] > 7 * 24 * 60) {
+        //                         card[0] = CardState.inactive;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //         this.deckTimeline.update();
+        //     })
+        );
         _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
         _this.enterCardPresenter();
         return _this;
     }
+    DeckPresenter.prototype.update = function () {
+        this.deckTimeline.update();
+    };
     DeckPresenter.prototype.presentingLoop = function () {
         return __awaiter(this, void 0, void 0, function () {
             var selectedCard, result, interrupt_1;
@@ -129,7 +163,9 @@ var DeckPresenter = /** @class */ (function (_super) {
                         console.log(interrupt_1);
                         return [3 /*break*/, 8];
                     case 5:
+                        this.deck.database.undoLog.startGroup();
                         this.deck.applyResultToCard(selectedCard, result);
+                        this.deck.database.undoLog.endGroup();
                         return [3 /*break*/, 7];
                     case 6: return [3 /*break*/, 8];
                     case 7:
@@ -157,20 +193,23 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     DeckPresenter.prototype.openCreateNoteDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var createNoteDialog, data;
+            var createNoteDialog, note;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         this.exitCardPresenter();
                         createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
                         return [4 /*yield*/, new Promise(function (res) {
-                                createNoteDialog.onNoteCreated.addHandler(function (data) {
-                                    res(data);
+                                createNoteDialog.onNoteCreated.addHandler(function (note) {
+                                    res(note);
                                 });
                             })];
                     case 1:
-                        data = _a.sent();
-                        this.deck.addNoteAndUpdate(data);
+                        note = _a.sent();
+                        this.deck.database.undoLog.startGroup();
+                        this.deck.addNoteAndUpdate(note);
+                        this.deck.database.undoLog.endGroup();
+                        this.deckTimeline.update();
                         createNoteDialog.remove();
                         return [2 /*return*/];
                 }
@@ -278,7 +317,7 @@ var CreateNoteDialog = /** @class */ (function (_super) {
         return _this;
     }
     CreateNoteDialog.prototype.loadNoteTypes = function () {
-        var noteTypes = this.deck.data.getNoteTypes();
+        var noteTypes = this.deck.database.getNoteTypes();
         for (var i = 0; i < noteTypes.length; i++) {
             var noteType = noteTypes[i];
             this.typeSelectElm.append(new Elm("option").append(noteType.name).attribute("value", i.toString()));
@@ -290,13 +329,13 @@ var CreateNoteDialog = /** @class */ (function (_super) {
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        noteTypes = this.deck.data.getNoteTypes();
+                        noteTypes = this.deck.database.getNoteTypes();
                         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
                         this.inputElms = [];
                         this.inputsContainer.clear();
                         noteType = noteTypes[this.noteTypeIndex];
                         _i = 0;
-                        return [4 /*yield*/, this.deck.data.getIntegratedNoteType(noteType.name)];
+                        return [4 /*yield*/, NoteType.getIntegratedNoteType(noteType)];
                     case 1:
                         _a = (_b.sent()).fieldNames;
                         _b.label = 2;
@@ -319,10 +358,7 @@ var CreateNoteDialog = /** @class */ (function (_super) {
         if (this.noteTypeIndex === undefined || !this.inputElms) {
             return;
         }
-        this.onNoteCreated.dispatch([
-            this.noteTypeIndex,
-            this.inputElms.map(function (e) { return e.getHTMLElement().value; })
-        ]);
+        this.onNoteCreated.dispatch(Note.create(this.deck.database.getNoteTypes()[this.noteTypeIndex], this.inputElms.map(function (e) { return e.getHTMLElement().value; })));
         for (var _i = 0, _a = this.inputElms; _i < _a.length; _i++) {
             var inputElm = _a[_i];
             inputElm.getHTMLElement().value = "";
@@ -363,21 +399,26 @@ var ImportNotesDialog = /** @class */ (function (_super) {
             _this.imported = true;
             var value = textarea.getValue();
             var parsed = JSON.parse(value);
-            if (_this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name) < 0) {
-                _this.deck.data.addNoteType(ImportNotesDialog.jishoAPIDataImportedNoteType);
+            if (!_this.deck.database.getNoteTypeByName(ImportNotesDialog.jishoAPIDataImportedNoteType.name)) {
+                _this.deck.database.addNoteType(new NoteType(ImportNotesDialog.jishoAPIDataImportedNoteType));
             }
-            var index = _this.deck.data.indexOfNote(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
+            var cardType = _this.deck.database.getNoteTypeByName(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
+            _this.deck.database.undoLog.startGroup();
             for (var _i = 0, parsed_1 = parsed; _i < parsed_1.length; _i++) {
                 var item = parsed_1[_i];
-                _this.deck.data.addNote([
-                    index, [JSON.stringify(item)],
-                    checkboxes.map(function (checkbox) {
-                        return checkbox.input.getHTMLElement().checked ?
-                            undefined : [CardState.new, [CardFlag.suspended]];
-                    })
-                ]);
+                var note = Note.create(cardType, [JSON.stringify(item)]);
+                _this.deck.database.addNote(note);
+                for (var i = 0; i < checkboxes.length; i++) {
+                    var checkbox = checkboxes[i];
+                    if (!checkbox.input.getHTMLElement().checked) {
+                        var card = _this.deck.database.getCardByUid(note.cardUids[i]).clone();
+                        card.addFlag(CardFlag.suspended);
+                        _this.deck.database.writeEdit(card);
+                    }
+                }
             }
-            _this.deck.updateCardArrays()
+            _this.deck.database.undoLog.endGroup();
+            _this.deck.updateCache()
                 .then(function () { return _this.onImported.dispatch(); });
         }));
     };
@@ -389,7 +430,8 @@ var ImportNotesDialog = /** @class */ (function (_super) {
     };
     ImportNotesDialog.jishoAPIDataImportedNoteType = {
         name: "jishoAPIDataImportedNoteType",
-        src: "resources/jishoAPIDataImportedNoteType.json"
+        src: "resources/jishoAPIDataImportedNoteType.json",
+        numCardTypes: 3
     };
     return ImportNotesDialog;
 }(ModalDialog));
@@ -399,23 +441,19 @@ var ManageNotesDialog = /** @class */ (function (_super) {
         var _this = _super.call(this, "manageNotesDialog") || this;
         _this.foregroundElm.append(new Elm("h1").append("Manage notes"), _this.notesList = new Elm().class("notesList"));
         var _loop_1 = function (item) {
-            var label = item[1][0].slice(0, 20);
+            var label = item.fields[0].slice(0, 20);
             new Elm()
                 .append(new Elm().class("label").append(label), new Elm().class("cards").withSelf(function (cards) {
-                if (item[2]) {
-                    for (var _i = 0, _a = item[2]; _i < _a.length; _i++) {
-                        var card = _a[_i];
-                        cards.append(new Elm().class("card").append(card ? CardState[card[0]] : "(new)"));
-                    }
-                }
-                else {
-                    cards.append("(all new)");
+                for (var _i = 0, _a = item.cardUids; _i < _a.length; _i++) {
+                    var cardUid = _a[_i];
+                    var card = deck.database.getCardByUid(cardUid);
+                    cards.append(new Elm().class("card").append(CardState[card.state]));
                 }
             }))
                 .appendTo(this_1.notesList);
         };
         var this_1 = this;
-        for (var _i = 0, _a = deck.data.getNotes(); _i < _a.length; _i++) {
+        for (var _i = 0, _a = deck.database.getNotes(); _i < _a.length; _i++) {
             var item = _a[_i];
             _loop_1(item);
         }
@@ -553,20 +591,19 @@ var CardPresenter = /** @class */ (function (_super) {
     }
     CardPresenter.prototype.presentCard = function (card) {
         return __awaiter(this, void 0, void 0, function () {
-            var noteTypes, noteType, cardType, noteFieldNames, cardFields, rating;
+            var noteType, cardType, noteFieldNames, cardFields, rating;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.currentState) {
                             this.discardState();
                         }
-                        noteTypes = this.deck.data.getNoteTypes();
-                        return [4 /*yield*/, this.deck.data.getIntegratedNoteType(noteTypes[card.noteType].name)];
+                        return [4 /*yield*/, card.parentNote.type.getIntegratedNoteType()];
                     case 1:
                         noteType = _a.sent();
                         cardType = noteType.cardTypes[card.cardTypeID];
                         noteFieldNames = noteType.fieldNames;
-                        cardFields = card.parentNote[1];
+                        cardFields = card.parentNote.fields;
                         this.currentState = { card: card };
                         this.createCardInIFrame(cardType.frontTemplate, noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.frontScript]);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];

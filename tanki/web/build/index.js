@@ -39,7 +39,7 @@ import { readIn } from "./storage.js";
 import { TankiInterface } from "./userInterface.js";
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var deckData, deck, tankiInterface;
+        var deckData, deck, tankiInterface, ipc_1, g;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -54,9 +54,20 @@ function main() {
                         throw new Error("Could not load deckData");
                     }
                     deck = new Deck(deckData);
-                    console.log(deck);
                     tankiInterface = new TankiInterface(deck);
                     tankiInterface.appendTo(document.body);
+                    if (window.require !== undefined) {
+                        ipc_1 = require("electron").ipcRenderer;
+                        addEventListener("mousedown", function (e) {
+                            console.log(e.button);
+                            if (e.button === 2) {
+                                ipc_1.send("openContextMenu");
+                            }
+                        });
+                    }
+                    g = global;
+                    g.deck = deck;
+                    g.tankiInterface = tankiInterface;
                     return [2 /*return*/];
             }
         });
