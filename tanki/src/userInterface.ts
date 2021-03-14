@@ -615,7 +615,6 @@ class CardPresenter extends Component {
         );
 
         const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
-        console.log(rating);
 
         this.discardState();
 

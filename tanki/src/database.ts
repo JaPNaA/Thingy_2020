@@ -77,7 +77,6 @@ export class TankiDatabase {
         if (copying._uid < 0) { throw new Error("Trying to write to unregisted object"); }
         const existing = this.objects[copying._uid];
 
-        console.log("Write", existing, copying);
         this.undoLog.logEdit({
             target: existing,
             original: existing.clone()
@@ -243,7 +242,6 @@ class UndoLog {
         this.groupDepth--;
         if (this.groupDepth > 0) { return; }
         if (this.groupDepth < 0) { throw new Error("No more groups to end"); }
-        console.log("group ended");
 
         this.flushLogGroupToHistory();
     }

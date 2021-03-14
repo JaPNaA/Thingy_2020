@@ -20,7 +20,6 @@ async function main() {
         const ipc = require("electron").ipcRenderer;
 
         addEventListener("mousedown", function (e) {
-            console.log(e.button);
             if (e.button === 2) {
                 ipc.send("openContextMenu");
             }

@@ -36,8 +36,6 @@ export class Deck {
 
     /** update data based on results */
     public applyResultToCard(card: Immutable<Card>, result: number) {
-        console.log("apply result to", card);
-
         if (card.state === CardState.new) {
             const schedulingSettings = this.database.getCardSchedulingSettings(card);
             const newCardIndex = this.newCardCache.indexOf(card);
@@ -87,8 +85,6 @@ export class Deck {
                     schedulingSettings.learningStepsMinutes,
                     step => step > mutCard.learningInterval!
                 );
-
-                console.log(nextStepIndex);
 
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
