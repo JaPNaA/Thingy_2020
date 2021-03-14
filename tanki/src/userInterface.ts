@@ -72,7 +72,15 @@ class DeckPresenter extends Component {
             new Elm("button").class("JishoWithHistory")
                 .append("Jisho With History")
                 .on("click", () => {
-                    window.open("jishoWithHistory/index.html");
+                    const jishoWin = window.open(
+                        "jishoWithHistory/index.html",
+                        "jishoWithHistoryWindow",
+                        "width=612,height=706",
+                        true
+                    );
+                    if (jishoWin) {
+                        jishoWin.resizeTo(612, 706);
+                    }
                 })
             // new Elm("button").class("graduateNotes")
             //     .append("Graduate Notes")
