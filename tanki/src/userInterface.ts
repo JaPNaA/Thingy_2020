@@ -494,8 +494,7 @@ class DeckTimeline extends Component {
 
         this.nextCardInMinutesElm.append("~");
 
-        //* temporary quality-of-life
-        setInterval(() => this.update(), 30e3);
+        this.setMinutelyUpdateIntervals();
     }
 
     public update() {
@@ -510,6 +509,15 @@ class DeckTimeline extends Component {
         this.graduatedCardsElm.replaceContents(counts.inactive);
 
         this.drawTimeline();
+    }
+
+    private setMinutelyUpdateIntervals() {
+        const timeToNextMinute = (Math.floor(Date.now() / 60e3) + 1) * 60e3 - Date.now();
+
+        setTimeout(() => {
+            this.update();
+            this.setMinutelyUpdateIntervals();
+        }, timeToNextMinute);
     }
 
     private drawTimeline() {
