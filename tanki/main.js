@@ -15,6 +15,11 @@ function createWindow() {
         Menu.getApplicationMenu().popup();
     });
 
+    ipcMain.on("hideMenu", function (event) {
+        const window = BrowserWindow.fromWebContents(event.sender);
+        window.removeMenu();
+    });
+
     // window.removeMenu();
     window.loadFile("web/index.html");
 }

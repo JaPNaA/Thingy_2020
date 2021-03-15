@@ -806,5 +806,7 @@ if (/\sElectron\//.test(navigator.userAgent) && window.require) {
             ipc.send("openContextMenu");
         }
     });
-}
 
+    // for integration with tanki
+    ipc.send("hideMenu");
+}
