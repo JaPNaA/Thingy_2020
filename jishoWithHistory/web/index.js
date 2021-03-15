@@ -229,7 +229,7 @@ class Lookup extends Component {
             /** @type {HTMLInputElement} */ // @ts-ignore
             const input = this.input.elm;
             input.value = searchString;
-            alertIfErrorInPromise(this._makeLookup(searchString));
+            this._makeLookupWithIndications(searchString);
         }
     }
 
@@ -271,13 +271,28 @@ class Lookup extends Component {
         }
 
         this._removeLastLookup();
-        alertIfErrorInPromise(this._makeLookup(input.value));
+        this._makeLookupWithIndications(input.value);
     }
 
     _removeLastLookup() {
         if (this.lastLookupResults) {
             this.lastLookupResults.remove();
         }
+    }
+
+    /**
+     * @param {string} inputValue 
+     */
+    async _makeLookupWithIndications(inputValue) {
+        this.class("loading");
+
+        try {
+            await this._makeLookup(inputValue);
+        } catch (err) {
+            alert("Oh... an error occured.\n" + err.toString());
+        }
+
+        this.removeClass("loading");
     }
 
     /**
@@ -772,16 +787,6 @@ function arrayEquals(arr1, arr2) {
     }
 
     return true;
-}
-
-/**
- * @param {Promise} promise 
- */
-function alertIfErrorInPromise(promise) {
-    promise.catch(
-        err =>
-            alert("Oh... an error occured.\n" + err.toString())
-    );
 }
 
 const main = new Main();

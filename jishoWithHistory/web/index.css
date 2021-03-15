@@ -95,6 +95,28 @@ textarea {
     color: #ffffff;
 }
 
+.lookup.loading::after {
+    content: " ";
+    display: block;
+    background-color: #88888846;
+    width: 16px;
+    height: 16px;
+    margin: auto;
+
+    animation: cubic-bezier(0.14, 0.3, 0.63, 0.89) loadingRotate 1.5s 0s
+        infinite;
+    opacity: 1;
+}
+
+@keyframes loadingRotate {
+    0% {
+        transform: rotate(0);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 .lookup .input {
     width: 100%;
     padding: 8px;
