@@ -30,7 +30,7 @@ export class Deck {
         }
     }
 
-    public getActiveCards(): Immutable<ActiveCard[]> {
+    public getActiveCardsSortedCache(): Immutable<ActiveCard[]> {
         return this.activeCardCache;
     }
 
