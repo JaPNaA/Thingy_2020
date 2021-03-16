@@ -11,6 +11,8 @@ export class DeckTimeline extends Component {
     /** Canvas context for timeline canvas element */
     private timelineX = this.timelineCanvasElm.getHTMLElement().getContext("2d")!;
 
+    private offsetX = 0;
+
     constructor(private deck: Deck) {
         super("deckTimeline");
 
@@ -32,6 +34,12 @@ export class DeckTimeline extends Component {
         );
 
         this.nextCardInMinutesElm.append("~");
+
+        //* for debug use
+        addEventListener("mousemove", e => {
+            this.offsetX = e.clientX * 100;
+            this.update();
+        });
 
         this.setMinutelyUpdateIntervals();
     }
@@ -77,10 +85,15 @@ export class DeckTimeline extends Component {
         const fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
         const twelveHourBuckets = new Array(128).fill(0);
 
+        const offset = - minuteZero - this.offsetX;
+        const fourMinuteBucketIndexOffset = Math.floor(offset / 4);
+        const twelveHourBucketIndexOffset = Math.floor(offset / (60 * 12));
+
         for (const card of activeCards) {
-            const relativeDue = card.dueMinutes - minuteZero;
-            const fourMinuteBucketIndex = Math.floor(relativeDue / 4);
-            const twelveHourBucketIndex = Math.floor(relativeDue / (60 * 12));
+            if (card.dueMinutes + offset < 0) { continue; }
+
+            const fourMinuteBucketIndex = Math.floor(card.dueMinutes / 4) + fourMinuteBucketIndexOffset;
+            const twelveHourBucketIndex = Math.floor(card.dueMinutes / (60 * 12)) + twelveHourBucketIndexOffset;
 
             if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
                 fourMinuteBuckets[fourMinuteBucketIndex]++;
