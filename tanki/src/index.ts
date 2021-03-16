@@ -1,6 +1,6 @@
 import { Deck } from "./logic.js";
 import { readIn } from "./storage.js";
-import { TankiInterface } from "./userInterface.js";
+import { TankiInterface } from "./userInterface/userInterface.js";
 
 
 async function main() {
