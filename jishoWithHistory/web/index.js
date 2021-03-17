@@ -143,7 +143,7 @@ class ActionsBar extends Component {
         this.append(
             new Elm().class("left").append(
                 this.clearAllButton = new Elm("button").class("clearAllButton", "shadow")
-                    .on("click", () => this.history.clearLookups())
+                    .on("click", () => confirm("Clear all words?") && this.history.clearLookups())
             ),
 
             new Elm().class("right").append(
