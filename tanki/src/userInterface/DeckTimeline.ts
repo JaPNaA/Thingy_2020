@@ -61,16 +61,38 @@ class TimelineGraph extends Component {
     private canvas = new Elm("canvas").class("timelineCanvas");
     private context = this.canvas.getHTMLElement().getContext("2d")!;
 
+    private bucketSizes = [
+        1,
+        60,
+        60 * 24
+    ];
+
+    private graphBucketBarWidth = [
+        4, 8, 12
+    ];
+
     private offsetX = 0;
+    private dragScale = 0;
+    private isDragging = false;
 
     constructor(private deck: Deck) {
         super("timelineGraph");
 
         this.append(this.canvas);
 
-        //* for debug use
+        this.canvas.on("mousedown", e => {
+            this.isDragging = true;
+            this.dragScale = 2 ** (e.clientX / 100);
+        });
+        addEventListener("mouseup", () => this.isDragging = false);
         addEventListener("mousemove", e => {
-            this.offsetX = e.clientX * 100;
+            if (!this.isDragging) { return; }
+            this.offsetX -= e.movementX * this.dragScale;
+            this.update();
+        });
+        this.canvas.on("dblclick", e => {
+            e.preventDefault();
+            this.offsetX = 0;
             this.update();
         });
     }
@@ -87,38 +109,66 @@ class TimelineGraph extends Component {
         this.context.canvas.height = 256;
         this.context.clearRect(0, 0, 100, 100);
         this.context.fillStyle = "#000000aa";
-        // this.context.fillRect(0, 0, 100, 100);
 
         const activeCards = this.deck.getActiveCardsSortedCache();
-        const fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
-        const twelveHourBuckets = new Array(128).fill(0);
+        const buckets = this.createBucketsArray();
 
         const offset = - minuteZero - this.offsetX;
-        const fourMinuteBucketIndexOffset = Math.floor(offset / 4);
-        const twelveHourBucketIndexOffset = Math.floor(offset / (60 * 12));
 
         for (const card of activeCards) {
-            if (card.dueMinutes + offset < 0) { continue; }
+            const relMinutes = card.dueMinutes + offset;
+            if (relMinutes < 0) { continue; }
 
-            const fourMinuteBucketIndex = Math.floor(card.dueMinutes / 4) + fourMinuteBucketIndexOffset;
-            const twelveHourBucketIndex = Math.floor(card.dueMinutes / (60 * 12)) + twelveHourBucketIndexOffset;
-
-            if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
-                fourMinuteBuckets[fourMinuteBucketIndex]++;
+            for (let bucketI = 0; bucketI < this.bucketSizes.length; bucketI++) {
+                if (relMinutes >= this.bucketSizes[bucketI + 1]) { continue; }
+                buckets[bucketI][
+                    Math.floor(card.dueMinutes / this.bucketSizes[bucketI]) +
+                    Math.floor(offset / this.bucketSizes[bucketI])
+                ]++;
+                break;
             }
-            if (twelveHourBucketIndex < twelveHourBuckets.length) {
-                twelveHourBuckets[twelveHourBucketIndex]++;
+        }
+
+        let x = 0;
+        for (let i = 0; i < this.bucketSizes.length; i++) {
+            const bucketBarWidth = this.graphBucketBarWidth[i];
+            const bucket = buckets[i];
+
+            for (const bar of bucket) {
+                this.context.fillRect(x, 0, bucketBarWidth, bar);
+                x += bucketBarWidth;
+            }
+
+            this.context.fillStyle = "#222222";
+            this.context.fillRect(x, 0, 8, 128);
+            x += 8;
+            this.context.fillStyle = "#000000aa";
+        }
+
+        // this.context.fillStyle = "#ff0000";
+        // this.context.fillRect(Date.now() / 60e3 + offset, 0, 2, 128);
+    }
+
+    private createBucketsArray(): number[][] {
+        const arr: number[][] = [];
+
+        for (let i = 0; i < this.bucketSizes.length; i++) {
+            const bucketArr: number[] = [];
+
+            let numBuckets: number;
+            if (this.bucketSizes[i + 1]) {
+                numBuckets = this.bucketSizes[i + 1] / this.bucketSizes[i];
             } else {
-                twelveHourBuckets[twelveHourBuckets.length - 1]++;
+                numBuckets = 24;
             }
+
+            for (let j = 0; j < numBuckets; j++) {
+                bucketArr.push(0);
+            }
+
+            arr.push(bucketArr);
         }
 
-        for (let i = 0; i < fourMinuteBuckets.length; i++) {
-            this.context.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
-        }
-
-        for (let i = 0; i < twelveHourBuckets.length; i++) {
-            this.context.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
-        }
+        return arr;
     }
 }
