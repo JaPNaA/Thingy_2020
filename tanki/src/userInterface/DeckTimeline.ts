@@ -66,10 +66,10 @@ class TimelineGraph extends Component {
         60,
         60 * 24
     ];
-
     private graphBucketBarWidth = [
         4, 8, 12
     ];
+    private numberOfBucketsOfLastType = 22;
 
     private offsetX = 0;
     private dragScale = 0;
@@ -121,10 +121,10 @@ class TimelineGraph extends Component {
 
             for (let bucketI = 0; bucketI < this.bucketSizes.length; bucketI++) {
                 if (relMinutes >= this.bucketSizes[bucketI + 1]) { continue; }
-                buckets[bucketI][
+                const index =
                     Math.floor(card.dueMinutes / this.bucketSizes[bucketI]) +
-                    Math.floor(offset / this.bucketSizes[bucketI])
-                ]++;
+                    Math.floor(offset / this.bucketSizes[bucketI]);
+                buckets[bucketI][Math.min(index, buckets[bucketI].length - 1)]++;
                 break;
             }
         }
@@ -159,7 +159,7 @@ class TimelineGraph extends Component {
             if (this.bucketSizes[i + 1]) {
                 numBuckets = this.bucketSizes[i + 1] / this.bucketSizes[i];
             } else {
-                numBuckets = 24;
+                numBuckets = this.numberOfBucketsOfLastType;
             }
 
             for (let j = 0; j < numBuckets; j++) {
