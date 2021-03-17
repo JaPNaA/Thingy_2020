@@ -7,19 +7,14 @@ export class DeckTimeline extends Component {
     private newCardsElm = new Elm().class("number");
     private dueCardsElm = new Elm().class("number");
     private graduatedCardsElm = new Elm().class("number");
-    private timelineCanvasElm = new Elm("canvas").class("timelineCanvas");
-    /** Canvas context for timeline canvas element */
-    private timelineX = this.timelineCanvasElm.getHTMLElement().getContext("2d")!;
-
-    private offsetX = 0;
+    private timelineGraph = new TimelineGraph(this.deck);
 
     constructor(private deck: Deck) {
         super("deckTimeline");
 
         this.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
-            new Elm().class("timelineCanvasContainer")
-                .append(this.timelineCanvasElm),
+            this.timelineGraph,
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
                     "New: ", this.newCardsElm
@@ -35,12 +30,6 @@ export class DeckTimeline extends Component {
 
         this.nextCardInMinutesElm.append("~");
 
-        //* for debug use
-        addEventListener("mousemove", e => {
-            this.offsetX = e.clientX * 100;
-            this.update();
-        });
-
         this.setMinutelyUpdateIntervals();
     }
 
@@ -55,7 +44,7 @@ export class DeckTimeline extends Component {
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
 
-        this.drawTimeline();
+        this.timelineGraph.update();
     }
 
     private setMinutelyUpdateIntervals() {
@@ -66,20 +55,39 @@ export class DeckTimeline extends Component {
             this.setMinutelyUpdateIntervals();
         }, timeToNextMinute);
     }
+}
 
-    private drawTimeline() {
-        if (!this.timelineX) { return; }
+class TimelineGraph extends Component {
+    private canvas = new Elm("canvas").class("timelineCanvas");
+    private context = this.canvas.getHTMLElement().getContext("2d")!;
+
+    private offsetX = 0;
+
+    constructor(private deck: Deck) {
+        super("timelineGraph");
+
+        this.append(this.canvas);
+
+        //* for debug use
+        addEventListener("mousemove", e => {
+            this.offsetX = e.clientX * 100;
+            this.update();
+        });
+    }
+
+    public update() {
+        if (!this.context) { return; }
 
         const firstCardMinutes = this.deck.getMinutesToNextCard() ?? 0;
         const minuteZero = getCurrMinuteFloored() + (
             firstCardMinutes > 0 ? 0 : firstCardMinutes
         );
 
-        this.timelineX.canvas.width = 720;
-        this.timelineX.canvas.height = 256;
-        this.timelineX.clearRect(0, 0, 100, 100);
-        this.timelineX.fillStyle = "#000000aa";
-        // this.timelineX.fillRect(0, 0, 100, 100);
+        this.context.canvas.width = 720;
+        this.context.canvas.height = 256;
+        this.context.clearRect(0, 0, 100, 100);
+        this.context.fillStyle = "#000000aa";
+        // this.context.fillRect(0, 0, 100, 100);
 
         const activeCards = this.deck.getActiveCardsSortedCache();
         const fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
@@ -106,11 +114,11 @@ export class DeckTimeline extends Component {
         }
 
         for (let i = 0; i < fourMinuteBuckets.length; i++) {
-            this.timelineX.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
+            this.context.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
         }
 
         for (let i = 0; i < twelveHourBuckets.length; i++) {
-            this.timelineX.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
+            this.context.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
         }
     }
 }
