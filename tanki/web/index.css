@@ -7,6 +7,25 @@ body {
     overflow-x: hidden;
 }
 
+.snackbar {
+    position: fixed;
+    background-color: #212121;
+    color: #dadada;
+    bottom: 8px;
+    left: 8px;
+    padding: 8px 16px;
+    border-radius: 4px;
+    box-shadow: 0px 2px 8px #00000042;
+    transform: translateX(-8px);
+    opacity: 0;
+    transition: 0.15s ease opacity, 0.15s ease transform;
+}
+
+.snackbar.showing {
+    opacity: 1;
+    transform: translateX(0);
+}
+
 .hidden {
     display: none;
 }
@@ -125,11 +144,12 @@ body {
     display: block;
 }
 
-.deckTimeline .timelineCanvasContainer {
+.deckTimeline .timelineGraph {
+    user-select: none;
     width: 100vw;
     overflow-x: auto;
 }
 
-.deckTimeline .timelineCanvasContainer canvas {
+.deckTimeline .timelineGraph canvas {
     background-color: #0000000c;
 }

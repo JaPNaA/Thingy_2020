@@ -3,10 +3,11 @@ import { Component, Elm } from "../libs/elements.js";
 import { Deck } from "../logic.js";
 import { writeOut } from "../storage.js";
 import { DeckTimeline } from "./DeckTimeline.js";
-import { EventHandler, Immutable, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill } from "../utils.js";
+import { EventHandler, Immutable, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "../utils.js";
 import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
 import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
+import AnimateInOutElm from "./AnimateInOutElm.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -29,10 +30,18 @@ export class TankiInterface extends Component {
                 deck.database.undoLog.undo();
                 deck.updateCache();
                 this.deckPresenter.update();
+                this.showSnackbar("Undid", 1500);
             }
         });
 
         this.deckPresenter.onExit.addHandler(() => writeOut(deck));
+    }
+
+    public async showSnackbar(content: any, time: number) {
+        const snackbar = new Snackbar(content);
+        this.append(snackbar);
+        await wait(time);
+        snackbar.remove();
     }
 }
 
@@ -198,12 +207,6 @@ class DeckPresenter extends Component {
         this.addEscKeyExitHandler();
     }
 }
-
-
-
-
-
-
 
 class CardPresenter extends Component {
     public rating?: number;
@@ -390,5 +393,15 @@ class QuickUserInputGetter extends Component {
         document.removeEventListener("keydown", this.state.documentKeydownListener);
         this.state.promiseReject("State discarded");
         this.state = undefined;
+    }
+}
+
+class Snackbar extends AnimateInOutElm {
+    protected animationOutTime = 150;
+
+    constructor(content: any) {
+        super("snackbar");
+
+        this.append(content);
     }
 }
