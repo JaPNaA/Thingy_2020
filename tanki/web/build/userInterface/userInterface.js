@@ -54,11 +54,14 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
         to[j] = from[i];
     return to;
 };
-import { Note, NoteType } from "./database.js";
-import { CardFlag, CardState } from "./dataTypes.js";
-import { Component, Elm } from "./libs/elements.js";
-import { writeOut } from "./storage.js";
-import { EventHandler, getCurrMinuteFloored, minutesToHumanString, setImmediatePolyfill, wait } from "./utils.js";
+import { Component, Elm } from "../libs/elements.js";
+import { writeOut } from "../storage.js";
+import { DeckTimeline } from "./DeckTimeline.js";
+import { EventHandler, setImmediatePolyfill, wait } from "../utils.js";
+import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
+import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
+import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
+import AnimateInOutElm from "./AnimateInOutElm.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -76,11 +79,29 @@ var TankiInterface = /** @class */ (function (_super) {
                 deck.database.undoLog.undo();
                 deck.updateCache();
                 _this.deckPresenter.update();
+                _this.showSnackbar("Undid", 1500);
             }
         });
         _this.deckPresenter.onExit.addHandler(function () { return writeOut(deck); });
         return _this;
     }
+    TankiInterface.prototype.showSnackbar = function (content, time) {
+        return __awaiter(this, void 0, void 0, function () {
+            var snackbar;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        snackbar = new Snackbar(content);
+                        this.append(snackbar);
+                        return [4 /*yield*/, wait(time)];
+                    case 1:
+                        _a.sent();
+                        snackbar.remove();
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
     return TankiInterface;
 }(Component));
 export { TankiInterface };
@@ -247,330 +268,6 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     return DeckPresenter;
 }(Component));
-var ModalDialog = /** @class */ (function (_super) {
-    __extends(ModalDialog, _super);
-    function ModalDialog(name) {
-        var _this = _super.call(this, name) || this;
-        _this.class("modalDialog");
-        _this.append(new Elm().class("modalBackground")
-            .on("click", function () { return _this.remove(); }), _this.foregroundElm = new Elm().class("modalForeground").appendTo(_this.elm));
-        _this.show();
-        return _this;
-    }
-    ModalDialog.prototype.setPositionFixed = function () {
-        this.class("positionFixed");
-        return this;
-    };
-    ModalDialog.prototype.remove = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, this.hide()];
-                    case 1:
-                        _a.sent();
-                        _super.prototype.remove.call(this);
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ModalDialog.prototype.show = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0: return [4 /*yield*/, wait(1)];
-                    case 1:
-                        _a.sent();
-                        this.class("showing");
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    ModalDialog.prototype.hide = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.removeClass("showing");
-                        return [4 /*yield*/, wait(500)];
-                    case 1:
-                        _a.sent();
-                        return [2 /*return*/];
-                }
-            });
-        });
-    };
-    return ModalDialog;
-}(Component));
-var CreateNoteDialog = /** @class */ (function (_super) {
-    __extends(CreateNoteDialog, _super);
-    function CreateNoteDialog(deck) {
-        var _this = _super.call(this, "createNoteDialog") || this;
-        _this.deck = deck;
-        _this.onNoteCreated = new EventHandler();
-        _this.foregroundElm.append(new Elm("h2").append("Create Note"), _this.typeSelectElm = new Elm("select").class("typeSelect")
-            .on("change", function () { return _this.updateInputsElm(); }), _this.inputsContainer = new Elm().class("inputs"), new Elm("button").append("Add")
-            .on("click", function () { return _this.submit(); }));
-        _this.loadNoteTypes();
-        _this.updateInputsElm();
-        return _this;
-    }
-    CreateNoteDialog.prototype.loadNoteTypes = function () {
-        var noteTypes = this.deck.database.getNoteTypes();
-        for (var i = 0; i < noteTypes.length; i++) {
-            var noteType = noteTypes[i];
-            this.typeSelectElm.append(new Elm("option").append(noteType.name).attribute("value", i.toString()));
-        }
-    };
-    CreateNoteDialog.prototype.updateInputsElm = function () {
-        return __awaiter(this, void 0, void 0, function () {
-            var noteTypes, noteType, _i, _a, fieldName, inputElm;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        noteTypes = this.deck.database.getNoteTypes();
-                        this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
-                        this.inputElms = [];
-                        this.inputsContainer.clear();
-                        noteType = noteTypes[this.noteTypeIndex];
-                        _i = 0;
-                        return [4 /*yield*/, NoteType.getIntegratedNoteType(noteType)];
-                    case 1:
-                        _a = (_b.sent()).fieldNames;
-                        _b.label = 2;
-                    case 2:
-                        if (!(_i < _a.length)) return [3 /*break*/, 4];
-                        fieldName = _a[_i];
-                        inputElm = new Elm("input").class("cardFieldInput");
-                        this.inputElms.push(inputElm);
-                        this.inputsContainer.append(new Elm("label").class("cardFieldLabel").append(fieldName, inputElm));
-                        _b.label = 3;
-                    case 3:
-                        _i++;
-                        return [3 /*break*/, 2];
-                    case 4: return [2 /*return*/];
-                }
-            });
-        });
-    };
-    CreateNoteDialog.prototype.submit = function () {
-        if (this.noteTypeIndex === undefined || !this.inputElms) {
-            return;
-        }
-        this.onNoteCreated.dispatch(Note.create(this.deck.database.getNoteTypes()[this.noteTypeIndex], this.inputElms.map(function (e) { return e.getHTMLElement().value; })));
-        for (var _i = 0, _a = this.inputElms; _i < _a.length; _i++) {
-            var inputElm = _a[_i];
-            inputElm.getHTMLElement().value = "";
-        }
-        this.inputElms[0].getHTMLElement().focus();
-    };
-    return CreateNoteDialog;
-}(ModalDialog));
-var ImportNotesDialog = /** @class */ (function (_super) {
-    __extends(ImportNotesDialog, _super);
-    function ImportNotesDialog(deck) {
-        var _this = _super.call(this, "importNotesDialog") || this;
-        _this.deck = deck;
-        _this.onImported = new EventHandler();
-        /** Flag to prevent double-importing */
-        _this.imported = false;
-        _this.foregroundElm.append(new Elm("h3").append("Import Notes"), _this.sourcesListElm = new Elm().class("sourcesList").append(new Elm("button").append("jishoAPIData (jishoWithHistory)")
-            .on("click", function () { return _this.importFromJishoAPIData(); })));
-        console.log(deck);
-        return _this;
-    }
-    ImportNotesDialog.prototype.importFromJishoAPIData = function () {
-        var _a;
-        var _this = this;
-        this.sourcesListElm.remove();
-        this.imported = false;
-        var textarea = new DragAndDropTextarea();
-        var checkboxes = [
-            this.createCheckedCheckbox("Word -> Meaning"),
-            this.createCheckedCheckbox("Word -> Kana"),
-            this.createCheckedCheckbox("Kana + Meaning -> Word")
-        ];
-        this.foregroundElm.append(textarea, (_a = new Elm().class("options")).append.apply(_a, checkboxes.map(function (checkbox) { return checkbox.container; })), new Elm("button").append("Import")
-            .on("click", function () {
-            if (_this.imported) {
-                return;
-            }
-            _this.imported = true;
-            var value = textarea.getValue();
-            var parsed = JSON.parse(value);
-            if (!_this.deck.database.getNoteTypeByName(ImportNotesDialog.jishoAPIDataImportedNoteType.name)) {
-                _this.deck.database.addNoteType(new NoteType(ImportNotesDialog.jishoAPIDataImportedNoteType));
-            }
-            var cardType = _this.deck.database.getNoteTypeByName(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
-            _this.deck.database.undoLog.startGroup();
-            for (var _i = 0, parsed_1 = parsed; _i < parsed_1.length; _i++) {
-                var item = parsed_1[_i];
-                var note = Note.create(cardType, [JSON.stringify(item)]);
-                _this.deck.database.addNote(note);
-                for (var i = 0; i < checkboxes.length; i++) {
-                    var checkbox = checkboxes[i];
-                    if (!checkbox.input.getHTMLElement().checked) {
-                        var card = _this.deck.database.getCardByUid(note.cardUids[i]).clone();
-                        card.addFlag(CardFlag.suspended);
-                        _this.deck.database.writeEdit(card);
-                    }
-                }
-            }
-            _this.deck.database.undoLog.endGroup();
-            _this.deck.updateCache()
-                .then(function () { return _this.onImported.dispatch(); });
-        }));
-    };
-    ImportNotesDialog.prototype.createCheckedCheckbox = function (labelText) {
-        var input;
-        var container = new Elm().append(new Elm("label").append(input = new Elm("input").attribute("type", "checkbox")
-            .withSelf(function (e) { return e.getHTMLElement().checked = true; }), labelText));
-        return { input: input, container: container };
-    };
-    ImportNotesDialog.jishoAPIDataImportedNoteType = {
-        name: "jishoAPIDataImportedNoteType",
-        src: "resources/jishoAPIDataImportedNoteType.json",
-        numCardTypes: 3
-    };
-    return ImportNotesDialog;
-}(ModalDialog));
-var ManageNotesDialog = /** @class */ (function (_super) {
-    __extends(ManageNotesDialog, _super);
-    function ManageNotesDialog(deck) {
-        var _this = _super.call(this, "manageNotesDialog") || this;
-        _this.foregroundElm.append(new Elm("h1").append("Manage notes"), _this.notesList = new Elm().class("notesList"));
-        var _loop_1 = function (item) {
-            var label = item.fields[0].slice(0, 20);
-            new Elm()
-                .append(new Elm().class("label").append(label), new Elm().class("cards").withSelf(function (cards) {
-                for (var _i = 0, _a = item.cardUids; _i < _a.length; _i++) {
-                    var cardUid = _a[_i];
-                    var card = deck.database.getCardByUid(cardUid);
-                    cards.append(new Elm().class("card").append(CardState[card.state]));
-                }
-            }))
-                .appendTo(this_1.notesList);
-        };
-        var this_1 = this;
-        for (var _i = 0, _a = deck.database.getNotes(); _i < _a.length; _i++) {
-            var item = _a[_i];
-            _loop_1(item);
-        }
-        return _this;
-    }
-    return ManageNotesDialog;
-}(ModalDialog));
-var DragAndDropTextarea = /** @class */ (function (_super) {
-    __extends(DragAndDropTextarea, _super);
-    function DragAndDropTextarea() {
-        var _this = _super.call(this, "dragAndDropTextarea") || this;
-        _this.textarea = new Elm("textarea");
-        _this.htmlElm = _this.textarea.getHTMLElement();
-        _this.append(_this.textarea);
-        _this.textarea.on("dragover", function (e) {
-            e.preventDefault();
-        });
-        _this.textarea.on("drop", function (e) { return __awaiter(_this, void 0, void 0, function () {
-            var textData, file, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
-                    case 0:
-                        if (!e.dataTransfer) {
-                            return [2 /*return*/];
-                        }
-                        e.preventDefault();
-                        textData = e.dataTransfer.getData("text");
-                        if (textData) {
-                            this.htmlElm.value = textData;
-                            return [2 /*return*/];
-                        }
-                        if (!(e.dataTransfer.files.length > 0)) return [3 /*break*/, 2];
-                        file = e.dataTransfer.files.item(0);
-                        if (!file) return [3 /*break*/, 2];
-                        _a = this.htmlElm;
-                        return [4 /*yield*/, file.text()];
-                    case 1:
-                        _a.value = _b.sent();
-                        _b.label = 2;
-                    case 2: return [2 /*return*/];
-                }
-            });
-        }); });
-        return _this;
-    }
-    DragAndDropTextarea.prototype.getValue = function () {
-        return this.htmlElm.value;
-    };
-    return DragAndDropTextarea;
-}(Component));
-var DeckTimeline = /** @class */ (function (_super) {
-    __extends(DeckTimeline, _super);
-    function DeckTimeline(deck) {
-        var _this = _super.call(this, "deckTimeline") || this;
-        _this.deck = deck;
-        _this.nextCardInMinutesElm = new Elm("span");
-        _this.newCardsElm = new Elm().class("number");
-        _this.dueCardsElm = new Elm().class("number");
-        _this.graduatedCardsElm = new Elm().class("number");
-        _this.timelineCanvasElm = new Elm("canvas").class("timelineCanvas");
-        /** Canvas context for timeline canvas element */
-        _this.timelineX = _this.timelineCanvasElm.getHTMLElement().getContext("2d");
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().class("timelineCanvasContainer")
-            .append(_this.timelineCanvasElm), new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
-        _this.nextCardInMinutesElm.append("~");
-        //* temporary quality-of-life
-        setInterval(function () { return _this.update(); }, 30e3);
-        return _this;
-    }
-    DeckTimeline.prototype.update = function () {
-        var counts = this.deck.getCardCount();
-        var minutesToNextCard = this.deck.getMinutesToNextCard();
-        this.nextCardInMinutesElm.replaceContents(minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard));
-        this.newCardsElm.replaceContents(counts.new);
-        this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
-        this.graduatedCardsElm.replaceContents(counts.inactive);
-        this.drawTimeline();
-    };
-    DeckTimeline.prototype.drawTimeline = function () {
-        var _a;
-        if (!this.timelineX) {
-            return;
-        }
-        var firstCardMinutes = (_a = this.deck.getMinutesToNextCard()) !== null && _a !== void 0 ? _a : 0;
-        var minuteZero = getCurrMinuteFloored() + (firstCardMinutes > 0 ? 0 : firstCardMinutes);
-        this.timelineX.canvas.width = 720;
-        this.timelineX.canvas.height = 256;
-        this.timelineX.clearRect(0, 0, 100, 100);
-        this.timelineX.fillStyle = "#000000aa";
-        // this.timelineX.fillRect(0, 0, 100, 100);
-        var activeCards = this.deck.getActiveCards();
-        var fourMinuteBuckets = new Array(12 * 60 / 4).fill(0);
-        var twelveHourBuckets = new Array(128).fill(0);
-        for (var _i = 0, activeCards_1 = activeCards; _i < activeCards_1.length; _i++) {
-            var card = activeCards_1[_i];
-            var relativeDue = card.dueMinutes - minuteZero;
-            var fourMinuteBucketIndex = Math.floor(relativeDue / 4);
-            var twelveHourBucketIndex = Math.floor(relativeDue / (60 * 12));
-            if (fourMinuteBucketIndex < fourMinuteBuckets.length) {
-                fourMinuteBuckets[fourMinuteBucketIndex]++;
-            }
-            if (twelveHourBucketIndex < twelveHourBuckets.length) {
-                twelveHourBuckets[twelveHourBucketIndex]++;
-            }
-            else {
-                twelveHourBuckets[twelveHourBuckets.length - 1]++;
-            }
-        }
-        for (var i = 0; i < fourMinuteBuckets.length; i++) {
-            this.timelineX.fillRect(i * 4, 0, 4, fourMinuteBuckets[i]);
-        }
-        for (var i = 0; i < twelveHourBuckets.length; i++) {
-            this.timelineX.fillRect(i * 4, 128, 4, twelveHourBuckets[i] * 0.5);
-        }
-    };
-    return DeckTimeline;
-}(Component));
 var CardPresenter = /** @class */ (function (_super) {
     __extends(CardPresenter, _super);
     function CardPresenter(deck) {
@@ -613,7 +310,6 @@ var CardPresenter = /** @class */ (function (_super) {
                         return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
                     case 3:
                         rating = _a.sent();
-                        console.log(rating);
                         this.discardState();
                         return [2 /*return*/, rating];
                 }
@@ -680,7 +376,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             promiseRej = rej;
             promiseRes = res;
         });
-        var _loop_2 = function (i) {
+        var _loop_1 = function (i) {
             var item = items[i];
             var button = document.createElement("button");
             button.innerText = item;
@@ -691,7 +387,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
             optionsContainer.appendChild(button);
         };
         for (var i = 0; i < items.length; i++) {
-            _loop_2(i);
+            _loop_1(i);
         }
         this.elm.appendChild(optionsContainer);
         var keydownHandler = function (e) {
@@ -733,3 +429,13 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
     };
     return QuickUserInputGetter;
 }(Component));
+var Snackbar = /** @class */ (function (_super) {
+    __extends(Snackbar, _super);
+    function Snackbar(content) {
+        var _this = _super.call(this, "snackbar") || this;
+        _this.animationOutTime = 150;
+        _this.append(content);
+        return _this;
+    }
+    return Snackbar;
+}(AnimateInOutElm));

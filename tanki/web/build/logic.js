@@ -57,12 +57,11 @@ var Deck = /** @class */ (function () {
             return this.newCardCache[index];
         }
     };
-    Deck.prototype.getActiveCards = function () {
+    Deck.prototype.getActiveCardsSortedCache = function () {
         return this.activeCardCache;
     };
     /** update data based on results */
     Deck.prototype.applyResultToCard = function (card, result) {
-        console.log("apply result to", card);
         if (card.state === CardState.new) {
             var schedulingSettings = this.database.getCardSchedulingSettings(card);
             var newCardIndex = this.newCardCache.indexOf(card);
@@ -108,7 +107,6 @@ var Deck = /** @class */ (function () {
             }
             else if (result === 1) {
                 var nextStepIndex = binaryBoundarySearch(schedulingSettings.learningStepsMinutes, function (step) { return step > mutCard.learningInterval; });
-                console.log(nextStepIndex);
                 // finished all learning steps check
                 if (nextStepIndex >= schedulingSettings.learningStepsMinutes.length) {
                     mutCard.removeFlag(CardFlag.learn);
@@ -135,9 +133,10 @@ var Deck = /** @class */ (function () {
         this.database.addNote(data);
         this.updateCache();
     };
-    Deck.prototype.getMinutesToNextCard = function () {
+    Deck.prototype.getMinutesToNextCard = function (index) {
+        if (index === void 0) { index = 0; }
         var nowMinute = getCurrMinuteFloored();
-        var firstCard = this.activeCardCache[0];
+        var firstCard = this.activeCardCache[index];
         if (!firstCard) {
             return;
         }

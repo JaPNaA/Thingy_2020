@@ -118,7 +118,6 @@ var TankiDatabase = /** @class */ (function () {
             throw new Error("Trying to write to unregisted object");
         }
         var existing = this.objects[copying._uid];
-        console.log("Write", existing, copying);
         this.undoLog.logEdit({
             target: existing,
             original: existing.clone()
@@ -255,7 +254,6 @@ var UndoLog = /** @class */ (function () {
         if (this.groupDepth < 0) {
             throw new Error("No more groups to end");
         }
-        console.log("group ended");
         this.flushLogGroupToHistory();
     };
     UndoLog.prototype.undo = function () {

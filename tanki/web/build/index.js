@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { Deck } from "./logic.js";
 import { readIn } from "./storage.js";
-import { TankiInterface } from "./userInterface.js";
+import { TankiInterface } from "./userInterface/userInterface.js";
 function main() {
     return __awaiter(this, void 0, void 0, function () {
         var deckData, deck, tankiInterface, ipc_1, g;
@@ -59,7 +59,6 @@ function main() {
                     if (window.require !== undefined) {
                         ipc_1 = require("electron").ipcRenderer;
                         addEventListener("mousedown", function (e) {
-                            console.log(e.button);
                             if (e.button === 2) {
                                 ipc_1.send("openContextMenu");
                             }
