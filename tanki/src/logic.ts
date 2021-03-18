@@ -112,9 +112,9 @@ export class Deck {
         this.updateCache();
     }
 
-    public getMinutesToNextCard(): number | undefined {
+    public getMinutesToNextCard(index: number = 0): number | undefined {
         const nowMinute = getCurrMinuteFloored();
-        const firstCard = this.activeCardCache[0];
+        const firstCard = this.activeCardCache[index];
         if (!firstCard) { return; }
         return firstCard.dueMinutes - nowMinute;
     }

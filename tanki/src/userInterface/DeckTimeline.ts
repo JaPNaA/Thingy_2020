@@ -4,6 +4,7 @@ import { getCurrMinuteFloored, minutesToHumanString } from "../utils.js";
 
 export class DeckTimeline extends Component {
     private nextCardInMinutesElm = new Elm("span");
+    private next25CardsInMinutesElm = new Elm("span");
     private newCardsElm = new Elm().class("number");
     private dueCardsElm = new Elm().class("number");
     private graduatedCardsElm = new Elm().class("number");
@@ -14,6 +15,7 @@ export class DeckTimeline extends Component {
 
         this.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
+            new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm),
             this.timelineGraph,
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
@@ -36,9 +38,13 @@ export class DeckTimeline extends Component {
     public update() {
         const counts = this.deck.getCardCount();
         const minutesToNextCard = this.deck.getMinutesToNextCard();
+        const minutesToNext25Cards = this.deck.getMinutesToNextCard(24);
 
         this.nextCardInMinutesElm.replaceContents(
             minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard)
+        );
+        this.next25CardsInMinutesElm.replaceContents(
+            minutesToNext25Cards === undefined ? "~" : minutesToHumanString(minutesToNext25Cards)
         );
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
