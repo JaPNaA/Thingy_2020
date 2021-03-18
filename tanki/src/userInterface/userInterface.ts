@@ -1,4 +1,4 @@
-import { Card, Note } from "../database.js";
+import { ActivatedCard, Card, Note } from "../database.js";
 import { Component, Elm } from "../libs/elements.js";
 import { Deck } from "../logic.js";
 import { writeOut } from "../storage.js";
@@ -8,6 +8,7 @@ import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
 import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
+import { CardFlag, CardState } from "../dataTypes.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -88,24 +89,31 @@ class DeckPresenter extends Component {
                         "jishoWithHistory/index.html", "",
                         "width=612,height=706"
                     );
+                }),
+            new Elm("button").class("graduateNotes")
+                .append("Graduate Notes")
+                .on("click", () => {
+                    //* this button is temporary
+                    // todo: automatically gradate cards
+
+                    this.deck.database.undoLog.startGroup();
+                    const cards = this.deck.database.getCards();
+                    for (const card of cards) {
+                        if (
+                            card instanceof ActivatedCard &&
+                            card.state === CardState.active &&
+                            card.interval > 21 * 24 * 60
+                        ) {
+                            const cardEdit = card.clone();
+                            cardEdit.state = CardState.inactive;
+                            cardEdit.addFlag(CardFlag.graduated);
+                            this.deck.database.writeEdit(cardEdit);
+                        }
+                    }
+                    this.deck.updateCache();
+                    this.deckTimeline.update();
+                    this.deck.database.undoLog.endGroup();
                 })
-            // new Elm("button").class("graduateNotes")
-            //     .append("Graduate Notes")
-            //     .on("click", () => {
-            //         const notes = this.deck.data.getNotes();
-            //         for (const note of notes) {
-            //             const cards = note[2];
-            //             if (!cards) { continue; }
-            //             for (const card of cards) {
-            //                 if (card && isCardActive(card)) {
-            //                     if (card[3] > 7 * 24 * 60) {
-            //                         card[0] = CardState.inactive;
-            //                     }
-            //                 }
-            //             }
-            //         }
-            //         this.deckTimeline.update();
-            //     })
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
