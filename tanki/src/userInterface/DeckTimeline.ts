@@ -141,12 +141,12 @@ class TimelineGraph extends Component {
             const bucket = buckets[i];
 
             for (const bar of bucket) {
-                this.context.fillRect(x, 0, bucketBarWidth, bar);
+                this.context.fillRect(x, 256, bucketBarWidth, -bar);
                 x += bucketBarWidth;
             }
 
-            this.context.fillStyle = "#222222";
-            this.context.fillRect(x, 0, 8, 128);
+            this.context.fillStyle = "#aaaaaa";
+            this.context.fillRect(x, 0, 8, 256);
             x += 8;
             this.context.fillStyle = "#000000aa";
         }
