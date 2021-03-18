@@ -1,4 +1,4 @@
-import { ActiveCard, Card, Note, TankiDatabase } from "./database.js";
+import { ActivatedCard, Card, Note, TankiDatabase } from "./database.js";
 import { CardFlag, CardState, DeckData } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored, Immutable } from "./utils.js";
 
@@ -8,7 +8,7 @@ export class Deck {
     public database: TankiDatabase;
 
     private inactiveCardCache: Immutable<Card>[] = [];
-    private activeCardCache: Immutable<ActiveCard>[] = [];
+    private activeCardCache: Immutable<ActivatedCard>[] = [];
     private newCardCache: Immutable<Card>[] = [];
 
     constructor(data: DeckData) {
@@ -30,7 +30,7 @@ export class Deck {
         }
     }
 
-    public getActiveCardsSortedCache(): Immutable<ActiveCard[]> {
+    public getActiveCardsSortedCache(): Immutable<ActivatedCard[]> {
         return this.activeCardCache;
     }
 
@@ -61,7 +61,7 @@ export class Deck {
             }
 
             this.sortCardIntoCache(updatedCard);
-        } else if (card instanceof ActiveCard) {
+        } else if (card instanceof ActivatedCard) {
             this.updateCardScheduleWithResult(card, result);
         } else {
             throw new Error();
@@ -70,7 +70,7 @@ export class Deck {
         this.sortSeenAndReviewCards();
     }
 
-    private updateCardScheduleWithResult(card: Immutable<ActiveCard>, result: number) {
+    private updateCardScheduleWithResult(card: Immutable<ActivatedCard>, result: number) {
         const mutCard = card.clone();
         const schedulingSettings = this.database.getCardSchedulingSettings(card);
 
@@ -160,7 +160,7 @@ export class Deck {
     private sortCardIntoCache(card: Immutable<Card>) {
         if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
             this.inactiveCardCache.push(card);
-        } else if (card.state === CardState.active && card instanceof ActiveCard) {
+        } else if (card.state === CardState.active && card instanceof ActivatedCard) {
             this.activeCardCache.push(card);
         } else if (card.state === CardState.new) {
             this.newCardCache.push(card);

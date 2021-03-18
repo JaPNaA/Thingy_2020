@@ -1,4 +1,4 @@
-import { CardData, CardDataActive, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActive, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { CardData, CardDataActivated, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
 abstract class DatabaseObject {
@@ -84,15 +84,15 @@ export class TankiDatabase {
         existing.overwriteWith(copying);
     }
 
-    public activateCard(card: Immutable<Card>): Immutable<ActiveCard> {
-        if (card instanceof ActiveCard) { return card; }
+    public activateCard(card: Immutable<Card>): Immutable<ActivatedCard> {
+        if (card instanceof ActivatedCard) { return card; }
         this.undoLog.startGroup();
 
         const schedulingSettings = this.getCardSchedulingSettings(card);
 
         const originalCard = this.getCardByUid(card._uid) as Card;
         const cardIndex = this.cards.indexOf(originalCard);
-        const activeCard = new ActiveCard(
+        const activeCard = new ActivatedCard(
             [CardState.active, [], 0, schedulingSettings.initialInterval],
             card.cardTypeID, card.parentNote
         );
@@ -367,8 +367,8 @@ export class Note extends DatabaseObject {
         for (let i = 0; i < numCardTypes; i++) {
             const card = isEmptyValue(this.cardDatas) ? undefined : this.cardDatas[i];
 
-            if (!isEmptyValue(card) && isCardActive(card)) {
-                cards.push(new ActiveCard(card, i, this));
+            if (!isEmptyValue(card) && isCardActivated(card)) {
+                cards.push(new ActivatedCard(card, i, this));
             } else {
                 cards.push(new Card(card, i, this));
             }
@@ -475,14 +475,14 @@ export class Card extends DatabaseObject {
     }
 }
 
-export class ActiveCard extends Card {
+export class ActivatedCard extends Card {
     public dueMinutes: number;
     public interval: number;
     public timesWrongHistory: number[];
     public learningInterval: Optional<number>;
 
     constructor(
-        data: CardDataActive,
+        data: CardDataActivated,
         cardTypeID: number,
         parentNote: Immutable<Note>
     ) {
@@ -493,7 +493,7 @@ export class ActiveCard extends Card {
         this.learningInterval = data[5];
     }
 
-    public overwriteWith(card: Immutable<ActiveCard>) {
+    public overwriteWith(card: Immutable<ActivatedCard>) {
         super.overwriteWith(card);
         this.dueMinutes = card.dueMinutes;
         this.interval = card.interval;
@@ -501,8 +501,8 @@ export class ActiveCard extends Card {
         this.learningInterval = card.learningInterval;
     }
 
-    public serialize(): CardDataActive {
-        if (this.state !== CardState.active) { throw new Error("Tried serializing ActiveCard that wasn't active"); }
+    public serialize(): CardDataActivated {
+        if (this.state === CardState.new) { throw new Error("Tried serializing ActiveCard with state new"); }
         return [
             this.state,
             this.flags,
@@ -513,9 +513,9 @@ export class ActiveCard extends Card {
         ];
     }
 
-    public clone(): ActiveCard {
-        if (this.state !== CardState.active) { throw new Error("Tried cloning ActiveCard that wasn't active"); }
-        const card = new ActiveCard(
+    public clone(): ActivatedCard {
+        if (this.state === CardState.new) { throw new Error("Tried cloning ActiveCard with state new"); }
+        const card = new ActivatedCard(
             [this.state, this.flags.slice(), this.dueMinutes, this.interval, this.timesWrongHistory, this.learningInterval],
             this.cardTypeID, this.parentNote
         );

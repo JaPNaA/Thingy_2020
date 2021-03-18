@@ -68,8 +68,8 @@ export interface CardDataBasic extends Array<any> {
     1: Optional<CardFlag[]>
 }
 
-export interface CardDataActive extends CardDataBasic {
-    0: CardState.active;
+export interface CardDataActivated extends CardDataBasic {
+    0: CardState.active | CardState.inactive;
     /** Due date in minutes ( [Date#getTime() / 60_000] )*/
     2: number;
     /** Interval in minutes */
@@ -80,11 +80,11 @@ export interface CardDataActive extends CardDataBasic {
     5?: Optional<number>;
 }
 
-export function isCardActive(card: CardData): card is CardDataActive {
-    return card[0] === CardState.active;
+export function isCardActivated(card: CardData): card is CardDataActivated {
+    return card[0] !== CardState.new;
 }
 
-export type CardData = CardDataBasic | CardDataActive;
+export type CardData = CardDataBasic | CardDataActivated;
 
 export interface CardSchedulingSettingsData {
     skipCardIfIsNewButAnsweredCorrectly: boolean;
