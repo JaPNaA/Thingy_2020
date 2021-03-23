@@ -195,7 +195,7 @@ class ChapterFiles {
         console.log("scroll");
 
         const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
-        const displayPageIndex = this.pagesPerRow * closestRowY;
+        const displayPageIndex = Math.min(this.pagesPerRow * closestRowY, this.pages.length - 1);
         const pageIndex = this.pages.indexOf(this.displayPages[displayPageIndex]) + this.pageLoadBufferMin;
 
         if (pageIndex < this.pagesLoaded) {
