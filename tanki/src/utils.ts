@@ -116,3 +116,7 @@ export class EventHandler<T = void> {
         }
     }
 }
+
+export function boundBetween(min: number, x: number, max: number): number {
+    return Math.min(Math.max(x, min), max);
+}

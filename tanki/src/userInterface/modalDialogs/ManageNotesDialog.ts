@@ -1,7 +1,7 @@
 import { Note } from "../../database.js";
 import { Component, Elm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
-import { Immutable } from "../../utils.js";
+import { boundBetween, Immutable } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
 
 export class ManageNotesDialog extends ModalDialog {
@@ -20,16 +20,19 @@ export class ManageNotesDialog extends ModalDialog {
 }
 
 abstract class RecyclingList<T> extends Component {
-    private listElms: Elm[] = [];
+    private elmsList: Elm[] = [];
     private listElmsContainer = new Elm().class("elmsContainer");
     private bottomBufferElm = new Elm();
 
-    constructor(private list: T[], private listElmHeight: number) {
+    private bufferedPixelsTop = 0;
+    private bufferedPixelsBottom = 0;
+
+    constructor(private dataList: T[], private listElmHeight: number) {
         super("recyclingList");
 
         for (let i = 0; i < 15; i++) {
             const recyclingListItem = new RecyclingListItem(listElmHeight);
-            this.listElms.push(recyclingListItem);
+            this.elmsList.push(recyclingListItem);
             this.listElmsContainer.append(recyclingListItem);
         }
 
@@ -37,20 +40,30 @@ abstract class RecyclingList<T> extends Component {
         this.append(this.bottomBufferElm);
 
         this.on("scroll", () => this.scrollHandler());
+        this.scrollHandler();
     }
 
     private scrollHandler() {
-        const maxStartIndex = this.list.length - this.listElms.length;
-        const startIndex = Math.min(Math.floor(this.elm.scrollTop / this.listElmHeight), maxStartIndex);
-        this.listElmsContainer.attribute("style", `margin-top: ${startIndex * this.listElmHeight}px`);
+        if (this.bufferedElementsCoversViewbox()) { return; }
 
-        for (let i = 0; i < this.listElms.length; i++) {
-            const content = this.list[startIndex + i];
-            this.listElms[i].replaceContents(this.getContentForListItem(content));
+        const maxStartIndex = this.dataList.length - this.elmsList.length;
+        const bufferStartIndex = boundBetween(0, Math.floor(this.elm.scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
+
+        this.bufferedPixelsTop = bufferStartIndex * this.listElmHeight;
+        this.listElmsContainer.attribute("style", `margin-top: ${this.bufferedPixelsTop}px`);
+
+        for (let i = 0; i < this.elmsList.length; i++) {
+            const content = this.dataList[bufferStartIndex + i];
+            this.elmsList[i].replaceContents(this.getContentForListItem(content));
         }
 
-        this.bottomBufferElm.attribute("style", `height: ${(this.list.length - (startIndex + this.listElms.length)) * this.listElmHeight
-            }px`);
+        this.bufferedPixelsBottom = (bufferStartIndex + this.elmsList.length) * this.listElmHeight;
+        this.bottomBufferElm.attribute("style", `height: ${this.dataList.length * this.listElmHeight - this.bufferedPixelsBottom}px`);
+    }
+
+    private bufferedElementsCoversViewbox(): boolean {
+        return this.bufferedPixelsTop < this.elm.scrollTop &&
+            this.elm.scrollTop + this.elm.clientHeight < this.bufferedPixelsBottom;
     }
 
     protected abstract getContentForListItem(item: T): Elm;
@@ -86,3 +99,4 @@ class NotesRecyclingList extends RecyclingList<Immutable<Note>> {
         );
     }
 }
+
