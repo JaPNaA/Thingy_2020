@@ -28,7 +28,7 @@ export class TankiInterface extends Component {
         //* for testing
         addEventListener("keydown", e => {
             if (e.code === "KeyZ") {
-                deck.database.undoLog.undo();
+                deck.database.logs.undo();
                 deck.updateCache();
                 this.deckPresenter.update();
                 this.showSnackbar("Undid", 1500);
@@ -96,7 +96,7 @@ class DeckPresenter extends Component {
                     //* this button is temporary
                     // todo: automatically gradate cards
 
-                    this.deck.database.undoLog.startGroup();
+                    this.deck.database.logs.startGroup();
                     const cards = this.deck.database.getCards();
                     for (const card of cards) {
                         if (
@@ -112,7 +112,7 @@ class DeckPresenter extends Component {
                     }
                     this.deck.updateCache();
                     this.deckTimeline.update();
-                    this.deck.database.undoLog.endGroup();
+                    this.deck.database.logs.endGroup();
                 })
         );
 
@@ -140,9 +140,9 @@ class DeckPresenter extends Component {
                     break;
                 }
 
-                this.deck.database.undoLog.startGroup();
+                this.deck.database.logs.startGroup();
                 this.deck.applyResultToCard(selectedCard, result);
-                this.deck.database.undoLog.endGroup();
+                this.deck.database.logs.endGroup();
             } else {
                 break;
             }
@@ -179,9 +179,9 @@ class DeckPresenter extends Component {
             });
         });
 
-        this.deck.database.undoLog.startGroup();
+        this.deck.database.logs.startGroup();
         this.deck.addNoteAndUpdate(note);
-        this.deck.database.undoLog.endGroup();
+        this.deck.database.logs.endGroup();
 
         this.deckTimeline.update();
         createNoteDialog.remove();

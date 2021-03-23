@@ -8,7 +8,7 @@ abstract class DatabaseObject {
 }
 
 export class TankiDatabase {
-    public undoLog: UndoLog;
+    public logs: UndoLog;
 
     private cards: Card[] = [];
     private notes: Note[] = [];
@@ -28,13 +28,13 @@ export class TankiDatabase {
             throw new Error("Versions don't match");
         }
 
-        this.undoLog = new UndoLog();
-        this.undoLog.freeze = true;
+        this.logs = new UndoLog();
+        this.logs.freeze = true;
 
         this.noteTypes = this.initNoteTypes();
         this.initCards();
 
-        this.undoLog.freeze = false;
+        this.logs.freeze = false;
     }
 
     public getCards(): Immutable<Card[]> {
@@ -77,7 +77,7 @@ export class TankiDatabase {
         if (copying._uid < 0) { throw new Error("Trying to write to unregisted object"); }
         const existing = this.objects[copying._uid];
 
-        this.undoLog.logEdit({
+        this.logs.logEdit({
             target: existing,
             original: existing.clone()
         });
@@ -86,7 +86,7 @@ export class TankiDatabase {
 
     public activateCard(card: Immutable<Card>): Immutable<ActivatedCard> {
         if (card instanceof ActivatedCard) { return card; }
-        this.undoLog.startGroup();
+        this.logs.startGroup();
 
         const schedulingSettings = this.getCardSchedulingSettings(card);
 
@@ -99,12 +99,12 @@ export class TankiDatabase {
         this.registerObject(activeCard);
         this.cards[cardIndex] = activeCard;
 
-        this.undoLog.logRemove({
+        this.logs.logRemove({
             index: cardIndex,
             location: this.cards,
             target: originalCard
         });
-        this.undoLog.logAdd({
+        this.logs.logAdd({
             index: cardIndex,
             location: this.cards,
             target: activeCard
@@ -114,25 +114,25 @@ export class TankiDatabase {
         newNote.cardUids[card.cardTypeID] = activeCard._uid;
         this.writeEdit(newNote);
 
-        this.undoLog.endGroup();
+        this.logs.endGroup();
 
         return activeCard;
     }
 
     public addNote(note: Note): void {
-        this.undoLog.startGroup();
+        this.logs.startGroup();
         this.initNote(note);
-        this.undoLog.endGroup();
+        this.logs.endGroup();
     }
 
     public removeNote(note: Note | Immutable<Note>): void {
-        this.undoLog.startGroup();
+        this.logs.startGroup();
 
         const originalNote = this.getNoteByUid(note._uid);
         const index = this.notes.indexOf(originalNote as Note);
         this.notes.splice(index, 1);
 
-        this.undoLog.logRemove({
+        this.logs.logRemove({
             index: index,
             location: this.notes,
             target: originalNote
@@ -143,14 +143,14 @@ export class TankiDatabase {
             const index = this.cards.indexOf(card as Card);
             this.cards.splice(index, 1);
 
-            this.undoLog.logRemove({
+            this.logs.logRemove({
                 index: index,
                 location: this.cards,
                 target: card
             });
         }
 
-        this.undoLog.endGroup();
+        this.logs.endGroup();
     }
 
     public addNoteType(noteType: NoteType): void {
@@ -194,7 +194,7 @@ export class TankiDatabase {
     }
 
     private initNote(note: Note): void {
-        this.undoLog.logAdd({
+        this.logs.logAdd({
             index: this.notes.push(note) - 1,
             location: this.notes,
             target: note,
@@ -204,7 +204,7 @@ export class TankiDatabase {
 
         const cards = note._initCards();
         for (const card of cards) {
-            this.undoLog.logAdd({
+            this.logs.logAdd({
                 index: this.cards.push(card) - 1,
                 location: this.cards,
                 target: card,
