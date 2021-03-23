@@ -6,7 +6,7 @@ import { boundBetween, EventHandler, Immutable } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
 
 export class ManageNotesDialog extends ModalDialog {
-    private notesList: Elm;
+    private notesList: NotesRecyclingList;
 
     constructor(deck: Deck) {
         super("manageNotesDialog");
@@ -17,6 +17,15 @@ export class ManageNotesDialog extends ModalDialog {
                 deck.database.getNotes() as Immutable<Note>[], deck
             )
         );
+
+        this.notesList.onClick.addHandler(data => {
+            console.log(data);
+
+            if (confirm("Delete note?")) {
+                deck.database.removeNote(data);
+                this.notesList.update();
+            }
+        });
     }
 }
 
@@ -98,7 +107,7 @@ class RecyclingListItem<T> extends Component {
     public setContent(item: T, elm: Elm) {
         this.replaceContents(elm);
         this.itemData = item;
-}
+    }
 }
 
 class NotesRecyclingList extends RecyclingList<Immutable<Note>> {

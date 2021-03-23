@@ -125,6 +125,22 @@ export class TankiDatabase {
         this.undoLog.endGroup();
     }
 
+    public removeNote(note: Note | Immutable<Note>): void {
+        this.undoLog.startGroup();
+
+        const originalNote = this.getNoteByUid(note._uid);
+        const index = this.notes.indexOf(originalNote as Note);
+        this.notes.splice(index, 1);
+
+        this.undoLog.logRemove({
+            index: index,
+            location: this.notes,
+            target: originalNote
+        });
+
+        this.undoLog.endGroup();
+    }
+
     public addNoteType(noteType: NoteType): void {
         this.noteTypes.push(noteType);
     }
