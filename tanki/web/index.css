@@ -1,3 +1,9 @@
+:root {
+    --card-new-color: #143be7;
+    --card-due-color: #441eec;
+    --card-graduated-color: #a11cee;
+}
+
 body {
     margin: 0;
 }
@@ -63,15 +69,15 @@ body {
 }
 
 .cardCounts .new {
-    color: #143be7;
+    color: var(--card-new-color);
 }
 
 .cardCounts .due {
-    color: #441eec;
+    color: var(--card-due-color);
 }
 
 .cardCounts .graduated {
-    color: #a11cee;
+    color: var(--card-graduated-color);
 }
 
 .quickUserInputGetter button {
@@ -142,6 +148,36 @@ body {
 
 .createNoteDialog .cardFieldInput {
     display: block;
+}
+
+.manageNotesDialog .recyclingList {
+    height: 250px;
+    overflow-y: scroll;
+}
+
+.manageNotesDialog .cards {
+    display: flex;
+    width: 260px;
+    font-size: 0.7em;
+}
+
+.manageNotesDialog .cards .card {
+    color: #ffffff;
+    flex: 1;
+    text-align: center;
+    margin-right: 8px;
+}
+
+.manageNotesDialog .cards .card.new {
+    background-color: var(--card-new-color);
+}
+
+.manageNotesDialog .cards .card.active {
+    background-color: var(--card-due-color);
+}
+
+.manageNotesDialog .cards .card.inactive {
+    background-color: var(--card-graduated-color);
 }
 
 .deckTimeline .timelineGraph {
