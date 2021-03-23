@@ -288,7 +288,8 @@ class UndoLog {
 
     private flushLogGroupToHistory() {
         if (this.currentLogGroup.adds.length <= 0 &&
-            this.currentLogGroup.edits.length <= 0) {
+            this.currentLogGroup.edits.length <= 0 &&
+            this.currentLogGroup.removes.length <= 0) {
             return;
         }
 
