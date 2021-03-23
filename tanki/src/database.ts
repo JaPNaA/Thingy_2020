@@ -138,6 +138,18 @@ export class TankiDatabase {
             target: originalNote
         });
 
+        for (const cardUid of originalNote.cardUids) {
+            const card = this.getCardByUid(cardUid);
+            const index = this.cards.indexOf(card as Card);
+            this.cards.splice(index, 1);
+
+            this.undoLog.logRemove({
+                index: index,
+                location: this.cards,
+                target: card
+            });
+        }
+
         this.undoLog.endGroup();
     }
 
