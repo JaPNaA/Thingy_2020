@@ -185,7 +185,6 @@ textarea {
     margin-bottom: 24px;
     outline: none;
     min-width: 300px;
-    z-index: 0;
 }
 
 .lookupResult.clickable {
@@ -439,6 +438,8 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: center;
+
+    z-index: 2;
 }
 
 .modal .dialogue {
