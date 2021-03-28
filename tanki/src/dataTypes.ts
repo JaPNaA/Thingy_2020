@@ -1,4 +1,4 @@
-export const dataTypeVersion = "0.2";
+export const dataTypeVersion = "0.3";
 
 export interface DeckData {
     version: string;
