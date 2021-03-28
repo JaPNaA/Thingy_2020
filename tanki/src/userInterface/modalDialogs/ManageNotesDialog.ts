@@ -21,7 +21,7 @@ export class ManageNotesDialog extends ModalDialog {
         this.notesList.onClick.addHandler(data => {
             console.log(data);
 
-            if (confirm("Delete note?")) {
+            if (confirm("Delete note?\n(Delete note is WIP)")) {
                 deck.database.removeNote(data);
                 this.notesList.update();
             }
