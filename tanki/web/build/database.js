@@ -50,6 +50,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 import { CardState, dataTypeVersion, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
+import { clearData } from "./storage.js";
 import { arrayRemoveTrailingUndefinedOrNull } from "./utils.js";
 var DatabaseObject = /** @class */ (function () {
     function DatabaseObject() {
@@ -71,6 +72,10 @@ var TankiDatabase = /** @class */ (function () {
         this.objects = [];
         if (deckData.version !== dataTypeVersion) {
             alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
+            if (confirm("Clear deck data?")) {
+                clearData();
+                location.reload();
+            }
             throw new Error("Versions don't match");
         }
         this.logs = new UndoLog();

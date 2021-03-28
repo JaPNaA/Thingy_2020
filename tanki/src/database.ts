@@ -1,4 +1,5 @@
 import { CardData, CardDataActivated, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { clearData } from "./storage.js";
 import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
 
 abstract class DatabaseObject {
@@ -25,6 +26,11 @@ export class TankiDatabase {
     constructor(private readonly deckData: Readonly<DeckData>) {
         if (deckData.version !== dataTypeVersion) {
             alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
+
+            if (confirm("Clear deck data?")) {
+                clearData();
+                location.reload();
+            }
             throw new Error("Versions don't match");
         }
 

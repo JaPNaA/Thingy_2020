@@ -13,6 +13,15 @@ function resolveLinkAsFile(href: string) {
     return anchorElement.href;
 }
 
+export function clearData() {
+    if (fs) {
+        fs.writeFileSync(deckDataPath, "");
+    } else {
+        localStorage[localStoragePrefix + resolveLinkAsFile(deckDataPath)]
+            = "";
+    }
+}
+
 export function writeOut(deck: Deck) {
     const exportStr = deck.database.toJSON();
 
