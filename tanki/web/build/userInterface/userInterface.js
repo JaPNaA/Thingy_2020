@@ -54,6 +54,7 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
         to[j] = from[i];
     return to;
 };
+import { ActivatedCard } from "../database.js";
 import { Component, Elm } from "../libs/elements.js";
 import { writeOut } from "../storage.js";
 import { DeckTimeline } from "./DeckTimeline.js";
@@ -62,6 +63,7 @@ import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
 import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
+import { CardFlag, CardState } from "../dataTypes.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -76,7 +78,7 @@ var TankiInterface = /** @class */ (function (_super) {
         //* for testing
         addEventListener("keydown", function (e) {
             if (e.code === "KeyZ") {
-                deck.database.undoLog.undo();
+                deck.database.logs.undo();
                 deck.updateCache();
                 _this.deckPresenter.update();
                 _this.showSnackbar("Undid", 1500);
@@ -130,25 +132,28 @@ var DeckPresenter = /** @class */ (function (_super) {
             .append("Jisho With History")
             .on("click", function () {
             window.open("jishoWithHistory/index.html", "", "width=612,height=706");
-        })
-        // new Elm("button").class("graduateNotes")
-        //     .append("Graduate Notes")
-        //     .on("click", () => {
-        //         const notes = this.deck.data.getNotes();
-        //         for (const note of notes) {
-        //             const cards = note[2];
-        //             if (!cards) { continue; }
-        //             for (const card of cards) {
-        //                 if (card && isCardActive(card)) {
-        //                     if (card[3] > 7 * 24 * 60) {
-        //                         card[0] = CardState.inactive;
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //         this.deckTimeline.update();
-        //     })
-        );
+        }), new Elm("button").class("graduateNotes")
+            .append("Graduate Notes")
+            .on("click", function () {
+            //* this button is temporary
+            // todo: automatically gradate cards
+            _this.deck.database.logs.startGroup();
+            var cards = _this.deck.database.getCards();
+            for (var _i = 0, cards_1 = cards; _i < cards_1.length; _i++) {
+                var card = cards_1[_i];
+                if (card instanceof ActivatedCard &&
+                    card.state === CardState.active &&
+                    card.interval > 21 * 24 * 60) {
+                    var cardEdit = card.clone();
+                    cardEdit.state = CardState.inactive;
+                    cardEdit.addFlag(CardFlag.graduated);
+                    _this.deck.database.writeEdit(cardEdit);
+                }
+            }
+            _this.deck.updateCache();
+            _this.deckTimeline.update();
+            _this.deck.database.logs.endGroup();
+        }));
         _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
         _this.enterCardPresenter();
         return _this;
@@ -184,9 +189,9 @@ var DeckPresenter = /** @class */ (function (_super) {
                         console.log(interrupt_1);
                         return [3 /*break*/, 8];
                     case 5:
-                        this.deck.database.undoLog.startGroup();
+                        this.deck.database.logs.startGroup();
                         this.deck.applyResultToCard(selectedCard, result);
-                        this.deck.database.undoLog.endGroup();
+                        this.deck.database.logs.endGroup();
                         return [3 /*break*/, 7];
                     case 6: return [3 /*break*/, 8];
                     case 7:
@@ -227,9 +232,9 @@ var DeckPresenter = /** @class */ (function (_super) {
                             })];
                     case 1:
                         note = _a.sent();
-                        this.deck.database.undoLog.startGroup();
+                        this.deck.database.logs.startGroup();
                         this.deck.addNoteAndUpdate(note);
-                        this.deck.database.undoLog.endGroup();
+                        this.deck.database.logs.endGroup();
                         this.deckTimeline.update();
                         createNoteDialog.remove();
                         return [2 /*return*/];

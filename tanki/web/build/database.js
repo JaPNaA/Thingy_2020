@@ -49,7 +49,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { CardState, dataTypeVersion, isCardActive, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
+import { CardState, dataTypeVersion, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
 import { arrayRemoveTrailingUndefinedOrNull } from "./utils.js";
 var DatabaseObject = /** @class */ (function () {
     function DatabaseObject() {
@@ -73,11 +73,11 @@ var TankiDatabase = /** @class */ (function () {
             alert("Saved version of deckData doesn't match the app's version. Backwards compatibility doesn't come with this app.");
             throw new Error("Versions don't match");
         }
-        this.undoLog = new UndoLog();
-        this.undoLog.freeze = true;
+        this.logs = new UndoLog();
+        this.logs.freeze = true;
         this.noteTypes = this.initNoteTypes();
         this.initCards();
-        this.undoLog.freeze = false;
+        this.logs.freeze = false;
     }
     TankiDatabase.prototype.getCards = function () {
         return this.cards;
@@ -118,29 +118,29 @@ var TankiDatabase = /** @class */ (function () {
             throw new Error("Trying to write to unregisted object");
         }
         var existing = this.objects[copying._uid];
-        this.undoLog.logEdit({
+        this.logs.logEdit({
             target: existing,
             original: existing.clone()
         });
         existing.overwriteWith(copying);
     };
     TankiDatabase.prototype.activateCard = function (card) {
-        if (card instanceof ActiveCard) {
+        if (card instanceof ActivatedCard) {
             return card;
         }
-        this.undoLog.startGroup();
+        this.logs.startGroup();
         var schedulingSettings = this.getCardSchedulingSettings(card);
         var originalCard = this.getCardByUid(card._uid);
         var cardIndex = this.cards.indexOf(originalCard);
-        var activeCard = new ActiveCard([CardState.active, [], 0, schedulingSettings.initialInterval], card.cardTypeID, card.parentNote);
+        var activeCard = new ActivatedCard([CardState.active, [], 0, schedulingSettings.initialInterval], card.cardTypeID, card.parentNote);
         this.registerObject(activeCard);
         this.cards[cardIndex] = activeCard;
-        this.undoLog.logRemove({
+        this.logs.logRemove({
             index: cardIndex,
             location: this.cards,
             target: originalCard
         });
-        this.undoLog.logAdd({
+        this.logs.logAdd({
             index: cardIndex,
             location: this.cards,
             target: activeCard
@@ -148,13 +148,36 @@ var TankiDatabase = /** @class */ (function () {
         var newNote = card.parentNote.clone();
         newNote.cardUids[card.cardTypeID] = activeCard._uid;
         this.writeEdit(newNote);
-        this.undoLog.endGroup();
+        this.logs.endGroup();
         return activeCard;
     };
     TankiDatabase.prototype.addNote = function (note) {
-        this.undoLog.startGroup();
+        this.logs.startGroup();
         this.initNote(note);
-        this.undoLog.endGroup();
+        this.logs.endGroup();
+    };
+    TankiDatabase.prototype.removeNote = function (note) {
+        this.logs.startGroup();
+        var originalNote = this.getNoteByUid(note._uid);
+        var index = this.notes.indexOf(originalNote);
+        this.notes.splice(index, 1);
+        this.logs.logRemove({
+            index: index,
+            location: this.notes,
+            target: originalNote
+        });
+        for (var _i = 0, _a = originalNote.cardUids; _i < _a.length; _i++) {
+            var cardUid = _a[_i];
+            var card = this.getCardByUid(cardUid);
+            var index_1 = this.cards.indexOf(card);
+            this.cards.splice(index_1, 1);
+            this.logs.logRemove({
+                index: index_1,
+                location: this.cards,
+                target: card
+            });
+        }
+        this.logs.endGroup();
     };
     TankiDatabase.prototype.addNoteType = function (noteType) {
         this.noteTypes.push(noteType);
@@ -192,7 +215,7 @@ var TankiDatabase = /** @class */ (function () {
         }
     };
     TankiDatabase.prototype.initNote = function (note) {
-        this.undoLog.logAdd({
+        this.logs.logAdd({
             index: this.notes.push(note) - 1,
             location: this.notes,
             target: note,
@@ -201,7 +224,7 @@ var TankiDatabase = /** @class */ (function () {
         var cards = note._initCards();
         for (var _i = 0, cards_1 = cards; _i < cards_1.length; _i++) {
             var card = cards_1[_i];
-            this.undoLog.logAdd({
+            this.logs.logAdd({
                 index: this.cards.push(card) - 1,
                 location: this.cards,
                 target: card,
@@ -281,7 +304,8 @@ var UndoLog = /** @class */ (function () {
     };
     UndoLog.prototype.flushLogGroupToHistory = function () {
         if (this.currentLogGroup.adds.length <= 0 &&
-            this.currentLogGroup.edits.length <= 0) {
+            this.currentLogGroup.edits.length <= 0 &&
+            this.currentLogGroup.removes.length <= 0) {
             return;
         }
         this.logGroupHistory.push(this.currentLogGroup);
@@ -347,8 +371,8 @@ var Note = /** @class */ (function (_super) {
         var numCardTypes = this.type.numCardTypes;
         for (var i = 0; i < numCardTypes; i++) {
             var card = isEmptyValue(this.cardDatas) ? undefined : this.cardDatas[i];
-            if (!isEmptyValue(card) && isCardActive(card)) {
-                cards.push(new ActiveCard(card, i, this));
+            if (!isEmptyValue(card) && isCardActivated(card)) {
+                cards.push(new ActivatedCard(card, i, this));
             }
             else {
                 cards.push(new Card(card, i, this));
@@ -454,9 +478,9 @@ var Card = /** @class */ (function (_super) {
     return Card;
 }(DatabaseObject));
 export { Card };
-var ActiveCard = /** @class */ (function (_super) {
-    __extends(ActiveCard, _super);
-    function ActiveCard(data, cardTypeID, parentNote) {
+var ActivatedCard = /** @class */ (function (_super) {
+    __extends(ActivatedCard, _super);
+    function ActivatedCard(data, cardTypeID, parentNote) {
         var _this = _super.call(this, data, cardTypeID, parentNote) || this;
         _this.dueMinutes = data[2];
         _this.interval = data[3];
@@ -464,16 +488,16 @@ var ActiveCard = /** @class */ (function (_super) {
         _this.learningInterval = data[5];
         return _this;
     }
-    ActiveCard.prototype.overwriteWith = function (card) {
+    ActivatedCard.prototype.overwriteWith = function (card) {
         _super.prototype.overwriteWith.call(this, card);
         this.dueMinutes = card.dueMinutes;
         this.interval = card.interval;
         this.timesWrongHistory = card.timesWrongHistory.slice();
         this.learningInterval = card.learningInterval;
     };
-    ActiveCard.prototype.serialize = function () {
-        if (this.state !== CardState.active) {
-            throw new Error("Tried serializing ActiveCard that wasn't active");
+    ActivatedCard.prototype.serialize = function () {
+        if (this.state === CardState.new) {
+            throw new Error("Tried serializing ActiveCard with state new");
         }
         return [
             this.state,
@@ -484,14 +508,14 @@ var ActiveCard = /** @class */ (function (_super) {
             this.learningInterval
         ];
     };
-    ActiveCard.prototype.clone = function () {
-        if (this.state !== CardState.active) {
-            throw new Error("Tried cloning ActiveCard that wasn't active");
+    ActivatedCard.prototype.clone = function () {
+        if (this.state === CardState.new) {
+            throw new Error("Tried cloning ActiveCard with state new");
         }
-        var card = new ActiveCard([this.state, this.flags.slice(), this.dueMinutes, this.interval, this.timesWrongHistory, this.learningInterval], this.cardTypeID, this.parentNote);
+        var card = new ActivatedCard([this.state, this.flags.slice(), this.dueMinutes, this.interval, this.timesWrongHistory, this.learningInterval], this.cardTypeID, this.parentNote);
         card._uid = this._uid;
         return card;
     };
-    return ActiveCard;
+    return ActivatedCard;
 }(Card));
-export { ActiveCard };
+export { ActivatedCard };

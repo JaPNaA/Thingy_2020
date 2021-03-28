@@ -34,7 +34,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { ActiveCard, TankiDatabase } from "./database.js";
+import { ActivatedCard, TankiDatabase } from "./database.js";
 import { CardFlag, CardState } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored } from "./utils.js";
 var Deck = /** @class */ (function () {
@@ -86,7 +86,7 @@ var Deck = /** @class */ (function () {
             }
             this.sortCardIntoCache(updatedCard);
         }
-        else if (card instanceof ActiveCard) {
+        else if (card instanceof ActivatedCard) {
             this.updateCardScheduleWithResult(card, result);
         }
         else {
@@ -181,7 +181,7 @@ var Deck = /** @class */ (function () {
         if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
             this.inactiveCardCache.push(card);
         }
-        else if (card.state === CardState.active && card instanceof ActiveCard) {
+        else if (card.state === CardState.active && card instanceof ActivatedCard) {
             this.activeCardCache.push(card);
         }
         else if (card.state === CardState.new) {

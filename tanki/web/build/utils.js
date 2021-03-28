@@ -89,3 +89,6 @@ var EventHandler = /** @class */ (function () {
     return EventHandler;
 }());
 export { EventHandler };
+export function boundBetween(min, x, max) {
+    return Math.min(Math.max(x, min), max);
+}

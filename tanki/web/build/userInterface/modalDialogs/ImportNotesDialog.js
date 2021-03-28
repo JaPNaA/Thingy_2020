@@ -90,7 +90,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
                 _this.deck.database.addNoteType(new NoteType(ImportNotesDialog.jishoAPIDataImportedNoteType));
             }
             var cardType = _this.deck.database.getNoteTypeByName(ImportNotesDialog.jishoAPIDataImportedNoteType.name);
-            _this.deck.database.undoLog.startGroup();
+            _this.deck.database.logs.startGroup();
             for (var _i = 0, parsed_1 = parsed; _i < parsed_1.length; _i++) {
                 var item = parsed_1[_i];
                 var note = Note.create(cardType, [JSON.stringify(item)]);
@@ -104,7 +104,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
                     }
                 }
             }
-            _this.deck.database.undoLog.endGroup();
+            _this.deck.database.logs.endGroup();
             _this.deck.updateCache()
                 .then(function () { return _this.onImported.dispatch(); });
         }));

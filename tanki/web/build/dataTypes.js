@@ -1,10 +1,10 @@
-export var dataTypeVersion = "0.2";
+export var dataTypeVersion = "0.3";
 export function isNoteTypeDataIntegrated(x) {
     // @ts-ignore
     return !x.src;
 }
-export function isCardActive(card) {
-    return card[0] === CardState.active;
+export function isCardActivated(card) {
+    return card[0] !== CardState.new;
 }
 export var CardState;
 (function (CardState) {
