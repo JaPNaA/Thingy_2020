@@ -28,7 +28,7 @@ async function main() {
 
 
     // nice for debugging
-    const g: any = global;
+    const g: any = window;
     g.deck = deck;
     g.tankiInterface = tankiInterface;
 }

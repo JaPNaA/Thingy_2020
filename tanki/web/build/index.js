@@ -64,7 +64,7 @@ function main() {
                             }
                         });
                     }
-                    g = global;
+                    g = window;
                     g.deck = deck;
                     g.tankiInterface = tankiInterface;
                     return [2 /*return*/];
