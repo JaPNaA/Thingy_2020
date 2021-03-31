@@ -278,42 +278,47 @@ textarea {
     margin-bottom: 8px;
 }
 
-.lookupResult .sense > .seeAlsos {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 1;
+.lookupResult .sense > .senseContent {
+    display: flex;
+}
+
+.lookupResult .sense > .senseContent > .left {
+    flex-grow: 1;
+}
+
+.lookupResult .sense > .senseContent .seeAlsos {
+    text-align: right;
     font-size: 0.8em;
 }
 
-.lookupResult .sense > .seeAlsos > .seeAlso {
+.lookupResult .sense > .senseContent .seeAlsos > .seeAlso {
     cursor: pointer;
 }
 
-.lookupResult .sense > .seeAlsos > .seeAlso::before {
+.lookupResult .sense > .senseContent .seeAlsos > .seeAlso::before {
     content: "➡ ";
     opacity: 0.8;
 }
 
-.lookupResult .sense > .tags {
+.lookupResult .sense > .senseContent .tags {
     opacity: 0.8;
     font-size: 0.75em;
 }
 
-.lookupResult .sense > .tags > .tag {
+.lookupResult .sense > .senseContent .tags > .tag {
     display: inline-block;
     margin-right: 8px;
 }
 
-.lookupResult .sense > .tags > .tag.ukana {
+.lookupResult .sense > .senseContent .tags > .tag.ukana {
     color: var(--emphasis-color);
 }
 
-.lookupResult .sense > .infoElmContainer {
+.lookupResult .sense > .senseContent .infoElmContainer {
     display: inline-block;
 }
 
-.lookupResult .sense > .infoElmContainer .infoIndicator {
+.lookupResult .sense > .senseContent .infoElmContainer .infoIndicator {
     display: inline-block;
     background-color: rgba(0, 47, 255, 0.61);
     color: #fff;
@@ -332,14 +337,14 @@ textarea {
     margin-left: 4px;
 }
 
-.lookupResult .sense > .infoElmContainer > .infoElm {
+.lookupResult .sense > .senseContent .infoElmContainer > .infoElm {
     font-size: 0.8em;
 
     top: 100%;
     left: 0;
 }
 
-.lookupResult .sense:hover > .infoElmContainer > .infoElm {
+.lookupResult .sense > .senseContent .left:hover .infoElmContainer > .infoElm {
     opacity: 1;
     transform: translateY(0);
 }

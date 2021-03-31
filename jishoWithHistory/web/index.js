@@ -560,19 +560,22 @@ class LookupResult extends Component {
     /** @param {Sense} sense */
     _createSenseListItem(sense) {
         const senseElm = new Elm("li").class("sense");
+        const content = new Elm().class("senseContent").appendTo(senseElm);
+        const left = new Elm().class("left").appendTo(content);
+        const right = new Elm().class("right").appendTo(content);
 
         new Elm("span").class("definitions")
             .append(sense.english_definitions.join("; "))
-            .appendTo(senseElm);
+            .appendTo(left);
 
         if (sense.see_also.length > 0) {
-            this._createSeeAlsoElm(sense.see_also).appendTo(senseElm);
+            this._createSeeAlsoElm(sense.see_also).appendTo(right);
         }
 
-        this._createInfoElm(sense).appendTo(senseElm);
+        this._createInfoElm(sense).appendTo(left);
 
         if (sense.tags.length > 0) { // has tags?
-            const tags = new Elm().class("tags").appendTo(senseElm);
+            const tags = new Elm().class("tags").appendTo(left);
 
             for (const tag of sense.tags) {
                 if (tag === "Usually written using kana alone") {
