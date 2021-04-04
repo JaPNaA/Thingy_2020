@@ -10,7 +10,7 @@ export function minutesToHumanString(minutes) {
     var minsAbs = Math.abs(minutes);
     var resultStr;
     if (minsAbs < 60) {
-        resultStr = minsAbs + " minute" + (minsAbs === 1 ? "" : "s");
+        resultStr = Math.round(minsAbs) + " minute" + (minsAbs === 1 ? "" : "s");
     }
     else if (minsAbs < 24 * 60) {
         var hours = Math.round(minsAbs / 60);

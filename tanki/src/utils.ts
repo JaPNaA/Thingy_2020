@@ -13,7 +13,7 @@ export function minutesToHumanString(minutes: number): string {
     let resultStr;
 
     if (minsAbs < 60) {
-        resultStr = minsAbs + " minute" + (minsAbs === 1 ? "" : "s");
+        resultStr = Math.round(minsAbs) + " minute" + (minsAbs === 1 ? "" : "s");
     } else if (minsAbs < 24 * 60) {
         const hours = Math.round(minsAbs / 60);
         resultStr = hours + " hour" + (hours === 1 ? "" : "s");
