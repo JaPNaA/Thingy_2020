@@ -468,6 +468,11 @@ textarea {
 .modal .dialogue .content.scrollBar {
     overflow-y: scroll;
 }
+
+.modal .dialogue .content > div {
+    padding: 8px;
+}
+
 .modal .dialogue .buttons {
     padding: 8px;
     bottom: 0;
