@@ -9,6 +9,7 @@ import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
+import jishoWithHistory from "../jishoWithHistory.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -85,10 +86,7 @@ class DeckPresenter extends Component {
             new Elm("button").class("JishoWithHistory")
                 .append("Jisho With History")
                 .on("click", () => {
-                    window.open(
-                        "jishoWithHistory/index.html", "",
-                        "width=612,height=706"
-                    );
+                    jishoWithHistory.openWindow();
                 }),
             new Elm("button").class("graduateNotes")
                 .append("Graduate Notes")
@@ -117,6 +115,10 @@ class DeckPresenter extends Component {
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
+
+        jishoWithHistory.getData.addHandler(data => {
+            this.openImportNotesDialogWithJishoApiData(data);
+        });
 
         this.enterCardPresenter();
     }
@@ -187,7 +189,12 @@ class DeckPresenter extends Component {
         createNoteDialog.remove();
     }
 
-    private async openImportNotesDialog() {
+    private async openImportNotesDialogWithJishoApiData(data: string) {
+        const dialog = this.openImportNotesDialog();
+        dialog.setJishoAPIData(data);
+    }
+
+    private openImportNotesDialog() {
         this.exitCardPresenter();
 
         const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
@@ -195,6 +202,8 @@ class DeckPresenter extends Component {
             this.deckTimeline.update();
             importNotesDialog.remove();
         });
+
+        return importNotesDialog;
     }
 
     private openManageNotesDialog() {
