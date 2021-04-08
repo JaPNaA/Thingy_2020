@@ -64,6 +64,7 @@ import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
+import jishoWithHistory from "../jishoWithHistory.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -131,7 +132,7 @@ var DeckPresenter = /** @class */ (function (_super) {
             .on("click", function () { return _this.openManageNotesDialog(); }), new Elm("button").class("JishoWithHistory")
             .append("Jisho With History")
             .on("click", function () {
-            window.open("jishoWithHistory/index.html", "", "width=612,height=706");
+            jishoWithHistory.openWindow();
         }), new Elm("button").class("graduateNotes")
             .append("Graduate Notes")
             .on("click", function () {
@@ -155,6 +156,9 @@ var DeckPresenter = /** @class */ (function (_super) {
             _this.deck.database.logs.endGroup();
         }));
         _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
+        jishoWithHistory.getData.addHandler(function (data) {
+            _this.openImportNotesDialogWithJishoApiData(data);
+        });
         _this.enterCardPresenter();
         return _this;
     }
@@ -242,20 +246,25 @@ var DeckPresenter = /** @class */ (function (_super) {
             });
         });
     };
-    DeckPresenter.prototype.openImportNotesDialog = function () {
+    DeckPresenter.prototype.openImportNotesDialogWithJishoApiData = function (data) {
         return __awaiter(this, void 0, void 0, function () {
-            var importNotesDialog;
-            var _this = this;
+            var dialog;
             return __generator(this, function (_a) {
-                this.exitCardPresenter();
-                importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
-                importNotesDialog.onImported.addHandler(function () {
-                    _this.deckTimeline.update();
-                    importNotesDialog.remove();
-                });
+                dialog = this.openImportNotesDialog();
+                dialog.setJishoAPIData(data);
                 return [2 /*return*/];
             });
         });
+    };
+    DeckPresenter.prototype.openImportNotesDialog = function () {
+        var _this = this;
+        this.exitCardPresenter();
+        var importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        importNotesDialog.onImported.addHandler(function () {
+            _this.deckTimeline.update();
+            importNotesDialog.remove();
+        });
+        return importNotesDialog;
     };
     DeckPresenter.prototype.openManageNotesDialog = function () {
         this.exitCardPresenter();

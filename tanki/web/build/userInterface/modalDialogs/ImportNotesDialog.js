@@ -67,6 +67,10 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         console.log(deck);
         return _this;
     }
+    ImportNotesDialog.prototype.setJishoAPIData = function (data) {
+        this.existingData = data;
+        this.importFromJishoAPIData();
+    };
     ImportNotesDialog.prototype.importFromJishoAPIData = function () {
         var _a;
         var _this = this;
@@ -78,6 +82,9 @@ var ImportNotesDialog = /** @class */ (function (_super) {
             this.createCheckedCheckbox("Word -> Kana"),
             this.createCheckedCheckbox("Kana + Meaning -> Word")
         ];
+        if (this.existingData) {
+            textarea.setValue(this.existingData);
+        }
         this.foregroundElm.append(textarea, (_a = new Elm().class("options")).append.apply(_a, checkboxes.map(function (checkbox) { return checkbox.container; })), new Elm("button").append("Import")
             .on("click", function () {
             if (_this.imported) {
@@ -163,6 +170,9 @@ var DragAndDropTextarea = /** @class */ (function (_super) {
     }
     DragAndDropTextarea.prototype.getValue = function () {
         return this.htmlElm.value;
+    };
+    DragAndDropTextarea.prototype.setValue = function (value) {
+        this.htmlElm.value = value;
     };
     return DragAndDropTextarea;
 }(Component));
