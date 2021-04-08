@@ -1,5 +1,8 @@
 import { Elm, Component } from "./elements.js";
 
+/** @type {Electron.IpcRenderer} */
+let ipc;
+
 /**
  * @typedef {Object} JishoApiData
  * @property {JishoData[]} data
@@ -153,17 +156,7 @@ class ActionsBar extends Component {
             ),
 
             new Elm().class("right").append(
-                new Elm("button").class("exportButton", "shadow").append("Export")
-                    .on("click", () => {
-                        const modal = new Modal();
-                        modal.appendContent(
-                            new Elm("textarea")
-                                .attribute("readonly") // @ts-ignore
-                                .on("click", function () { this.select(); })
-                                .append(JSON.stringify(this.history.getData()))
-                        );
-                        modal.show();
-                    }),
+                new ExportButton(this.history),
 
                 new Elm("button").class("importButton", "shadow").append("Import")
                     .on("click", () => {
@@ -204,6 +197,94 @@ class ActionsBar extends Component {
         } else {
             this.clearAllButton.elm.innerHTML = "Clear all";
         }
+    }
+}
+
+class ExportButton extends Elm {
+    /**
+     * @param {LookupHistory} lookupHistory 
+     */
+    constructor(lookupHistory) {
+        super("button");
+        this.class("shadow", "exportButton");
+        this.append("Export");
+
+        this.lookupHistory = lookupHistory;
+
+        this.copyButton = new Elm("button").append("Copy");
+        this.sendButton = this.createSendButton();
+        this.contentTextarea = new Elm("textarea")
+            .attribute("readonly") // @ts-ignore
+            .on("click", function () { this.select(); });
+
+        this.on("click", () => {
+            const modal = new Modal();
+
+            /** @type {HTMLTextAreaElement} */
+            (this.contentTextarea.elm)
+                .value = this.getDataStr();
+
+            modal.appendContent(this.contentTextarea);
+            modal.addButton(this.sendButton);
+            modal.addButton(this.copyButton);
+            modal.show();
+        });
+
+        this.copyButton.on("click", () => {
+            navigator.clipboard.writeText(this.getDataStr())
+                .catch(err => {
+                    const modal = new Modal();
+                    modal.appendContent(new Elm().append("Failed to copy.\nPlease try selecting the textarea and pressing ctrl-c"));
+                });
+        });
+    }
+
+    createSendButton() {
+        const sendButton = new Elm("button")
+            .append("Send...")
+            .class("hidden");
+
+        let canDoHTTPServer = false;
+        let canDoPostParent = false;
+
+        /** @type {Window | null} */
+        const reciever =
+            parent !== window ? parent : opener;
+
+        if (reciever) {
+            reciever.postMessage("get:jishoWithHistoryRecieverName", "*");
+            addEventListener("message", e => {
+                if (typeof e.data === "string") {
+                    canDoPostParent = true;
+                    this.sendButton.clear();
+                    this.sendButton.append("Send to " + e.data);
+                }
+                console.log(e);
+                sendButton.removeClass("hidden");
+            });
+        }
+
+        if (ipc) {
+            ipc.send("get:httpServerAllowed");
+            ipc.once("get:httpServerAllowed", (e, data) => {
+                canDoHTTPServer = Boolean(data);
+                sendButton.removeClass("hidden");
+            });
+        }
+
+        sendButton.on("click", () => {
+            if (canDoPostParent) {
+                reciever.postMessage("export:" + this.getDataStr(), "*");
+            } else if (canDoHTTPServer) {
+                alert("Not yet implemented :/");
+            }
+        });
+
+        return sendButton;
+    }
+
+    getDataStr() {
+        return JSON.stringify(this.lookupHistory.getData());
     }
 }
 
@@ -810,7 +891,7 @@ console.log(main);
 history.scrollRestoration = "manual";
 
 if (/\sElectron\//.test(navigator.userAgent) && window.require) {
-    const ipc = require("electron").ipcRenderer;
+    ipc = require("electron").ipcRenderer;
 
     addEventListener("keydown", e => {
         if (e.key.toLowerCase() === "r" && e.ctrlKey) {

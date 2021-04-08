@@ -47,6 +47,10 @@ textarea {
     outline: none;
 }
 
+.hidden {
+    display: none;
+}
+
 .main {
     display: flex;
     flex-direction: column;
@@ -478,6 +482,10 @@ textarea {
     bottom: 0;
     right: 0;
     text-align: right;
+}
+
+.modal .dialogue .buttons .close {
+    opacity: 0.7;
 }
 
 .modal .dialogue .buttons button {
