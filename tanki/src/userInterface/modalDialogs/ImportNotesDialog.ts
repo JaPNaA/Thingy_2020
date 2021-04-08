@@ -11,6 +11,7 @@ export class ImportNotesDialog extends ModalDialog {
     private sourcesListElm: Elm;
     /** Flag to prevent double-importing */
     private imported = false;
+    private existingData?: string;
 
     private static jishoAPIDataImportedNoteType: NoteTypeDataExternal = {
         name: "jishoAPIDataImportedNoteType",
@@ -30,6 +31,11 @@ export class ImportNotesDialog extends ModalDialog {
         console.log(deck);
     }
 
+    public setJishoAPIData(data: string) {
+        this.existingData = data;
+        this.importFromJishoAPIData();
+    }
+
     private importFromJishoAPIData() {
         this.sourcesListElm.remove();
         this.imported = false;
@@ -40,6 +46,10 @@ export class ImportNotesDialog extends ModalDialog {
             this.createCheckedCheckbox("Word -> Kana"),
             this.createCheckedCheckbox("Kana + Meaning -> Word")
         ];
+
+        if (this.existingData) {
+            textarea.setValue(this.existingData);
+        }
 
         this.foregroundElm.append(
             textarea,
@@ -131,5 +141,9 @@ class DragAndDropTextarea extends Component {
 
     public getValue() {
         return this.htmlElm.value;
+    }
+
+    public setValue(value: string) {
+        this.htmlElm.value = value;
     }
 }
