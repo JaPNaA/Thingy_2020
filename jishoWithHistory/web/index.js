@@ -614,6 +614,7 @@ class LookupResult extends Component {
                         modal.remove();
                     });
 
+                    modal.showScrollbar();
                     modal.appendContent(lookup);
                     modal.show();
                     e.stopPropagation();
@@ -766,6 +767,10 @@ class Modal extends Component {
      */
     appendContent(content) {
         this.content.append(content);
+    }
+
+    showScrollbar() {
+        this.content.class("scrollBar");
     }
 
     /**

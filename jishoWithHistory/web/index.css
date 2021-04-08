@@ -461,10 +461,13 @@ textarea {
 
 .modal .dialogue .content {
     padding: 8px;
-    overflow: scroll;
+    overflow-y: hidden;
     overflow-x: hidden;
 }
 
+.modal .dialogue .content.scrollBar {
+    overflow-y: scroll;
+}
 .modal .dialogue .buttons {
     padding: 8px;
     bottom: 0;
