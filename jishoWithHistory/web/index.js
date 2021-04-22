@@ -287,6 +287,13 @@ class SendByHTTPServerModal extends Modal {
 
         ipc.send("server:serve", data);
         ipc.on("server:log", this.onServerLog);
+
+        ipc.send("get:networkInterfaces");
+        ipc.on("get:networkInterfaces", (event, data) => {
+            this.appendContent(
+                new Elm().append("Accessible at following IP Address(es):\n" + data.join(", "))
+            )
+        })
     }
 
     onServerLog(event, data) {
