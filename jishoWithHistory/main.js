@@ -1,5 +1,6 @@
 const { BrowserWindow, app, session, ipcMain, Menu } = require("electron");
 const http = require("http");
+const os = require("os");
 
 function createWindow() {
     const window = new BrowserWindow({
@@ -39,6 +40,19 @@ function createWindow() {
         }).listen(18403);
 
         e.sender.send("server:log", "Serving on port 18403.");
+
+        const accessibleAddresses = [];
+        const networkInterfaces = os.networkInterfaces();
+
+        for (const networkName in networkInterfaces) {
+            for (const address of networkInterfaces[networkName]) {
+                if (!address.internal && address.family === "IPv4") {
+                    accessibleAddresses.push(address.address);
+                }
+            }
+        }
+
+        e.sender.send("server:log", "Accessible through " + accessibleAddresses.join(", or "));
     });
 
     ipcMain.on("server:stop", e => {
