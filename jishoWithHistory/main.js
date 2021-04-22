@@ -1,4 +1,5 @@
 const { BrowserWindow, app, session, ipcMain, Menu } = require("electron");
+const http = require("http");
 
 function createWindow() {
     const window = new BrowserWindow({
@@ -13,6 +14,39 @@ function createWindow() {
 
     ipcMain.on("openDevTools", () => window.webContents.openDevTools());
     ipcMain.on("openContextMenu", () => Menu.getApplicationMenu().popup());
+
+    ipcMain.on("get:httpServerAllowed", e => {
+        e.sender.send("get:httpServerAllowed", true);
+        console.log("check http server allowed");
+    });
+
+    /** @type {http.Server} */
+    let server;
+
+    ipcMain.on("server:serve", (e, data) => {
+        if (server) { server.close(); }
+
+        server = http.createServer((req, res) => {
+            if (req.url === "/export") {
+                res.writeHead(200, {
+                    "content-type": "application/json; charset=utf-8"
+                });
+                res.end(data);
+            } else {
+                res.writeHead(404);
+                res.end();
+            }
+        }).listen(18403);
+
+        e.sender.send("server:log", "Serving on port 18403.");
+    });
+
+    ipcMain.on("server:stop", e => {
+        if (server) {
+            server.close();
+            server = undefined;
+        }
+    });
 
     window.removeMenu();
     window.loadFile("web/index.html");

@@ -1,4 +1,5 @@
 import { Elm, Component } from "./elements.js";
+import { arrayEquals, Furigana, Modal } from "./utils.js";
 
 /** @type {Electron.IpcRenderer} */
 let ipc;
@@ -264,11 +265,16 @@ class ExportButton extends Elm {
             });
         }
 
+        console.log(ipc);
         if (ipc) {
             ipc.send("get:httpServerAllowed");
             ipc.once("get:httpServerAllowed", (e, data) => {
+                if (canDoPostParent) { return; }
                 canDoHTTPServer = Boolean(data);
+
                 sendButton.removeClass("hidden");
+                this.sendButton.clear();
+                this.sendButton.append("Send by LAN");
             });
         }
 
@@ -276,7 +282,8 @@ class ExportButton extends Elm {
             if (canDoPostParent) {
                 reciever.postMessage("export:" + this.getDataStr(), "*");
             } else if (canDoHTTPServer) {
-                alert("Not yet implemented :/");
+                const serverModal = new SendByHTTPServerModal(this.getDataStr());
+                serverModal.show();
             }
         });
 
@@ -285,6 +292,35 @@ class ExportButton extends Elm {
 
     getDataStr() {
         return JSON.stringify(this.lookupHistory.getData());
+    }
+}
+
+class SendByHTTPServerModal extends Modal {
+    /**
+     * @param {string} data 
+     */
+    constructor(data) {
+        super();
+
+        this.appendContent(
+            new Elm().append("Serving...")
+        );
+
+        this.onServerLog = this.onServerLog.bind(this);
+
+        ipc.send("server:serve", data);
+        ipc.on("server:log", this.onServerLog);
+    }
+
+    onServerLog(event, data) {
+        this.appendContent(new Elm().append(data));
+    }
+
+    async remove() {
+        this.content.clear();
+        ipc.send("server:stop");
+        ipc.removeListener("server:log", this.onServerLog);
+        super.remove();
     }
 }
 
@@ -348,7 +384,6 @@ class Lookup extends Component {
     _inputEnterHandler(e) {
         /** @type {HTMLInputElement} */ // @ts-ignore
         const input = this.input.elm;
-        console.log(e);
 
         if (
             !(e.keyCode === 13 || e.key === "Enter") ||
@@ -799,97 +834,6 @@ class LookupResultRemoveButton extends Component {
     }
 }
 
-class Furigana extends Component {
-    /**
-     * @param {Japanese} item 
-     */
-    constructor(item) {
-        super("furigana");
-        if (item.word) {
-            this.append(
-                new Elm("ruby").class("word")
-                    .append(
-                        item.word,
-                        new Elm("rp").class("reading").append("("),
-                        new Elm("rt").class("reading").append(item.reading),
-                        new Elm("rp").class("reading").append(")")
-                    )
-            );
-        } else {
-            this.append(
-                new Elm("span").class("word").append(item.reading)
-            );
-        }
-    }
-
-    hideReading() {
-        this.class("hideReading");
-    }
-}
-
-class Modal extends Component {
-    constructor() {
-        super("modal");
-
-        this.append(
-            new Elm().class("dialogue").append(
-                this.content = new Elm().class("content"),
-
-                this.buttons = new Elm().class("buttons").append(
-                    this.closeButton = new Elm("button").class("close").append("Close")
-                        .on("click", () => this.remove())
-                )
-            )
-        );
-    }
-
-    /**
-     * @param {any} content 
-     */
-    appendContent(content) {
-        this.content.append(content);
-    }
-
-    showScrollbar() {
-        this.content.class("scrollBar");
-    }
-
-    /**
-     * @param {Elm} button
-     */
-    addButton(button) {
-        button.appendTo(this.buttons);
-        button.on("click", () => this.remove());
-        this.closeButton.elm.innerHTML = "Cancel";
-    }
-
-    show() {
-        this.appendTo(document.body);
-    }
-}
-
-/**
- * @template T
- * @param {T[]} arr1
- * @param {T[]} arr2
- * @return {boolean}
- */
-function arrayEquals(arr1, arr2) {
-    if (arr1.length !== arr2.length) { return false; }
-
-    for (let i = 0; i < arr1.length; i++) {
-        if (arr1[i] !== arr2[i]) { return false; }
-    }
-
-    return true;
-}
-
-const main = new Main();
-main.appendTo(document.body);
-console.log(main);
-
-history.scrollRestoration = "manual";
-
 if (/\sElectron\//.test(navigator.userAgent) && window.require) {
     ipc = require("electron").ipcRenderer;
 
@@ -910,3 +854,9 @@ if (/\sElectron\//.test(navigator.userAgent) && window.require) {
     // for integration with tanki
     ipc.send("hideMenu");
 }
+
+const main = new Main();
+main.appendTo(document.body);
+console.log(main);
+
+history.scrollRestoration = "manual";
