@@ -1,5 +1,5 @@
 import { Elm, Component } from "./elements.js";
-import { arrayEquals, Furigana, Modal } from "./utils.js";
+import { arrayEquals, Furigana, IPInput, Modal } from "./utils.js";
 
 /** @type {Electron.IpcRenderer} */
 let ipc;
@@ -158,30 +158,7 @@ class ActionsBar extends Component {
 
             new Elm().class("right").append(
                 new ExportButton(this.history),
-
-                new Elm("button").class("importButton", "shadow").append("Import")
-                    .on("click", () => {
-                        const modal = new Modal();
-                        const textarea = new Elm("textarea")
-                            .attribute("placeholder", "Import JSON...");
-
-                        modal.appendContent(textarea);
-                        modal.addButton(new Elm("button").append("Import")
-                            .on("click", () => {
-                                /** @type {string} */
-                                // @ts-ignore
-                                const data = textarea.elm.value;
-                                if (!data) { return; }
-                                const obj = JSON.parse(data);
-                                for (const item of obj) {
-                                    this.history.addLookup(item);
-                                }
-                            })
-                        );
-
-                        modal.show();
-                        textarea.elm.focus();
-                    })
+                new ImportButton(this.history)
             )
         );
 
@@ -322,6 +299,90 @@ class SendByHTTPServerModal extends Modal {
         ipc.removeListener("server:log", this.onServerLog);
         super.remove();
     }
+}
+
+class ImportButton extends Elm {
+    /** @param {LookupHistory} history */
+    constructor(history) {
+        super("button");
+        this.history = history;
+
+        this.class("importButton", "shadow");
+        this.append("Import");
+
+        this.on("click", () => {
+            const modal = new Modal();
+            const textarea = new Elm("textarea")
+                .attribute("placeholder", "Import JSON...");
+
+            modal.appendContent(textarea);
+
+            modal.addButton(new Elm("button").append("Get by LAN")
+                .on("click", () => {
+                    const LANModal = new GetFromLANModal(history);
+                    LANModal.show();
+                    LANModal.focus();
+                })
+            );
+
+            modal.addButton(new Elm("button").append("Import")
+                .on("click", () => {
+                    /** @type {string} */
+                    // @ts-ignore
+                    const data = textarea.elm.value;
+                    if (!data) { return; }
+                    const obj = JSON.parse(data);
+                    for (const item of obj) {
+                        this.history.addLookup(item);
+                    }
+                })
+            );
+
+            modal.show();
+            textarea.elm.focus();
+        })
+    }
+}
+
+class GetFromLANModal extends Modal {
+    /** @param {LookupHistory} history */
+    constructor(history) {
+        super();
+
+        this.ipInput = new IPInput();
+        this.appendContent(new Elm().append(
+            "Enter IP Address to import from:\n",
+            this.ipInput
+        ));
+
+        this.addButton(new Elm("button").append("Import")
+            .on("click", () => {
+                fetch("http://" + this.ipInput.getValue() + "/export")
+                    .then(e => e.json())
+                    .then(e => {
+                        for (const item of e) {
+                            history.addLookup(item);
+                        }
+                    })
+                    .catch(e => alert("Failed to import :/\n" + e));
+            }));
+
+        this._setIPInputDefault();
+    }
+
+    focus() {
+        this.ipInput.focus(3);
+    }
+
+    _setIPInputDefault() {
+        if (!ipc) { return; }
+        ipc.send("get:networkInterfaces");
+        ipc.once("get:networkInterfaces", (e, data) => {
+            this.ipInput.setValue(data[0] + ":18403");
+            this.focus();
+        });
+    }
+
 }
 
 class Lookup extends Component {
