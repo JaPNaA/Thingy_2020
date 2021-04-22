@@ -537,7 +537,9 @@ class Lookup extends Component {
 
             Lookup.useProxy = true;
             this._showProxyWarning();
-            return fetch(Lookup.getProxyUrl(url));
+            const requestWithProxy = fetch(Lookup.getProxyUrl(url));
+            requestWithProxy.catch(err => { Lookup.useProxy = false; });
+            return requestWithProxy;
         }
     }
 
