@@ -378,16 +378,19 @@ class GetFromLANModal extends Modal {
     }
 
     focus() {
-        this.ipInput.focus(3);
+        this.ipInput.focus(0);
     }
 
     _setIPInputDefault() {
-        if (!ipc) { return; }
-        ipc.send("get:networkInterfaces");
-        ipc.once("get:networkInterfaces", (e, data) => {
-            this.ipInput.setValue(data[0] + ":18403");
-            this.focus();
-        });
+        this.ipInput.setValue("255.255.255.255:18403");
+
+        if (ipc) {
+            ipc.send("get:networkInterfaces");
+            ipc.once("get:networkInterfaces", (e, data) => {
+                this.ipInput.setValue(data[0] + ":18403");
+                this.ipInput.focus(3);
+            });
+        }
     }
 
 }
