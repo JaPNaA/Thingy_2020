@@ -76,8 +76,11 @@ var TankiInterface = /** @class */ (function (_super) {
             .on("click", function () {
             writeOut(deck);
         }));
-        //* for testing
+        //* temporary
         addEventListener("keydown", function (e) {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
             if (e.code === "KeyZ") {
                 deck.database.logs.undo();
                 deck.updateCache();

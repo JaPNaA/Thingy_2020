@@ -26,8 +26,12 @@ export class TankiInterface extends Component {
                 })
         );
 
-        //* for testing
+        //* temporary
         addEventListener("keydown", e => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+                return;
+            }
+
             if (e.code === "KeyZ") {
                 deck.database.logs.undo();
                 deck.updateCache();
