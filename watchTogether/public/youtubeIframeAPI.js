@@ -5,7 +5,7 @@ let isReady = false;
 const readyHandlers = new EventHandlers();
 
 /** @param {ServerConnection} server */
-export function createIframe(server) {
+export function createYoutubeIframe(server) {
     let lastPlayerState = null;
     /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
     const playerState = new TrackableObject({
@@ -79,7 +79,7 @@ export function createIframe(server) {
 }
 
 /** @param {() => void} handler */
-export function onReady(handler) {
+export function onYoutubeIframeAPIReady(handler) {
     if (isReady) {
         handler();
     } else {
