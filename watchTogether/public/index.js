@@ -90,11 +90,10 @@ function onYouTubeIframeAPIReady() {
         height: "360",
         width: "640",
         videoId: "QH2-TGUlwu4",
-        origin: location.protocol + "//www.youtube-nocookie.com",
         playerVars: { rel: 0 },
         events: {
             onReady: () => {
-                playerState.setIfPossible("videoId", "4wufensBsds");
+                playerState.setIfPossible("videoId", "QH2-TGUlwu4");
                 updatePlayerState(playerState.getCurrObj());
             },
             onStateChange: event => {
