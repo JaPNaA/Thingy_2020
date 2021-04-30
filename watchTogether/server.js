@@ -141,6 +141,10 @@ class RoomMember {
 
             this._commandHandler(command, data);
         });
+
+        this._connection.addListener("close", event => {
+            this.onDisconnect.dispatch();
+        });
     }
 
     /**
