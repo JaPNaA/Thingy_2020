@@ -23,6 +23,10 @@ export class ServerConnection {
         this.onPositionChange = new EventHandlers();
     }
 
+    disconnect() {
+        this.socket.close();
+    }
+
     /** @param {number} position */
     sendVideoPositionChange(position) {
         this._sendStateUpdate({
