@@ -8,7 +8,3 @@ interface VideoStateData {
     position: number;
     playbackRate: number;
 }
-
-interface VideoStateDataUpdate extends Partial<VideoStateData> {
-    timestamp: number;
-}

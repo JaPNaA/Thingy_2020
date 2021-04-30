@@ -1,6 +1,6 @@
 import { createServer } from "http";
 import { server as WSServer } from "websocket";
-import { EventHandlers } from "./public/common.js";
+import { EventHandlers, TrackableObject } from "./public/common.js";
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();
@@ -32,64 +32,6 @@ wsServer.addListener("request", function (req) {
     }
 
 });
-
-class TrackableObject {
-    /** @param { { [x: string]: any } } initialObject */
-    constructor(initialObject) {
-        this.obj = initialObject;
-        this.keys = Object.keys(initialObject);
-
-        this.types = {};
-        this.dirtiness = {};
-        for (const key of this.keys) {
-            this.types[key] = typeof this.obj[key];
-            this.dirtiness[key] = false;
-        }
-    }
-
-    /**
-     * Attempts to set object[key] to value, if the typeof's match up
-     * @param {string} key 
-     * @param {any} value 
-     */
-    setIfPossible(key, value) {
-        if (typeof value === this.types[key]) {
-            this.obj[key] = value;
-            this.dirtiness[key] = true;
-        }
-    }
-
-    /**
-     * Writes data from an object onto trackable object, if possible
-     * @param {*} obj 
-     */
-    writeOverIfPossible(obj) {
-        for (const key of this.keys) {
-            this.setIfPossible(key, obj[key]);
-        }
-    }
-
-    /**
-     * Extracts all key/value pairs that have changed into an object
-     */
-    extractDirtInObject() {
-        const dirt = {};
-
-        for (const key of this.keys) {
-            if (this.dirtiness[key]) {
-                dirt[key] = this.obj[key];
-            }
-        }
-
-        return dirt;
-    }
-
-    clean() {
-        for (const key of this.keys) {
-            this.dirtiness[key] = false;
-        }
-    }
-}
 
 class Room {
     constructor() {
@@ -135,7 +77,7 @@ class Room {
     }
 
     /**
-     * @param {VideoStateDataUpdate} update
+     * @param {Partial<VideoStateData>} update
      * @param {RoomMember} sendingMember
      */
     _updateStateWithUpdateData(update, sendingMember) {
@@ -171,7 +113,7 @@ class RoomMember {
         this._isRoomAdmin = false;
 
         this.onDisconnect = new EventHandlers();
-        /** @type {EventHandlers<VideoStateDataUpdate>} */
+        /** @type {EventHandlers<Partial<VideoStateData>>} */
         this.onStateChange = new EventHandlers();
 
         this._addConnectionEventHandlers();
