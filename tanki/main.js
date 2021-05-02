@@ -8,6 +8,7 @@ function createWindow() {
             nodeIntegration: true,
             enableRemoteModule: true
         },
+        icon: "./tankiIcon.png"
         // titleBarStyle: "hidden"
     });
 
