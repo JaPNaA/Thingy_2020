@@ -1,6 +1,6 @@
 import { Note } from "../../database.js";
 import { CardState } from "../../dataTypes.js";
-import { Component, Elm } from "../../libs/elements.js";
+import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { boundBetween, EventHandler, Immutable } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
@@ -11,8 +11,31 @@ export class ManageNotesDialog extends ModalDialog {
     constructor(deck: Deck) {
         super("manageNotesDialog");
 
+        let searchBox: InputElm;
+
         this.foregroundElm.append(
             new Elm("h1").append("Manage notes"),
+            new Elm().append(
+                "Search: ",
+                searchBox = new InputElm().on("change", () => {
+                    const search = searchBox.getValue() as string;
+                    if (!search) {
+                        this.notesList.setDataList(deck.database.getNotes() as Immutable<Note>[]);
+                        return;
+                    }
+
+                    const results = deck.database.getNotes().filter(note => {
+                        for (const field of note.fields) {
+                            if (field.includes(search)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
+
+                    this.notesList.setDataList(results);
+                })
+            ),
             this.notesList = new NotesRecyclingList(
                 deck.database.getNotes() as Immutable<Note>[], deck
             )
@@ -55,6 +78,12 @@ abstract class RecyclingList<T> extends Component {
         this.elm.on("scroll", () => this.scrollHandler());
     }
 
+    public setDataList(dataList: T[]) {
+        this.dataList = dataList;
+        this.elm.getHTMLElement().scrollTop = 0;
+        this.update();
+    }
+
     public update() {
         const maxStartIndex = this.dataList.length - this.elmsList.length;
         const bufferStartIndex = boundBetween(0, Math.floor(this.elm.getHTMLElement().scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
@@ -64,9 +93,11 @@ abstract class RecyclingList<T> extends Component {
 
         for (let i = 0; i < this.elmsList.length; i++) {
             const content = this.dataList[bufferStartIndex + i];
-            this.elmsList[i].setContent(
-                content, this.getContentForListItem(content)
-            );
+            if (content) {
+                this.elmsList[i].setContent(
+                    content, this.getContentForListItem(content)
+                );
+            }
         }
 
         this.bufferedPixelsBottom = (bufferStartIndex + this.elmsList.length) * this.listElmHeight;
