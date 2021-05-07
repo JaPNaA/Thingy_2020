@@ -1,6 +1,6 @@
 import { NoteType, Note } from "../../database.js";
 import { NoteTypeDataExternal, CardFlag } from "../../dataTypes.js";
-import { Elm, Component } from "../../libs/elements.js";
+import { Elm, Component, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { EventHandler } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
@@ -81,7 +81,7 @@ export class ImportNotesDialog extends ModalDialog {
 
                         for (let i = 0; i < checkboxes.length; i++) {
                             const checkbox = checkboxes[i];
-                            if (!checkbox.input.getHTMLElement().checked) {
+                            if (!checkbox.input.getValue()) {
                                 const card = this.deck.database.getCardByUid(note.cardUids[i]).clone();
                                 card.addFlag(CardFlag.suspended);
                                 this.deck.database.writeEdit(card);
@@ -96,12 +96,11 @@ export class ImportNotesDialog extends ModalDialog {
         )
     }
 
-    private createCheckedCheckbox(labelText: string): { input: Elm<"input">, container: Elm } {
-        let input: Elm<"input">;
+    private createCheckedCheckbox(labelText: string): { input: InputElm, container: Elm } {
+        let input: InputElm;
         let container = new Elm().append(
             new Elm("label").append(
-                input = new Elm("input").attribute("type", "checkbox")
-                    .withSelf(e => e.getHTMLElement().checked = true),
+                input = new InputElm().setType("checkbox").setValue(true),
                 labelText
             )
         );

@@ -1,5 +1,5 @@
 import { Note, NoteType } from "../../database.js";
-import { Elm } from "../../libs/elements.js";
+import { Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { EventHandler } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
@@ -11,7 +11,7 @@ export class CreateNoteDialog extends ModalDialog {
     private typeSelectElm: Elm<"select">;
 
     private noteTypeIndex?: number;
-    private inputElms?: Elm<"input">[];
+    private inputElms?: InputElm[];
 
     constructor(private deck: Deck) {
         super("createNoteDialog");
@@ -52,7 +52,7 @@ export class CreateNoteDialog extends ModalDialog {
         for (const fieldName of
             (await NoteType.getIntegratedNoteType(noteType)).fieldNames
         ) {
-            const inputElm = new Elm("input").class("cardFieldInput");
+            const inputElm = new InputElm().class("cardFieldInput");
 
             this.inputElms.push(inputElm);
             this.inputsContainer.append(
@@ -65,11 +65,11 @@ export class CreateNoteDialog extends ModalDialog {
         if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
         this.onNoteCreated.dispatch(Note.create(
             this.deck.database.getNoteTypes()[this.noteTypeIndex],
-            this.inputElms.map(e => e.getHTMLElement().value))
+            this.inputElms.map(e => e.getValue() as string))
         );
 
         for (const inputElm of this.inputElms) {
-            inputElm.getHTMLElement().value = "";
+            inputElm.setValue("");
         }
         this.inputElms[0].getHTMLElement().focus();
     }

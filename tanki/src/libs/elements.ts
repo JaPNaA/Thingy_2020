@@ -1,6 +1,6 @@
 /**
  * Helper class for constructing element trees
- * Version 1.3 (typescript)
+ * Version 1.4 (typescript)
  */
 class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
     protected elm: HTMLElementTagNameMap[T];
@@ -127,10 +127,26 @@ class InputElm extends Elm<"input"> {
 
     setType(type: string) {
         this.elm.type = type;
+        return this;
     }
 
-    getValue() {
-        return this.elm.value;
+    getValue(): string | boolean {
+        if (this.elm.type === "checkbox") {
+            return this.elm.checked;
+        } else {
+            return this.elm.value;
+        }
+    }
+
+    setValue(value: boolean | string | number) {
+        if (this.elm.type === "checkbox" && typeof value === "boolean") {
+            this.elm.checked = value;
+        } else if (this.elm.type === "number" && typeof value === "number") {
+            this.elm.value = value.toString();
+        } else {
+            this.elm.value = value.toString();
+        }
+        return this;
     }
 }
 
