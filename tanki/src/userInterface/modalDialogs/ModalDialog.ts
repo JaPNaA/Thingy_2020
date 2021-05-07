@@ -7,9 +7,9 @@ export abstract class ModalDialog extends AnimateInOutElm {
 
     constructor(name: string) {
         super(name);
-        this.class("modalDialog");
+        this.elm.class("modalDialog");
 
-        this.append(
+        this.elm.append(
             new Elm().class("modalBackground")
                 .on("click", () => this.remove()),
             this.foregroundElm = new Elm().class("modalForeground").appendTo(this.elm)
@@ -17,7 +17,7 @@ export abstract class ModalDialog extends AnimateInOutElm {
     }
 
     public setPositionFixed() {
-        this.class("positionFixed");
+        this.elm.class("positionFixed");
         return this;
     }
 }

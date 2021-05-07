@@ -13,7 +13,7 @@ export class DeckTimeline extends Component {
     constructor(private deck: Deck) {
         super("deckTimeline");
 
-        this.append(
+        this.elm.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
             new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm),
             this.timelineGraph,
@@ -84,7 +84,7 @@ class TimelineGraph extends Component {
     constructor(private deck: Deck) {
         super("timelineGraph");
 
-        this.append(this.canvas);
+        this.elm.append(this.canvas);
 
         this.canvas.on("mousedown", e => {
             this.isDragging = true;

@@ -1,5 +1,6 @@
 /**
  * Helper class for constructing element trees
+ * Version 1.3 (typescript)
  */
 class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
     protected elm: HTMLElementTagNameMap[T];
@@ -8,7 +9,6 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
     constructor(tagNameOrElement: T);
     constructor(tagNameOrElement: HTMLElementTagNameMap[T]);
     constructor(tagNameOrElement?: HTMLElementTagNameMap[T] | T) {
-
         if (typeof tagNameOrElement === "undefined") {
             // @ts-ignore
             this.elm = document.createElement("div");
@@ -110,6 +110,8 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
             return document.createTextNode(any);
         } else if (any instanceof Node) {
             return any;
+        } else if (any instanceof Component) {
+            return any.elm.elm;
         } else if (any !== undefined && any !== null) {
             return document.createTextNode(any.toString());
         } else {
@@ -118,11 +120,32 @@ class Elm<T extends keyof HTMLElementTagNameMap = "div"> {
     }
 }
 
-class Component extends Elm {
-    constructor(protected name: string) {
-        super();
-        this.class(name);
+class InputElm extends Elm<"input"> {
+    constructor() {
+        super("input");
+    }
+
+    setType(type: string) {
+        this.elm.type = type;
+    }
+
+    getValue() {
+        return this.elm.value;
     }
 }
 
-export { Component, Elm };
+class Component {
+    public elm: Elm;
+
+    constructor(protected name: string) {
+        this.elm = new Elm();
+        this.elm.class(name);
+    }
+
+    appendTo(parent: HTMLElement | Elm) {
+        this.elm.appendTo(parent);
+        return this;
+    }
+}
+
+export { Component, Elm, InputElm };

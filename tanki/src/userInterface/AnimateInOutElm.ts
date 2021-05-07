@@ -7,22 +7,22 @@ export default abstract class AnimateInOutElm extends Component {
     constructor(name: string) {
         super(name);
 
-        this.class("animatedInOutElm");
+        this.elm.class("animatedInOutElm");
         this.show();
     }
 
     public async remove() {
         await this.hide();
-        super.remove();
+        this.elm.remove();
     }
 
     protected async show() {
         await wait(1);
-        this.class("showing");
+        this.elm.class("showing");
     }
 
     protected async hide() {
-        this.removeClass("showing");
+        this.elm.removeClass("showing");
         await wait(this.animationOutTime);
     }
 }

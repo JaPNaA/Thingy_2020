@@ -49,15 +49,15 @@ abstract class RecyclingList<T> extends Component {
             this.listElmsContainer.append(recyclingListItem);
         }
 
-        this.append(this.listElmsContainer);
-        this.append(this.bottomBufferElm);
+        this.elm.append(this.listElmsContainer);
+        this.elm.append(this.bottomBufferElm);
 
-        this.on("scroll", () => this.scrollHandler());
+        this.elm.on("scroll", () => this.scrollHandler());
     }
 
     public update() {
         const maxStartIndex = this.dataList.length - this.elmsList.length;
-        const bufferStartIndex = boundBetween(0, Math.floor(this.elm.scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
+        const bufferStartIndex = boundBetween(0, Math.floor(this.elm.getHTMLElement().scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
 
         this.bufferedPixelsTop = bufferStartIndex * this.listElmHeight;
         this.listElmsContainer.attribute("style", `margin-top: ${this.bufferedPixelsTop}px`);
@@ -79,8 +79,9 @@ abstract class RecyclingList<T> extends Component {
     }
 
     private bufferedElementsCoversViewbox(): boolean {
-        return this.bufferedPixelsTop < this.elm.scrollTop &&
-            this.elm.scrollTop + this.elm.clientHeight < this.bufferedPixelsBottom;
+        const htmlElm = this.elm.getHTMLElement();
+        return this.bufferedPixelsTop < htmlElm.scrollTop &&
+            htmlElm.scrollTop + htmlElm.clientHeight < this.bufferedPixelsBottom;
     }
 
     protected abstract getContentForListItem(item: T): Elm;
@@ -94,18 +95,18 @@ class RecyclingListItem<T> extends Component {
     constructor(elmHeight: number) {
         super("recyclingListItem");
 
-        this.attribute("style", "height: " + elmHeight + "px");
+        this.elm.attribute("style", "height: " + elmHeight + "px");
 
-        this.append("Owo");
+        this.elm.append("Owo");
 
-        this.on("click", () => {
+        this.elm.on("click", () => {
             if (!this.itemData) { return; }
             this.onClick.dispatch(this.itemData);
         });
     }
 
     public setContent(item: T, elm: Elm) {
-        this.replaceContents(elm);
+        this.elm.replaceContents(elm);
         this.itemData = item;
     }
 }

@@ -17,8 +17,8 @@ export class TankiInterface extends Component {
     constructor(deck: Deck) {
         super("tankiInterface");
         this.deckPresenter = new DeckPresenter(deck);
-        this.deckPresenter.appendTo(this);
-        this.append(
+        this.elm.append(this.deckPresenter);
+        this.elm.append(
             new Elm("button").class("writeOut")
                 .append("Write Out")
                 .on("click", () => {
@@ -45,7 +45,7 @@ export class TankiInterface extends Component {
 
     public async showSnackbar(content: any, time: number) {
         const snackbar = new Snackbar(content);
-        this.append(snackbar);
+        this.elm.append(snackbar);
         await wait(time);
         snackbar.remove();
     }
@@ -68,7 +68,7 @@ class DeckPresenter extends Component {
         this.deckTimeline = new DeckTimeline(this.deck);
         deck.loaded.then(() => this.deckTimeline.update());
 
-        this.append(
+        this.elm.append(
             this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
                 .append(this.cardPresenter),
             new Elm().class("timeline").append(this.deckTimeline),
@@ -242,7 +242,7 @@ class CardPresenter extends Component {
 
     constructor(private deck: Deck) {
         super("cardPresenter");
-        this.append(this.cardIFrame, this.inputGetter);
+        this.elm.append(this.cardIFrame, this.inputGetter);
 
         this.cardIFrame.on("load", () => {
             const iframeWindow = this.cardIFrame.getHTMLElement().contentWindow;
@@ -376,7 +376,7 @@ class QuickUserInputGetter extends Component {
             optionsContainer.appendChild(button);
         }
 
-        this.elm.appendChild(optionsContainer);
+        this.elm.append(optionsContainer);
 
         const keydownHandler = (e: KeyboardEvent) => {
             if (e.repeat) { return; }
@@ -410,7 +410,7 @@ class QuickUserInputGetter extends Component {
 
     public discardState() {
         if (!this.state) { return; }
-        this.elm.removeChild(this.state.elm);
+        this.elm.getHTMLElement().removeChild(this.state.elm);
         document.removeEventListener("keydown", this.state.documentKeydownListener);
         this.state.promiseReject("State discarded");
         this.state = undefined;
@@ -423,6 +423,6 @@ class Snackbar extends AnimateInOutElm {
     constructor(content: any) {
         super("snackbar");
 
-        this.append(content);
+        this.elm.append(content);
     }
 }

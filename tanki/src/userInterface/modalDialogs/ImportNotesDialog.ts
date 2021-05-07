@@ -116,7 +116,7 @@ class DragAndDropTextarea extends Component {
     constructor() {
         super("dragAndDropTextarea");
 
-        this.append(this.textarea);
+        this.elm.append(this.textarea);
 
         this.textarea.on("dragover", e => {
             e.preventDefault();
