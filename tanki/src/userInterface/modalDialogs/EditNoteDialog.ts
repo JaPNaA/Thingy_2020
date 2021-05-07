@@ -1,11 +1,11 @@
 import { Note, NoteType } from "../../database.js";
 import { Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
-import { EventHandler } from "../../utils.js";
+import { EventHandler, Immutable } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
 
-export class CreateNoteDialog extends ModalDialog {
-    public onNoteCreated = new EventHandler<Note>();
+export class EditNoteDialog extends ModalDialog {
+    public onSubmit = new EventHandler<Note>();
 
     private inputsContainer: Elm;
     private typeSelectElm: Elm<"select">;
@@ -26,6 +26,22 @@ export class CreateNoteDialog extends ModalDialog {
         );
 
         this.loadNoteTypes();
+    }
+
+    public async setEditingNote(note: Immutable<Note>) {
+        this.typeSelectElm.getHTMLElement().value =
+            this.deck.database.getNoteTypes().indexOf(note.type).toString();
+        await this.updateInputsElm();
+
+        if (!this.inputElms) { throw new Error("Expected inputElms to be defined"); }
+
+        for (let i = 0; i < this.inputElms.length; i++) {
+            if (!note.fields[i]) { continue; }
+            this.inputElms[i].setValue(note.fields[i]);
+        }
+    }
+
+    public setCreatingNote() {
         this.updateInputsElm();
     }
 
@@ -45,13 +61,13 @@ export class CreateNoteDialog extends ModalDialog {
 
         this.noteTypeIndex = parseInt(this.typeSelectElm.getHTMLElement().value);
         this.inputElms = [];
-        this.inputsContainer.clear();
 
         const noteType = noteTypes[this.noteTypeIndex];
+        const noteTypeIntegrated = await NoteType.getIntegratedNoteType(noteType);
 
-        for (const fieldName of
-            (await NoteType.getIntegratedNoteType(noteType)).fieldNames
-        ) {
+        this.inputsContainer.clear();
+
+        for (const fieldName of noteTypeIntegrated.fieldNames) {
             const inputElm = new InputElm().class("cardFieldInput");
 
             this.inputElms.push(inputElm);
@@ -63,7 +79,7 @@ export class CreateNoteDialog extends ModalDialog {
 
     private submit() {
         if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
-        this.onNoteCreated.dispatch(Note.create(
+        this.onSubmit.dispatch(Note.create(
             this.deck.database.getNoteTypes()[this.noteTypeIndex],
             this.inputElms.map(e => e.getValue() as string))
         );

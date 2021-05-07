@@ -5,7 +5,7 @@ import { writeOut } from "../storage.js";
 import { DeckTimeline } from "./DeckTimeline.js";
 import { EventHandler, Immutable, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "../utils.js";
 import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
-import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
+import { EditNoteDialog } from "./modalDialogs/EditNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
@@ -178,9 +178,10 @@ class DeckPresenter extends Component {
     private async openCreateNoteDialog() {
         this.exitCardPresenter();
 
-        const createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        const createNoteDialog = new EditNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        createNoteDialog.setCreatingNote();
         const note = await new Promise<Note>(res => {
-            createNoteDialog.onNoteCreated.addHandler(note => {
+            createNoteDialog.onSubmit.addHandler(note => {
                 res(note);
             });
         });
