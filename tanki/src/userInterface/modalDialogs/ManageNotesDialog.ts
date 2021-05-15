@@ -3,6 +3,7 @@ import { CardState } from "../../dataTypes.js";
 import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { boundBetween, EventHandler, Immutable } from "../../utils.js";
+import { EditNoteDialog } from "./EditNoteDialog.js";
 import { ModalDialog } from "./ModalDialog.js";
 
 export class ManageNotesDialog extends ModalDialog {
@@ -44,10 +45,13 @@ export class ManageNotesDialog extends ModalDialog {
         this.notesList.onClick.addHandler(data => {
             console.log(data);
 
-            if (confirm("Delete note?\n(Delete note is WIP)")) {
-                deck.database.removeNote(data);
-                this.notesList.update();
-            }
+            const editNoteDialog = new EditNoteDialog(deck);
+            editNoteDialog.setEditingNote(data);
+            editNoteDialog.appendTo(this.elm);
+            // if (confirm("Delete note?\n(Delete note is WIP)")) {
+            //     deck.database.removeNote(data);
+            //     this.notesList.update();
+            // }
         });
     }
 }
