@@ -1,7 +1,8 @@
-import { Note, NoteType } from "../../database.js";
+import { Card, Note, NoteType } from "../../database.js";
 import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { EventHandler, Immutable } from "../../utils.js";
+import { CardRenderer } from "../CardRenderer.js";
 import { ModalDialog } from "./ModalDialog.js";
 
 export class EditNoteDialog extends ModalDialog {
@@ -71,7 +72,7 @@ export class EditNoteDialog extends ModalDialog {
 
         const noteType = noteTypes[this.noteTypeIndex];
         const noteTypeIntegrated = await NoteType.getIntegratedNoteType(noteType);
-        this.cardPreview.setCardType(noteType);
+        this.cardPreview.setNote(Note.create(noteType, noteTypeIntegrated.fieldNames));
 
         this.inputsContainer.clear();
 
@@ -104,14 +105,21 @@ class CardPreview extends Component {
         super("cardPreview");
     }
 
-    public async setCardType(noteType: Immutable<NoteType>) {
+    public async setNote(note: Note) {
         this.elm.clear();
 
-        const integrated = await noteType.getIntegratedNoteType();
+        const integratedNoteType = await note.type.getIntegratedNoteType();
 
-        console.log(integrated);
-        for (const cardType of integrated.cardTypes) {
-            this.elm.append(cardType.frontTemplate);
+        for (const cardType of integratedNoteType.cardTypes) {
+            const preview = new CardRenderer();
+            this.elm.append(preview);
+            preview.render(
+                cardType.frontTemplate,
+                integratedNoteType.fieldNames,
+                note.fields,
+                integratedNoteType.style,
+                [integratedNoteType.script, cardType.frontScript]
+            );
         }
     }
 }
