@@ -47,6 +47,8 @@ export class EditNoteDialog extends ModalDialog {
             if (!note.fields[i]) { continue; }
             this.inputElms[i].setValue(note.fields[i]);
         }
+
+        this.updatePreview();
     }
 
     public setCreatingNote() {
@@ -72,7 +74,7 @@ export class EditNoteDialog extends ModalDialog {
 
         const noteType = noteTypes[this.noteTypeIndex];
         const noteTypeIntegrated = await NoteType.getIntegratedNoteType(noteType);
-        this.cardPreview.setNote(Note.create(noteType, noteTypeIntegrated.fieldNames));
+        this.updatePreview();
 
         this.inputsContainer.clear();
 
@@ -86,17 +88,28 @@ export class EditNoteDialog extends ModalDialog {
         }
     }
 
+    private updatePreview() {
+        if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
+        const noteTypes = this.deck.database.getNoteTypes();
+        const noteType = noteTypes[this.noteTypeIndex];
+        this.cardPreview.setNote(Note.create(noteType, this.getFields()));
+    }
+
     private submit() {
         if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
         this.onSubmit.dispatch(Note.create(
             this.deck.database.getNoteTypes()[this.noteTypeIndex],
-            this.inputElms.map(e => e.getValue() as string))
-        );
+            this.getFields()
+        ));
 
         for (const inputElm of this.inputElms) {
             inputElm.setValue("");
         }
         this.inputElms[0].getHTMLElement().focus();
+    }
+
+    private getFields() {
+        return this.inputElms?.map(e => e.getValue() as string) || [];
     }
 }
 
@@ -106,20 +119,17 @@ class CardPreview extends Component {
     }
 
     public async setNote(note: Note) {
-        this.elm.clear();
-
         const integratedNoteType = await note.type.getIntegratedNoteType();
 
+        this.elm.clear();
+
         for (const cardType of integratedNoteType.cardTypes) {
-            const preview = new CardRenderer();
-            this.elm.append(preview);
-            preview.render(
-                cardType.frontTemplate,
-                integratedNoteType.fieldNames,
-                note.fields,
-                integratedNoteType.style,
-                [integratedNoteType.script, cardType.frontScript]
-            );
+            const renderer = new CardRenderer().appendTo(this.elm);
+            renderer.renderFrontNote(note, cardType);
+
+            renderer.elm.on("click", () => {
+                renderer.renderBackNote(note, cardType);
+            });
         }
     }
 }

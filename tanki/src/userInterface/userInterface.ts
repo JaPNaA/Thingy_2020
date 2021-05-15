@@ -251,28 +251,12 @@ class CardPresenter extends Component {
             this.discardState();
         }
 
-        const noteType = await card.parentNote.type.getIntegratedNoteType();
-        const cardType = noteType.cardTypes[card.cardTypeID];
-
-        const noteFieldNames = noteType.fieldNames;
-        const cardFields = card.parentNote.fields;
-
         this.currentState = { card };
 
-        this.cardRenderer.render(
-            cardType.frontTemplate,
-            noteFieldNames, cardFields,
-            noteType.style,
-            [noteType.script, cardType.frontScript]
-        );
+        this.cardRenderer.renderBack(card);
         await this.inputGetter.options(["Show back"]);
 
-        this.cardRenderer.render(
-            cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate),
-            noteFieldNames, cardFields,
-            noteType.style,
-            [noteType.script, cardType.backScript]
-        );
+        this.cardRenderer.renderFront(card);
 
         const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
 

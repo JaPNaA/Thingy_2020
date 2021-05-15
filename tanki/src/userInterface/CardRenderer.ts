@@ -1,3 +1,5 @@
+import { Card, Note } from "../database.js";
+import { CardTypeData } from "../dataTypes.js";
 import { Component, Elm } from "../libs/elements.js";
 import { Immutable, setImmediatePolyfill } from "../utils.js";
 
@@ -16,7 +18,44 @@ export class CardRenderer extends Component {
         });
     }
 
-    public render(
+    public async renderFront(card: Immutable<Card>) {
+        const integratedNoteType = await card.parentNote.type.getIntegratedNoteType();
+        const cardType = integratedNoteType.cardTypes[card.cardTypeID];
+        this.renderFrontNote(card.parentNote, cardType);
+    }
+
+    public async renderFrontNote(note: Immutable<Note>, cardType: Immutable<CardTypeData>) {
+        const integratedNoteType = await note.type.getIntegratedNoteType();
+
+        this.setContent(
+            cardType.frontTemplate,
+            integratedNoteType.fieldNames,
+            note.fields,
+            integratedNoteType.style,
+            [integratedNoteType.script, cardType.frontScript]
+        );
+    }
+
+    public async renderBack(card: Immutable<Card>) {
+        const integratedNoteType = await card.parentNote.type.getIntegratedNoteType();
+        const cardType = integratedNoteType.cardTypes[card.cardTypeID];
+        this.renderBackNote(card.parentNote, cardType);
+    }
+
+    public async renderBackNote(note: Immutable<Note>, cardType: Immutable<CardTypeData>) {
+        const integratedNoteType = await note.type.getIntegratedNoteType();
+
+        this.setContent(
+            cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate),
+            integratedNoteType.fieldNames,
+            note.fields,
+            integratedNoteType.style,
+            [integratedNoteType.script, cardType.backScript]
+        );
+    }
+
+
+    private setContent(
         contentTemplate: string, fieldNames: Immutable<string[]>, fields: Immutable<string[]>,
         styles: string | undefined, scripts: (string | undefined)[]
     ): void {
