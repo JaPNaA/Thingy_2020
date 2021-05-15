@@ -1,5 +1,5 @@
 import { Note, NoteType } from "../../database.js";
-import { Elm, InputElm } from "../../libs/elements.js";
+import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { EventHandler, Immutable } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
@@ -9,6 +9,7 @@ export class EditNoteDialog extends ModalDialog {
 
     private inputsContainer: Elm;
     private typeSelectElm: Elm<"select">;
+    private cardPreview: CardPreview;
 
     private noteTypeIndex?: number;
     private inputElms?: InputElm[];
@@ -17,12 +18,18 @@ export class EditNoteDialog extends ModalDialog {
         super("createNoteDialog");
 
         this.foregroundElm.append(
-            new Elm("h2").append("Create Note"),
-            this.typeSelectElm = new Elm("select").class("typeSelect")
-                .on("change", () => this.updateInputsElm()),
-            this.inputsContainer = new Elm().class("inputs"),
-            new Elm("button").append("Add")
-                .on("click", () => this.submit())
+            new Elm().class("edit").append(
+                new Elm("h2").append("Create Note"),
+                this.typeSelectElm = new Elm("select").class("typeSelect")
+                    .on("change", () => this.updateInputsElm()),
+                this.inputsContainer = new Elm().class("inputs"),
+                new Elm("button").append("Add")
+                    .on("click", () => this.submit())
+            ),
+            new Elm().class("preview").append(
+                new Elm("h3").append("Preview"),
+                this.cardPreview = new CardPreview()
+            )
         );
 
         this.loadNoteTypes();
@@ -64,6 +71,7 @@ export class EditNoteDialog extends ModalDialog {
 
         const noteType = noteTypes[this.noteTypeIndex];
         const noteTypeIntegrated = await NoteType.getIntegratedNoteType(noteType);
+        this.cardPreview.setCardType(noteType);
 
         this.inputsContainer.clear();
 
@@ -88,5 +96,22 @@ export class EditNoteDialog extends ModalDialog {
             inputElm.setValue("");
         }
         this.inputElms[0].getHTMLElement().focus();
+    }
+}
+
+class CardPreview extends Component {
+    constructor() {
+        super("cardPreview");
+    }
+
+    public async setCardType(noteType: Immutable<NoteType>) {
+        this.elm.clear();
+
+        const integrated = await noteType.getIntegratedNoteType();
+
+        console.log(integrated);
+        for (const cardType of integrated.cardTypes) {
+            this.elm.append(cardType.frontTemplate);
+        }
     }
 }
