@@ -326,8 +326,8 @@ export class Note extends DatabaseObject {
 
     constructor(
         public type: Immutable<NoteType>,
-        public fields: string[],
-        public tags: string[]
+        public fields: Immutable<string[]>,
+        public tags: Immutable<string[]>
     ) {
         super();
         this.cardUids = [];
@@ -345,7 +345,7 @@ export class Note extends DatabaseObject {
         return note;
     }
 
-    public static create(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
+    public static create(type: Immutable<NoteType>, fields: Immutable<string[]>, tags?: Immutable<string[]>) {
         const note = Note.createWithoutCards(type, fields, tags);
         return note;
     }
@@ -380,10 +380,10 @@ export class Note extends DatabaseObject {
             this.fields,
             cards.length > 0 ? cards : undefined,
             this.tags.length > 0 ? this.tags : undefined
-        ]);
+        ]) as NoteData;
     }
 
-    private static createWithoutCards(type: Immutable<NoteType>, fields: string[], tags?: string[]) {
+    private static createWithoutCards(type: Immutable<NoteType>, fields: Immutable<string[]>, tags?: Immutable<string[]>) {
         return new Note(
             type, fields,
             tags || [],
