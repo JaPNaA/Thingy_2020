@@ -45,3 +45,4 @@ Scared of forgetting? Let's remember that people didn't always use steroids to l
     - auto reading
     - "next card" preview
     - skip learning steps for late cards
+    - "do cards early" button

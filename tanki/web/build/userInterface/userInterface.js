@@ -49,29 +49,25 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
 import { ActivatedCard } from "../database.js";
 import { Component, Elm } from "../libs/elements.js";
 import { writeOut } from "../storage.js";
 import { DeckTimeline } from "./DeckTimeline.js";
-import { EventHandler, setImmediatePolyfill, wait } from "../utils.js";
+import { EventHandler, wait } from "../utils.js";
 import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
-import { CreateNoteDialog } from "./modalDialogs/CreateNoteDialog.js";
+import { EditNoteDialog } from "./modalDialogs/EditNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
 import jishoWithHistory from "../jishoWithHistory.js";
+import { CardRenderer } from "./CardRenderer.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
         var _this = _super.call(this, "tankiInterface") || this;
         _this.deckPresenter = new DeckPresenter(deck);
-        _this.deckPresenter.appendTo(_this);
-        _this.append(new Elm("button").class("writeOut")
+        _this.elm.append(_this.deckPresenter);
+        _this.elm.append(new Elm("button").class("writeOut")
             .append("Write Out")
             .on("click", function () {
             writeOut(deck);
@@ -98,7 +94,7 @@ var TankiInterface = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         snackbar = new Snackbar(content);
-                        this.append(snackbar);
+                        this.elm.append(snackbar);
                         return [4 /*yield*/, wait(time)];
                     case 1:
                         _a.sent();
@@ -118,10 +114,10 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.deck = deck;
         _this.onExit = new EventHandler();
         _this.presenting = false;
-        _this.cardPresenter = new CardPresenter(_this.deck);
+        _this.cardPresenter = new CardPresenter();
         _this.deckTimeline = new DeckTimeline(_this.deck);
         deck.loaded.then(function () { return _this.deckTimeline.update(); });
-        _this.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
+        _this.elm.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
             .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm("button").class("exitButton")
             .append("Exit")
             .on("click", function () { return _this.exitCardPresenter(); }), new Elm("button").class("enterButton")
@@ -231,9 +227,10 @@ var DeckPresenter = /** @class */ (function (_super) {
                 switch (_a.label) {
                     case 0:
                         this.exitCardPresenter();
-                        createNoteDialog = new CreateNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                        createNoteDialog = new EditNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                        createNoteDialog.setCreatingNote();
                         return [4 /*yield*/, new Promise(function (res) {
-                                createNoteDialog.onNoteCreated.addHandler(function (note) {
+                                createNoteDialog.onSubmit.addHandler(function (note) {
                                     res(note);
                                 });
                             })];
@@ -287,45 +284,30 @@ var DeckPresenter = /** @class */ (function (_super) {
 }(Component));
 var CardPresenter = /** @class */ (function (_super) {
     __extends(CardPresenter, _super);
-    function CardPresenter(deck) {
+    function CardPresenter() {
         var _this = _super.call(this, "cardPresenter") || this;
-        _this.deck = deck;
         _this.inputGetter = new QuickUserInputGetter();
-        _this.cardIFrame = new Elm("iframe").class("card");
-        _this.append(_this.cardIFrame, _this.inputGetter);
-        _this.cardIFrame.on("load", function () {
-            var iframeWindow = _this.cardIFrame.getHTMLElement().contentWindow;
-            if (!iframeWindow) {
-                throw new Error("iframe loaded but no window");
-            }
-            _this.cardIFrameDocument = iframeWindow.document;
-            _this.setPropogateKeyEvents(iframeWindow);
-        });
+        _this.cardRenderer = new CardRenderer();
+        _this.elm.append(_this.cardRenderer, _this.inputGetter);
         return _this;
     }
     CardPresenter.prototype.presentCard = function (card) {
         return __awaiter(this, void 0, void 0, function () {
-            var noteType, cardType, noteFieldNames, cardFields, rating;
+            var rating;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         if (this.currentState) {
                             this.discardState();
                         }
-                        return [4 /*yield*/, card.parentNote.type.getIntegratedNoteType()];
-                    case 1:
-                        noteType = _a.sent();
-                        cardType = noteType.cardTypes[card.cardTypeID];
-                        noteFieldNames = noteType.fieldNames;
-                        cardFields = card.parentNote.fields;
                         this.currentState = { card: card };
-                        this.createCardInIFrame(cardType.frontTemplate, noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.frontScript]);
+                        this.cardRenderer.renderBack(card);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
-                    case 2:
+                    case 1:
                         _a.sent();
-                        this.createCardInIFrame(cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate), noteFieldNames, cardFields, noteType.style, [noteType.script, cardType.backScript]);
+                        this.cardRenderer.renderFront(card);
                         return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
-                    case 3:
+                    case 2:
                         rating = _a.sent();
                         this.discardState();
                         return [2 /*return*/, rating];
@@ -339,40 +321,6 @@ var CardPresenter = /** @class */ (function (_super) {
         }
         this.inputGetter.discardState();
         this.currentState = undefined;
-    };
-    CardPresenter.prototype.createCardInIFrame = function (contentTemplate, fieldNames, fields, styles, scripts) {
-        var _a;
-        var regexMatches = /{{(.+?)}}/g;
-        var outString = "";
-        var lastIndex = 0;
-        for (var match = void 0; match = regexMatches.exec(contentTemplate);) {
-            outString += contentTemplate.slice(lastIndex, match.index);
-            var replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
-            lastIndex = match.index + match[0].length;
-        }
-        outString += contentTemplate.slice(lastIndex);
-        if (!this.cardIFrameDocument) {
-            throw new Error("Tried to create card in unopened iframe");
-        }
-        this.cardIFrameDocument.body.innerHTML = outString;
-        if (styles) {
-            this.cardIFrameDocument.body.appendChild(new Elm("style").append(styles).getHTMLElement());
-        }
-        try {
-            //* dangerous!
-            (_a = new (Function.bind.apply(Function, __spreadArray(__spreadArray([void 0, "require"], fieldNames), [scripts.join("\n")])))())
-                .call.apply(_a, __spreadArray([this.cardIFrameDocument, undefined], fields));
-        }
-        catch (err) {
-            console.warn("Error while running script for card", err);
-        }
-    };
-    CardPresenter.prototype.setPropogateKeyEvents = function (iframeWindow) {
-        var _this = this;
-        iframeWindow.addEventListener("keydown", function (e) {
-            setImmediatePolyfill(function () { return _this.cardIFrame.getHTMLElement().dispatchEvent(e); });
-        });
     };
     return CardPresenter;
 }(Component));
@@ -406,7 +354,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
         for (var i = 0; i < items.length; i++) {
             _loop_1(i);
         }
-        this.elm.appendChild(optionsContainer);
+        this.elm.append(optionsContainer);
         var keydownHandler = function (e) {
             if (e.repeat) {
                 return;
@@ -439,7 +387,7 @@ var QuickUserInputGetter = /** @class */ (function (_super) {
         if (!this.state) {
             return;
         }
-        this.elm.removeChild(this.state.elm);
+        this.elm.getHTMLElement().removeChild(this.state.elm);
         document.removeEventListener("keydown", this.state.documentKeydownListener);
         this.state.promiseReject("State discarded");
         this.state = undefined;
@@ -451,7 +399,7 @@ var Snackbar = /** @class */ (function (_super) {
     function Snackbar(content) {
         var _this = _super.call(this, "snackbar") || this;
         _this.animationOutTime = 150;
-        _this.append(content);
+        _this.elm.append(content);
         return _this;
     }
     return Snackbar;

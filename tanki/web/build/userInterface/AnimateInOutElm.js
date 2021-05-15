@@ -55,7 +55,7 @@ var AnimateInOutElm = /** @class */ (function (_super) {
     __extends(AnimateInOutElm, _super);
     function AnimateInOutElm(name) {
         var _this = _super.call(this, name) || this;
-        _this.class("animatedInOutElm");
+        _this.elm.class("animatedInOutElm");
         _this.show();
         return _this;
     }
@@ -66,7 +66,7 @@ var AnimateInOutElm = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, this.hide()];
                     case 1:
                         _a.sent();
-                        _super.prototype.remove.call(this);
+                        this.elm.remove();
                         return [2 /*return*/];
                 }
             });
@@ -79,7 +79,7 @@ var AnimateInOutElm = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, wait(1)];
                     case 1:
                         _a.sent();
-                        this.class("showing");
+                        this.elm.class("showing");
                         return [2 /*return*/];
                 }
             });
@@ -90,7 +90,7 @@ var AnimateInOutElm = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        this.removeClass("showing");
+                        this.elm.removeClass("showing");
                         return [4 /*yield*/, wait(this.animationOutTime)];
                     case 1:
                         _a.sent();

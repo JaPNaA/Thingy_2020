@@ -51,7 +51,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { NoteType, Note } from "../../database.js";
 import { CardFlag } from "../../dataTypes.js";
-import { Elm, Component } from "../../libs/elements.js";
+import { Elm, Component, InputElm } from "../../libs/elements.js";
 import { EventHandler } from "../../utils.js";
 import { ModalDialog } from "./ModalDialog.js";
 var ImportNotesDialog = /** @class */ (function (_super) {
@@ -104,7 +104,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
                 _this.deck.database.addNote(note);
                 for (var i = 0; i < checkboxes.length; i++) {
                     var checkbox = checkboxes[i];
-                    if (!checkbox.input.getHTMLElement().checked) {
+                    if (!checkbox.input.getValue()) {
                         var card = _this.deck.database.getCardByUid(note.cardUids[i]).clone();
                         card.addFlag(CardFlag.suspended);
                         _this.deck.database.writeEdit(card);
@@ -118,8 +118,7 @@ var ImportNotesDialog = /** @class */ (function (_super) {
     };
     ImportNotesDialog.prototype.createCheckedCheckbox = function (labelText) {
         var input;
-        var container = new Elm().append(new Elm("label").append(input = new Elm("input").attribute("type", "checkbox")
-            .withSelf(function (e) { return e.getHTMLElement().checked = true; }), labelText));
+        var container = new Elm().append(new Elm("label").append(input = new InputElm().setType("checkbox").setValue(true), labelText));
         return { input: input, container: container };
     };
     ImportNotesDialog.jishoAPIDataImportedNoteType = {
@@ -136,7 +135,7 @@ var DragAndDropTextarea = /** @class */ (function (_super) {
         var _this = _super.call(this, "dragAndDropTextarea") || this;
         _this.textarea = new Elm("textarea");
         _this.htmlElm = _this.textarea.getHTMLElement();
-        _this.append(_this.textarea);
+        _this.elm.append(_this.textarea);
         _this.textarea.on("dragover", function (e) {
             e.preventDefault();
         });

@@ -20,13 +20,13 @@ var ModalDialog = /** @class */ (function (_super) {
     function ModalDialog(name) {
         var _this = _super.call(this, name) || this;
         _this.animationOutTime = 500;
-        _this.class("modalDialog");
-        _this.append(new Elm().class("modalBackground")
+        _this.elm.class("modalDialog");
+        _this.elm.append(new Elm().class("modalBackground")
             .on("click", function () { return _this.remove(); }), _this.foregroundElm = new Elm().class("modalForeground").appendTo(_this.elm));
         return _this;
     }
     ModalDialog.prototype.setPositionFixed = function () {
-        this.class("positionFixed");
+        this.elm.class("positionFixed");
         return this;
     };
     return ModalDialog;

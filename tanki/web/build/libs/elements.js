@@ -15,6 +15,7 @@ var __extends = (this && this.__extends) || (function () {
 })();
 /**
  * Helper class for constructing element trees
+ * Version 1.4 (typescript)
  */
 var Elm = /** @class */ (function () {
     function Elm(tagNameOrElement) {
@@ -126,6 +127,9 @@ var Elm = /** @class */ (function () {
         else if (any instanceof Node) {
             return any;
         }
+        else if (any instanceof Component) {
+            return any.elm.elm;
+        }
         else if (any !== undefined && any !== null) {
             return document.createTextNode(any.toString());
         }
@@ -135,14 +139,47 @@ var Elm = /** @class */ (function () {
     };
     return Elm;
 }());
-var Component = /** @class */ (function (_super) {
-    __extends(Component, _super);
-    function Component(name) {
-        var _this = _super.call(this) || this;
-        _this.name = name;
-        _this.class(name);
-        return _this;
+var InputElm = /** @class */ (function (_super) {
+    __extends(InputElm, _super);
+    function InputElm() {
+        return _super.call(this, "input") || this;
     }
-    return Component;
+    InputElm.prototype.setType = function (type) {
+        this.elm.type = type;
+        return this;
+    };
+    InputElm.prototype.getValue = function () {
+        if (this.elm.type === "checkbox") {
+            return this.elm.checked;
+        }
+        else {
+            return this.elm.value;
+        }
+    };
+    InputElm.prototype.setValue = function (value) {
+        if (this.elm.type === "checkbox" && typeof value === "boolean") {
+            this.elm.checked = value;
+        }
+        else if (this.elm.type === "number" && typeof value === "number") {
+            this.elm.value = value.toString();
+        }
+        else {
+            this.elm.value = value.toString();
+        }
+        return this;
+    };
+    return InputElm;
 }(Elm));
-export { Component, Elm };
+var Component = /** @class */ (function () {
+    function Component(name) {
+        this.name = name;
+        this.elm = new Elm();
+        this.elm.class(name);
+    }
+    Component.prototype.appendTo = function (parent) {
+        this.elm.appendTo(parent);
+        return this;
+    };
+    return Component;
+}());
+export { Component, Elm, InputElm };

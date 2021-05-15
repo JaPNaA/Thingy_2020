@@ -26,7 +26,7 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.dueCardsElm = new Elm().class("number");
         _this.graduatedCardsElm = new Elm().class("number");
         _this.timelineGraph = new TimelineGraph(_this.deck);
-        _this.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
+        _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         _this.setMinutelyUpdateIntervals();
         return _this;
@@ -72,7 +72,7 @@ var TimelineGraph = /** @class */ (function (_super) {
         _this.offsetX = 0;
         _this.dragScale = 0;
         _this.isDragging = false;
-        _this.append(_this.canvas);
+        _this.elm.append(_this.canvas);
         _this.canvas.on("mousedown", function (e) {
             _this.isDragging = true;
             _this.dragScale = Math.pow(2, (e.clientX / 100));

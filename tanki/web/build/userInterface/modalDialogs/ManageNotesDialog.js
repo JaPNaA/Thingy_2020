@@ -14,20 +14,41 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 import { CardState } from "../../dataTypes.js";
-import { Component, Elm } from "../../libs/elements.js";
+import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { boundBetween, EventHandler } from "../../utils.js";
+import { EditNoteDialog } from "./EditNoteDialog.js";
 import { ModalDialog } from "./ModalDialog.js";
 var ManageNotesDialog = /** @class */ (function (_super) {
     __extends(ManageNotesDialog, _super);
     function ManageNotesDialog(deck) {
         var _this = _super.call(this, "manageNotesDialog") || this;
-        _this.foregroundElm.append(new Elm("h1").append("Manage notes"), _this.notesList = new NotesRecyclingList(deck.database.getNotes(), deck));
+        var searchBox;
+        _this.foregroundElm.append(new Elm("h1").append("Manage notes"), new Elm().append("Search: ", searchBox = new InputElm().on("change", function () {
+            var search = searchBox.getValue();
+            if (!search) {
+                _this.notesList.setDataList(deck.database.getNotes());
+                return;
+            }
+            var results = deck.database.getNotes().filter(function (note) {
+                for (var _i = 0, _a = note.fields; _i < _a.length; _i++) {
+                    var field = _a[_i];
+                    if (field.includes(search)) {
+                        return true;
+                    }
+                }
+                return false;
+            });
+            _this.notesList.setDataList(results);
+        })), _this.notesList = new NotesRecyclingList(deck.database.getNotes(), deck));
         _this.notesList.onClick.addHandler(function (data) {
             console.log(data);
-            if (confirm("Delete note?\n(Delete note is WIP)")) {
-                deck.database.removeNote(data);
-                _this.notesList.update();
-            }
+            var editNoteDialog = new EditNoteDialog(deck);
+            editNoteDialog.setEditingNote(data);
+            editNoteDialog.appendTo(_this.elm);
+            // if (confirm("Delete note?\n(Delete note is WIP)")) {
+            //     deck.database.removeNote(data);
+            //     this.notesList.update();
+            // }
         });
         return _this;
     }
@@ -52,19 +73,26 @@ var RecyclingList = /** @class */ (function (_super) {
             _this.elmsList.push(recyclingListItem);
             _this.listElmsContainer.append(recyclingListItem);
         }
-        _this.append(_this.listElmsContainer);
-        _this.append(_this.bottomBufferElm);
-        _this.on("scroll", function () { return _this.scrollHandler(); });
+        _this.elm.append(_this.listElmsContainer);
+        _this.elm.append(_this.bottomBufferElm);
+        _this.elm.on("scroll", function () { return _this.scrollHandler(); });
         return _this;
     }
+    RecyclingList.prototype.setDataList = function (dataList) {
+        this.dataList = dataList;
+        this.elm.getHTMLElement().scrollTop = 0;
+        this.update();
+    };
     RecyclingList.prototype.update = function () {
         var maxStartIndex = this.dataList.length - this.elmsList.length;
-        var bufferStartIndex = boundBetween(0, Math.floor(this.elm.scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
+        var bufferStartIndex = boundBetween(0, Math.floor(this.elm.getHTMLElement().scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
         this.bufferedPixelsTop = bufferStartIndex * this.listElmHeight;
         this.listElmsContainer.attribute("style", "margin-top: " + this.bufferedPixelsTop + "px");
         for (var i = 0; i < this.elmsList.length; i++) {
             var content = this.dataList[bufferStartIndex + i];
-            this.elmsList[i].setContent(content, this.getContentForListItem(content));
+            if (content) {
+                this.elmsList[i].setContent(content, this.getContentForListItem(content));
+            }
         }
         this.bufferedPixelsBottom = (bufferStartIndex + this.elmsList.length) * this.listElmHeight;
         this.bottomBufferElm.attribute("style", "height: " + (this.dataList.length * this.listElmHeight - this.bufferedPixelsBottom) + "px");
@@ -76,8 +104,9 @@ var RecyclingList = /** @class */ (function (_super) {
         this.update();
     };
     RecyclingList.prototype.bufferedElementsCoversViewbox = function () {
-        return this.bufferedPixelsTop < this.elm.scrollTop &&
-            this.elm.scrollTop + this.elm.clientHeight < this.bufferedPixelsBottom;
+        var htmlElm = this.elm.getHTMLElement();
+        return this.bufferedPixelsTop < htmlElm.scrollTop &&
+            htmlElm.scrollTop + htmlElm.clientHeight < this.bufferedPixelsBottom;
     };
     return RecyclingList;
 }(Component));
@@ -86,9 +115,9 @@ var RecyclingListItem = /** @class */ (function (_super) {
     function RecyclingListItem(elmHeight) {
         var _this = _super.call(this, "recyclingListItem") || this;
         _this.onClick = new EventHandler();
-        _this.attribute("style", "height: " + elmHeight + "px");
-        _this.append("Owo");
-        _this.on("click", function () {
+        _this.elm.attribute("style", "height: " + elmHeight + "px");
+        _this.elm.append("Owo");
+        _this.elm.on("click", function () {
             if (!_this.itemData) {
                 return;
             }
@@ -97,7 +126,7 @@ var RecyclingListItem = /** @class */ (function (_super) {
         return _this;
     }
     RecyclingListItem.prototype.setContent = function (item, elm) {
-        this.replaceContents(elm);
+        this.elm.replaceContents(elm);
         this.itemData = item;
     };
     return RecyclingListItem;
