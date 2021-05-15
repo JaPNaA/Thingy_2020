@@ -10,6 +10,7 @@ import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
 import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
 import jishoWithHistory from "../jishoWithHistory.js";
+import { CardRenderer } from "./CardRenderer.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -64,7 +65,7 @@ class DeckPresenter extends Component {
     constructor(private deck: Deck) {
         super("deckPresenter");
 
-        this.cardPresenter = new CardPresenter(this.deck);
+        this.cardPresenter = new CardPresenter();
         this.deckTimeline = new DeckTimeline(this.deck);
         deck.loaded.then(() => this.deckTimeline.update());
 
@@ -238,19 +239,11 @@ class CardPresenter extends Component {
         card: Immutable<Card>;
     };
 
-    private cardIFrame = new Elm("iframe").class("card");
-    private cardIFrameDocument?: Document;
+    private cardRenderer: CardRenderer = new CardRenderer();
 
-    constructor(private deck: Deck) {
+    constructor() {
         super("cardPresenter");
-        this.elm.append(this.cardIFrame, this.inputGetter);
-
-        this.cardIFrame.on("load", () => {
-            const iframeWindow = this.cardIFrame.getHTMLElement().contentWindow;
-            if (!iframeWindow) { throw new Error("iframe loaded but no window"); }
-            this.cardIFrameDocument = iframeWindow.document;
-            this.setPropogateKeyEvents(iframeWindow);
-        });
+        this.elm.append(this.cardRenderer, this.inputGetter);
     }
 
     public async presentCard(card: Immutable<Card>): Promise<number> {
@@ -266,7 +259,7 @@ class CardPresenter extends Component {
 
         this.currentState = { card };
 
-        this.createCardInIFrame(
+        this.cardRenderer.render(
             cardType.frontTemplate,
             noteFieldNames, cardFields,
             noteType.style,
@@ -274,7 +267,7 @@ class CardPresenter extends Component {
         );
         await this.inputGetter.options(["Show back"]);
 
-        this.createCardInIFrame(
+        this.cardRenderer.render(
             cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate),
             noteFieldNames, cardFields,
             noteType.style,
@@ -292,50 +285,6 @@ class CardPresenter extends Component {
         if (!this.currentState) { return; }
         this.inputGetter.discardState();
         this.currentState = undefined;
-    }
-
-    private createCardInIFrame(
-        contentTemplate: string, fieldNames: Immutable<string[]>, fields: Immutable<string[]>,
-        styles: string | undefined, scripts: (string | undefined)[]
-    ): void {
-        const regexMatches = /{{(.+?)}}/g;
-        let outString = "";
-        let lastIndex = 0;
-
-        for (let match; match = regexMatches.exec(contentTemplate);) {
-            outString += contentTemplate.slice(lastIndex, match.index);
-            const replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
-            lastIndex = match.index + match[0].length;
-        }
-
-        outString += contentTemplate.slice(lastIndex);
-
-        if (!this.cardIFrameDocument) { throw new Error("Tried to create card in unopened iframe"); }
-
-        this.cardIFrameDocument.body.innerHTML = outString;
-        if (styles) {
-            this.cardIFrameDocument.body.appendChild(
-                new Elm("style").append(styles).getHTMLElement()
-            );
-        }
-
-        try {
-            //* dangerous!
-            new Function("require", ...fieldNames, scripts.join("\n"))
-                .call(this.cardIFrameDocument, undefined, ...fields);
-        } catch (err) {
-            console.warn("Error while running script for card", err);
-        }
-
-    }
-
-    private setPropogateKeyEvents(iframeWindow: Window) {
-        iframeWindow.addEventListener("keydown", e => {
-            setImmediatePolyfill(
-                () => this.cardIFrame.getHTMLElement().dispatchEvent(e)
-            );
-        });
     }
 }
 
