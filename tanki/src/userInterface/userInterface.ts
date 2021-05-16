@@ -253,11 +253,10 @@ class CardPresenter extends Component {
 
         this.currentState = { card };
 
-        this.cardRenderer.renderBack(card);
+        this.cardRenderer.renderFront(card);
         await this.inputGetter.options(["Show back"]);
 
-        this.cardRenderer.renderFront(card);
-
+        this.cardRenderer.renderBack(card);
         const rating = await this.inputGetter.options(["Forgot", "Remembered"], 1);
 
         this.discardState();
