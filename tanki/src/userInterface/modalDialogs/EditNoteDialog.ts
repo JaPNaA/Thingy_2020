@@ -124,11 +124,19 @@ class CardPreview extends Component {
         this.elm.clear();
 
         for (const cardType of integratedNoteType.cardTypes) {
+            let showingBack = false;
+
             const renderer = new CardRenderer().appendTo(this.elm);
             renderer.renderFrontNote(note, cardType);
 
             renderer.elm.on("click", () => {
-                renderer.renderBackNote(note, cardType);
+                if (showingBack) {
+                    renderer.renderFrontNote(note, cardType);
+                    showingBack = false;
+                } else {
+                    renderer.renderBackNote(note, cardType);
+                    showingBack = true;
+                }
             });
         }
     }
