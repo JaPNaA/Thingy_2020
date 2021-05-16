@@ -1,4 +1,4 @@
-import { Card, Note, NoteType } from "../../database.js";
+import { Note, NoteType } from "../../database.js";
 import { Component, Elm, InputElm } from "../../libs/elements.js";
 import { Deck } from "../../logic.js";
 import { EventHandler, Immutable } from "../../utils.js";
