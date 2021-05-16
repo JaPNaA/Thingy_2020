@@ -16,7 +16,7 @@ export class EditNoteDialog extends ModalDialog {
     private inputElms?: InputElm[];
 
     constructor(private deck: Deck) {
-        super("createNoteDialog");
+        super("editNoteDialog");
 
         this.foregroundElm.append(
             new Elm().class("edit").append(

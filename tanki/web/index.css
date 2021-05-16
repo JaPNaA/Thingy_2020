@@ -142,25 +142,25 @@ body {
     overflow-y: auto;
 }
 
-.createNoteDialog .modalForeground {
+.editNoteDialog .modalForeground {
     display: flex;
     flex-wrap: wrap;
     gap: 16px;
     max-width: 720px;
 }
 
-.createNoteDialog .cardPreview .cardRenderer {
+.editNoteDialog .cardPreview .cardRenderer {
     border: 1px solid black;
     margin-bottom: 8px;
 }
 
-.createNoteDialog .cardFieldLabel {
+.editNoteDialog .cardFieldLabel {
     display: block;
     font-size: 0.8em;
     margin-bottom: 8px;
 }
 
-.createNoteDialog .cardFieldInput {
+.editNoteDialog .cardFieldInput {
     display: block;
 }
 
