@@ -120,6 +120,10 @@ export class EditNoteDialog extends ModalDialog {
 }
 
 class CardPreview extends Component {
+    private rendererPool: CardRenderer[] = [];
+    private rendererIndex = 0;
+    private numRenderersShowing = 0;
+
     constructor() {
         super("cardPreview");
     }
@@ -127,12 +131,12 @@ class CardPreview extends Component {
     public async setNote(note: Note) {
         const integratedNoteType = await note.type.getIntegratedNoteType();
 
-        this.elm.clear();
+        this.rendererIndex = 0;
 
         for (const cardType of integratedNoteType.cardTypes) {
             let showingBack = false;
 
-            const renderer = new CardRenderer().appendTo(this.elm);
+            const renderer = this.getAndShowRenderer();
             renderer.renderFrontNote(note, cardType);
 
             renderer.elm.on("click", () => {
@@ -144,6 +148,36 @@ class CardPreview extends Component {
                     showingBack = true;
                 }
             });
+        }
+
+        this.hideUnusedRenderers();
+    }
+
+    private getAndShowRenderer(): CardRenderer {
+        const renderer = this.getRenderer();
+        renderer.elm.removeClass("hidden");
+        if (this.rendererIndex > this.numRenderersShowing) {
+            this.numRenderersShowing = this.rendererIndex;
+        }
+        return renderer;
+    }
+
+    private hideUnusedRenderers() {
+        for (let i = this.rendererIndex; i < this.numRenderersShowing; i++) {
+            this.rendererPool[i].elm.class("hidden");
+        }
+        this.numRenderersShowing = this.rendererIndex;
+    }
+
+    private getRenderer(): CardRenderer {
+        const currIndex = this.rendererIndex++;
+        const availRenderer = this.rendererPool[currIndex];
+        if (availRenderer) {
+            return availRenderer;
+        } else {
+            const newRenderer = new CardRenderer().appendTo(this.elm);
+            this.rendererPool[currIndex] = newRenderer;
+            return newRenderer;
         }
     }
 }
