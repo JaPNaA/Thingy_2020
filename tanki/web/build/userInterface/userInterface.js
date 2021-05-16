@@ -301,11 +301,11 @@ var CardPresenter = /** @class */ (function (_super) {
                             this.discardState();
                         }
                         this.currentState = { card: card };
-                        this.cardRenderer.renderBack(card);
+                        this.cardRenderer.renderFront(card);
                         return [4 /*yield*/, this.inputGetter.options(["Show back"])];
                     case 1:
                         _a.sent();
-                        this.cardRenderer.renderFront(card);
+                        this.cardRenderer.renderBack(card);
                         return [4 /*yield*/, this.inputGetter.options(["Forgot", "Remembered"], 1)];
                     case 2:
                         rating = _a.sent();

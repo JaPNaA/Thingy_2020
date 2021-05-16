@@ -61,14 +61,7 @@ var CardRenderer = /** @class */ (function (_super) {
     function CardRenderer() {
         var _this = _super.call(this, "cardRenderer") || this;
         _this.cardIFrame = new Elm("iframe").class("card").appendTo(_this.elm);
-        _this.cardIFrame.on("load", function () {
-            var iframeWindow = _this.cardIFrame.getHTMLElement().contentWindow;
-            if (!iframeWindow) {
-                throw new Error("iframe loaded but no window");
-            }
-            _this.cardIFrameDocument = iframeWindow.document;
-            _this.setPropogateKeyEvents(iframeWindow);
-        });
+        _this.loadPromise = _this.loadIFrame();
         return _this;
     }
     CardRenderer.prototype.renderFront = function (card) {
@@ -80,8 +73,7 @@ var CardRenderer = /** @class */ (function (_super) {
                     case 1:
                         integratedNoteType = _a.sent();
                         cardType = integratedNoteType.cardTypes[card.cardTypeID];
-                        this.renderFrontNote(card.parentNote, cardType);
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.renderFrontNote(card.parentNote, cardType)];
                 }
             });
         });
@@ -94,8 +86,7 @@ var CardRenderer = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, note.type.getIntegratedNoteType()];
                     case 1:
                         integratedNoteType = _a.sent();
-                        this.setContent(cardType.frontTemplate, integratedNoteType.fieldNames, note.fields, integratedNoteType.style, [integratedNoteType.script, cardType.frontScript]);
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.setContent(cardType.frontTemplate, integratedNoteType.fieldNames, note.fields, integratedNoteType.style, [integratedNoteType.script, cardType.frontScript])];
                 }
             });
         });
@@ -109,8 +100,7 @@ var CardRenderer = /** @class */ (function (_super) {
                     case 1:
                         integratedNoteType = _a.sent();
                         cardType = integratedNoteType.cardTypes[card.cardTypeID];
-                        this.renderBackNote(card.parentNote, cardType);
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.renderBackNote(card.parentNote, cardType)];
                 }
             });
         });
@@ -123,39 +113,64 @@ var CardRenderer = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, note.type.getIntegratedNoteType()];
                     case 1:
                         integratedNoteType = _a.sent();
-                        this.setContent(cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate), integratedNoteType.fieldNames, note.fields, integratedNoteType.style, [integratedNoteType.script, cardType.backScript]);
-                        return [2 /*return*/];
+                        return [2 /*return*/, this.setContent(cardType.backTemplate.replace("{{frontTemplate}}", cardType.frontTemplate), integratedNoteType.fieldNames, note.fields, integratedNoteType.style, [integratedNoteType.script, cardType.backScript])];
                 }
             });
         });
     };
     CardRenderer.prototype.setContent = function (contentTemplate, fieldNames, fields, styles, scripts) {
-        var _a;
-        var regexMatches = /{{(.+?)}}/g;
-        var outString = "";
-        var lastIndex = 0;
-        for (var match = void 0; match = regexMatches.exec(contentTemplate);) {
-            outString += contentTemplate.slice(lastIndex, match.index);
-            var replaceFieldName = match[1];
-            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
-            lastIndex = match.index + match[0].length;
-        }
-        outString += contentTemplate.slice(lastIndex);
-        if (!this.cardIFrameDocument) {
-            throw new Error("Tried to create card in unopened iframe");
-        }
-        this.cardIFrameDocument.body.innerHTML = outString;
-        if (styles) {
-            this.cardIFrameDocument.body.appendChild(new Elm("style").append(styles).getHTMLElement());
-        }
-        try {
-            //* dangerous!
-            (_a = new (Function.bind.apply(Function, __spreadArray(__spreadArray([void 0, "require"], fieldNames), [scripts.join("\n")])))())
-                .call.apply(_a, __spreadArray([this.cardIFrameDocument, undefined], fields));
-        }
-        catch (err) {
-            console.warn("Error while running script for card", err);
-        }
+        return __awaiter(this, void 0, void 0, function () {
+            var regexMatches, outString, lastIndex, match, replaceFieldName;
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        regexMatches = /{{(.+?)}}/g;
+                        outString = "";
+                        lastIndex = 0;
+                        for (match = void 0; match = regexMatches.exec(contentTemplate);) {
+                            outString += contentTemplate.slice(lastIndex, match.index);
+                            replaceFieldName = match[1];
+                            outString += fields[fieldNames.indexOf(replaceFieldName)] || "&lt;&lt;undefined&gt;&gt;";
+                            lastIndex = match.index + match[0].length;
+                        }
+                        outString += contentTemplate.slice(lastIndex);
+                        return [4 /*yield*/, this.loadPromise];
+                    case 1:
+                        _b.sent();
+                        if (!this.cardIFrameDocument) {
+                            throw new Error("Tried to create card in unopened iframe");
+                        }
+                        this.cardIFrameDocument.body.innerHTML = outString;
+                        if (styles) {
+                            this.cardIFrameDocument.body.appendChild(new Elm("style").append(styles).getHTMLElement());
+                        }
+                        try {
+                            //* dangerous!
+                            (_a = new (Function.bind.apply(Function, __spreadArray(__spreadArray([void 0, "require"], fieldNames), [scripts.join("\n")])))())
+                                .call.apply(_a, __spreadArray([this.cardIFrameDocument, undefined], fields));
+                        }
+                        catch (err) {
+                            console.warn("Error while running script for card", err);
+                        }
+                        return [2 /*return*/];
+                }
+            });
+        });
+    };
+    CardRenderer.prototype.loadIFrame = function () {
+        var _this = this;
+        return new Promise(function (res) {
+            _this.cardIFrame.on("load", function () {
+                var iframeWindow = _this.cardIFrame.getHTMLElement().contentWindow;
+                if (!iframeWindow) {
+                    throw new Error("iframe loaded but no window");
+                }
+                _this.cardIFrameDocument = iframeWindow.document;
+                _this.setPropogateKeyEvents(iframeWindow);
+                res();
+            });
+        });
     };
     CardRenderer.prototype.setPropogateKeyEvents = function (iframeWindow) {
         var _this = this;
