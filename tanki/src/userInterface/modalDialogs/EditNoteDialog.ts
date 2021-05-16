@@ -81,6 +81,8 @@ export class EditNoteDialog extends ModalDialog {
         for (const fieldName of noteTypeIntegrated.fieldNames) {
             const inputElm = new InputElm().class("cardFieldInput");
 
+            inputElm.on("change", () => this.inputChangeHandler());
+
             this.inputElms.push(inputElm);
             this.inputsContainer.append(
                 new Elm("label").class("cardFieldLabel").append(fieldName, inputElm)
@@ -93,6 +95,10 @@ export class EditNoteDialog extends ModalDialog {
         const noteTypes = this.deck.database.getNoteTypes();
         const noteType = noteTypes[this.noteTypeIndex];
         this.cardPreview.setNote(Note.create(noteType, this.getFields()));
+    }
+
+    private inputChangeHandler() {
+        this.updatePreview();
     }
 
     private submit() {
