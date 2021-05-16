@@ -136,9 +136,22 @@ body {
     max-width: 380px;
     max-height: 80vh;
     padding: 8px;
+    margin: 32px;
 
     overflow-x: hidden;
     overflow-y: auto;
+}
+
+.createNoteDialog .modalForeground {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    max-width: 720px;
+}
+
+.createNoteDialog .cardPreview .cardRenderer {
+    border: 1px solid black;
+    margin-bottom: 8px;
 }
 
 .createNoteDialog .cardFieldLabel {
