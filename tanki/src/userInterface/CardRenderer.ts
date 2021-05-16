@@ -93,14 +93,20 @@ export class CardRenderer extends Component {
                 const iframeWindow = this.cardIFrame.getHTMLElement().contentWindow;
                 if (!iframeWindow) { throw new Error("iframe loaded but no window"); }
                 this.cardIFrameDocument = iframeWindow.document;
-                this.setPropogateKeyEvents(iframeWindow);
+                this.setPropogateKeyboardAndMouseEvents(iframeWindow);
                 res();
             });
         });
     }
 
-    private setPropogateKeyEvents(iframeWindow: Window) {
-        iframeWindow.addEventListener("keydown", e => {
+    private setPropogateKeyboardAndMouseEvents(iframeWindow: Window) {
+        for (const event of ["keydown", "keyup", "click", "mousedown", "mouseup"]) {
+            this.setPropogate(event, iframeWindow);
+        }
+    }
+
+    private setPropogate(eventName: string, iframeWindow: Window) {
+        iframeWindow.addEventListener(eventName, e => {
             setImmediatePolyfill(
                 () => this.cardIFrame.getHTMLElement().dispatchEvent(e)
             );
