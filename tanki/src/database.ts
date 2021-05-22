@@ -9,7 +9,7 @@ abstract class DatabaseObject {
 }
 
 export class TankiDatabase {
-    public logs: UndoLog;
+    public logs: DatabaseChangeLog;
 
     private cards: Card[] = [];
     private notes: Note[] = [];
@@ -34,7 +34,7 @@ export class TankiDatabase {
             throw new Error("Versions don't match");
         }
 
-        this.logs = new UndoLog();
+        this.logs = new DatabaseChangeLog();
         this.logs.freeze = true;
 
         this.noteTypes = this.initNoteTypes();
@@ -246,7 +246,7 @@ interface LogGroup {
 }
 
 
-class UndoLog {
+class DatabaseChangeLog {
     public freeze: boolean = false;
 
     private currentLogGroup: LogGroup = this.createLogGroup();
