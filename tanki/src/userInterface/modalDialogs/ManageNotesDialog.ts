@@ -42,16 +42,27 @@ export class ManageNotesDialog extends ModalDialog {
             )
         );
 
-        this.notesList.onClick.addHandler(data => {
-            console.log(data);
+        this.notesList.onClick.addHandler(selectedCard => {
+            console.log(selectedCard);
 
             const editNoteDialog = new EditNoteDialog(deck);
-            editNoteDialog.setEditingNote(data);
+            editNoteDialog.setEditingNote(selectedCard);
             editNoteDialog.appendTo(this.elm);
-            // if (confirm("Delete note?\n(Delete note is WIP)")) {
-            //     deck.database.removeNote(data);
-            //     this.notesList.update();
-            // }
+
+            editNoteDialog.onSubmit.addHandler(editReturnCard => {
+                const selectedCardEdit = selectedCard.clone();
+                selectedCardEdit.fields = editReturnCard.fields;
+                deck.database.writeEdit(selectedCardEdit);
+                editNoteDialog.remove();
+            });
+
+            editNoteDialog.onDeleteButtonClick.addHandler(() => {
+                if (confirm("Delete note?\n(Delete note is WIP)")) {
+                    deck.database.removeNote(selectedCard);
+                    this.notesList.update();
+                    editNoteDialog.remove();
+                }
+            });
         });
     }
 }
