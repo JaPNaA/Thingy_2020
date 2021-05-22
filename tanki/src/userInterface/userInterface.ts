@@ -35,10 +35,12 @@ export class TankiInterface extends Component {
 
             if (e.code === "KeyZ") {
                 deck.database.undo();
-                this.deckPresenter.update();
-                this.showSnackbar("Undid", 1500);
             }
         });
+
+        deck.database.onUndo.addHandler(() =>
+            this.showSnackbar("Undid", 1500)
+        );
 
         this.deckPresenter.onExit.addHandler(() => writeOut(deck));
     }
@@ -66,7 +68,6 @@ class DeckPresenter extends Component {
 
         this.cardPresenter = new CardPresenter();
         this.deckTimeline = new DeckTimeline(this.deck);
-        deck.loaded.then(() => this.deckTimeline.update());
 
         this.elm.append(
             this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
@@ -123,10 +124,6 @@ class DeckPresenter extends Component {
         });
 
         this.enterCardPresenter();
-    }
-
-    public update() {
-        this.deckTimeline.update();
     }
 
     private async presentingLoop() {

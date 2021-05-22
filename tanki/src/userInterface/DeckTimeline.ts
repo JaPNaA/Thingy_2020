@@ -10,6 +10,8 @@ export class DeckTimeline extends Component {
     private graduatedCardsElm = new Elm().class("number");
     private timelineGraph = new TimelineGraph(this.deck);
 
+    private rateLimitTimeoutID?: NodeJS.Timeout;
+
     constructor(private deck: Deck) {
         super("deckTimeline");
 
@@ -33,13 +35,22 @@ export class DeckTimeline extends Component {
         this.nextCardInMinutesElm.append("~");
 
         this.deck.database.onAnyChange.addHandler(
-            () => setImmediatePolyfill(() => this.update())
+            () => this.rateLimitedUpdate()
         );
+        this.deck.loaded.then(() => this.rateLimitedUpdate());
 
         this.setMinutelyUpdateIntervals();
     }
 
-    public update() {
+    private rateLimitedUpdate() {
+        if (this.rateLimitTimeoutID) {
+            clearTimeout(this.rateLimitTimeoutID);
+        }
+
+        this.rateLimitTimeoutID = setTimeout(() => this.update(), 10);
+    }
+
+    private update() {
         console.log("timeline update");
         const counts = this.deck.getCardCount();
         const minutesToNextCard = this.deck.getMinutesToNextCard();
@@ -62,7 +73,7 @@ export class DeckTimeline extends Component {
         const timeToNextMinute = (Math.floor(Date.now() / 60e3) + 1) * 60e3 - Date.now();
 
         setTimeout(() => {
-            this.update();
+            this.rateLimitedUpdate();
             this.setMinutelyUpdateIntervals();
         }, timeToNextMinute);
     }
