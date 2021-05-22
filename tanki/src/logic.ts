@@ -13,7 +13,13 @@ export class Deck {
 
     constructor(data: DeckData) {
         this.database = new TankiDatabase(data);
-        this.loaded = this.updateCache();
+        this.loaded = this.updateCache()
+            .then(() => {
+                this.database.onAddNote.addHandler(() => this.updateCache());
+                this.database.onRemoveNote.addHandler(() => this.updateCache())
+                this.database.onEditNote.addHandler(() => this.updateCache())
+                this.database.onUndo.addHandler(() => this.updateCache())
+            });
     }
 
     public selectCard(): Immutable<Card> | undefined {
@@ -107,11 +113,6 @@ export class Deck {
         this.database.writeEdit(mutCard);
     }
 
-    public addNoteAndUpdate(data: Note) {
-        this.database.addNote(data);
-        this.updateCache();
-    }
-
     public getMinutesToNextCard(index: number = 0): number | undefined {
         const nowMinute = getCurrMinuteFloored();
         const firstCard = this.activeCardCache[index];
@@ -144,8 +145,8 @@ export class Deck {
         );
     }
 
-    // todo: make private again and listen for when cards are added
-    public async updateCache() {
+    private async updateCache() {
+        console.log("update cache triggered");
         this.inactiveCardCache.length = 0;
         this.newCardCache.length = 0;
         this.activeCardCache.length = 0;

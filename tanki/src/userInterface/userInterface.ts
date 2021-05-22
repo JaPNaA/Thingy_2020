@@ -34,8 +34,7 @@ export class TankiInterface extends Component {
             }
 
             if (e.code === "KeyZ") {
-                deck.database.logs.undo();
-                deck.updateCache();
+                deck.database.undo();
                 this.deckPresenter.update();
                 this.showSnackbar("Undid", 1500);
             }
@@ -99,7 +98,7 @@ class DeckPresenter extends Component {
                     //* this button is temporary
                     // todo: automatically gradate cards
 
-                    this.deck.database.logs.startGroup();
+                    this.deck.database.startUndoLogGroup();
                     const cards = this.deck.database.getCards();
                     for (const card of cards) {
                         if (
@@ -113,9 +112,7 @@ class DeckPresenter extends Component {
                             this.deck.database.writeEdit(cardEdit);
                         }
                     }
-                    this.deck.updateCache();
-                    this.deckTimeline.update();
-                    this.deck.database.logs.endGroup();
+                    this.deck.database.endUndoLogGroup();
                 })
         );
 
@@ -147,14 +144,12 @@ class DeckPresenter extends Component {
                     break;
                 }
 
-                this.deck.database.logs.startGroup();
+                this.deck.database.startUndoLogGroup();
                 this.deck.applyResultToCard(selectedCard, result);
-                this.deck.database.logs.endGroup();
+                this.deck.database.endUndoLogGroup();
             } else {
                 break;
             }
-
-            this.deckTimeline.update();
         }
 
         this.exitCardPresenter();
@@ -187,11 +182,10 @@ class DeckPresenter extends Component {
             });
         });
 
-        this.deck.database.logs.startGroup();
-        this.deck.addNoteAndUpdate(note);
-        this.deck.database.logs.endGroup();
+        this.deck.database.startUndoLogGroup();
+        this.deck.database.addNote(note);
+        this.deck.database.endUndoLogGroup();
 
-        this.deckTimeline.update();
         createNoteDialog.remove();
     }
 
@@ -205,7 +199,6 @@ class DeckPresenter extends Component {
 
         const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
         importNotesDialog.onImported.addHandler(() => {
-            this.deckTimeline.update();
             importNotesDialog.remove();
         });
 

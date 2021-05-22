@@ -74,7 +74,7 @@ export class ImportNotesDialog extends ModalDialog {
                         ImportNotesDialog.jishoAPIDataImportedNoteType.name
                     )!;
 
-                    this.deck.database.logs.startGroup();
+                    this.deck.database.startUndoLogGroup();
                     for (const item of parsed) {
                         const note = Note.create(cardType, [JSON.stringify(item)]);
                         this.deck.database.addNote(note);
@@ -88,10 +88,9 @@ export class ImportNotesDialog extends ModalDialog {
                             }
                         }
                     }
-                    this.deck.database.logs.endGroup();
+                    this.deck.database.endUndoLogGroup();
 
-                    this.deck.updateCache()
-                        .then(() => this.onImported.dispatch());
+                    this.onImported.dispatch();
                 })
         )
     }

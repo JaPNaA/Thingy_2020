@@ -1,6 +1,6 @@
 import { Component, Elm } from "../libs/elements.js";
 import { Deck } from "../logic.js";
-import { getCurrMinuteFloored, minutesToHumanString } from "../utils.js";
+import { getCurrMinuteFloored, minutesToHumanString, setImmediatePolyfill } from "../utils.js";
 
 export class DeckTimeline extends Component {
     private nextCardInMinutesElm = new Elm("span");
@@ -32,10 +32,15 @@ export class DeckTimeline extends Component {
 
         this.nextCardInMinutesElm.append("~");
 
+        this.deck.database.onAnyChange.addHandler(
+            () => setImmediatePolyfill(() => this.update())
+        );
+
         this.setMinutelyUpdateIntervals();
     }
 
     public update() {
+        console.log("timeline update");
         const counts = this.deck.getCardCount();
         const minutesToNextCard = this.deck.getMinutesToNextCard();
         const minutesToNext25Cards = this.deck.getMinutesToNextCard(24);

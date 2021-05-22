@@ -1,6 +1,6 @@
 import { CardData, CardDataActivated, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { clearData } from "./storage.js";
-import { arrayRemoveTrailingUndefinedOrNull, Immutable } from "./utils.js";
+import { arrayRemoveTrailingUndefinedOrNull, EventHandler, Immutable } from "./utils.js";
 
 abstract class DatabaseObject {
     public _uid: number = -1;
@@ -9,7 +9,13 @@ abstract class DatabaseObject {
 }
 
 export class TankiDatabase {
-    public logs: DatabaseChangeLog;
+    public onAddNote = new EventHandler<Immutable<Note>>();
+    public onRemoveNote = new EventHandler<Immutable<Note>>();
+    public onEditNote = new EventHandler<Immutable<Note>>();
+    public onUndo = new EventHandler<Immutable<LogGroup>>();
+    public onAnyChange = new EventHandler<Immutable<LogGroup> | Immutable<Note>>();
+
+    private logs: DatabaseChangeLog;
 
     private cards: Card[] = [];
     private notes: Note[] = [];
@@ -41,6 +47,11 @@ export class TankiDatabase {
         this.initCards();
 
         this.logs.freeze = false;
+
+        this.onAddNote.addHandler(e => this.onAnyChange.dispatch(e));
+        this.onRemoveNote.addHandler(e => this.onAnyChange.dispatch(e));
+        this.onEditNote.addHandler(e => this.onAnyChange.dispatch(e));
+        this.onUndo.addHandler(e => this.onAnyChange.dispatch(e));
     }
 
     public getCards(): Immutable<Card[]> {
@@ -88,6 +99,12 @@ export class TankiDatabase {
             original: existing.clone()
         });
         existing.overwriteWith(copying);
+
+        if (existing instanceof Card) {
+            this.onEditNote.dispatch(existing.parentNote);
+        } else if (existing instanceof Note) {
+            this.onEditNote.dispatch(existing);
+        }
     }
 
     public activateCard(card: Immutable<Card>): Immutable<ActivatedCard> {
@@ -128,6 +145,7 @@ export class TankiDatabase {
     public addNote(note: Note): void {
         this.logs.startGroup();
         this.initNote(note);
+        this.onAddNote.dispatch(note);
         this.logs.endGroup();
     }
 
@@ -156,11 +174,28 @@ export class TankiDatabase {
             });
         }
 
+        this.onRemoveNote.dispatch(note);
+
         this.logs.endGroup();
     }
 
     public addNoteType(noteType: NoteType): void {
         this.noteTypes.push(noteType);
+    }
+
+    public undo() {
+        const log = this.logs.undo();
+        if (log) {
+            this.onUndo.dispatch(log);
+        }
+    }
+
+    public startUndoLogGroup() {
+        this.logs.startGroup();
+    }
+
+    public endUndoLogGroup() {
+        this.logs.endGroup();
     }
 
     // todo: process changed cards
@@ -302,6 +337,8 @@ class DatabaseChangeLog {
             const remove = removes[i];
             remove.location.splice(remove.index, 0, remove.target);
         }
+
+        return logGroup;
     }
 
     private flushLogGroupToHistory() {
