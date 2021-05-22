@@ -7,9 +7,12 @@ import { ModalDialog } from "./ModalDialog.js";
 
 export class EditNoteDialog extends ModalDialog {
     public onSubmit = new EventHandler<Note>();
+    public onDeleteButtonClick = new EventHandler();
 
+    private title: Elm<"h2">;
     private inputsContainer: Elm;
     private typeSelectElm: Elm<"select">;
+    private actionButtons: Elm;
     private cardPreview: CardPreview;
 
     private noteTypeIndex?: number;
@@ -20,12 +23,14 @@ export class EditNoteDialog extends ModalDialog {
 
         this.foregroundElm.append(
             new Elm().class("edit").append(
-                new Elm("h2").append("Create Note"),
+                this.title = new Elm("h2").append("Create Note"),
                 this.typeSelectElm = new Elm("select").class("typeSelect")
                     .on("change", () => this.updateInputsElm()),
                 this.inputsContainer = new Elm().class("inputs"),
-                new Elm("button").append("Add")
-                    .on("click", () => this.submit())
+                this.actionButtons = new Elm().append(
+                    new Elm("button").append("Add")
+                        .on("click", () => this.addButtonClickHandler())
+                )
             ),
             new Elm().class("preview").append(
                 new Elm("h3").append("Preview"),
@@ -37,6 +42,7 @@ export class EditNoteDialog extends ModalDialog {
     }
 
     public async setEditingNote(note: Immutable<Note>) {
+        this.setEditMode();
         this.typeSelectElm.getHTMLElement().value =
             this.deck.database.getNoteTypes().indexOf(note.type).toString();
         await this.updateInputsElm();
@@ -53,6 +59,16 @@ export class EditNoteDialog extends ModalDialog {
 
     public setCreatingNote() {
         this.updateInputsElm();
+    }
+
+    private setEditMode() {
+        this.title.replaceContents("Edit note");
+        this.actionButtons.replaceContents(
+            new Elm("button").append("Save")
+                .on("click", () => this.dispatchSubmit()),
+            new Elm("button").append("Delete")
+                .on("click", () => this.onDeleteButtonClick.dispatch())
+        );
     }
 
     private loadNoteTypes() {
@@ -101,17 +117,23 @@ export class EditNoteDialog extends ModalDialog {
         this.updatePreview();
     }
 
-    private submit() {
-        if (this.noteTypeIndex === undefined || !this.inputElms) { return; }
-        this.onSubmit.dispatch(Note.create(
-            this.deck.database.getNoteTypes()[this.noteTypeIndex],
-            this.getFields()
-        ));
+    private addButtonClickHandler() {
+        if (!this.inputElms) { return; }
+
+        this.dispatchSubmit();
 
         for (const inputElm of this.inputElms) {
             inputElm.setValue("");
         }
         this.inputElms[0].getHTMLElement().focus();
+    }
+
+    private dispatchSubmit() {
+        if (this.noteTypeIndex === undefined) { return; }
+        this.onSubmit.dispatch(Note.create(
+            this.deck.database.getNoteTypes()[this.noteTypeIndex],
+            this.getFields()
+        ));
     }
 
     private getFields() {
