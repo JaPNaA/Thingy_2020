@@ -57,12 +57,13 @@ import { ModalDialog } from "./ModalDialog.js";
 var EditNoteDialog = /** @class */ (function (_super) {
     __extends(EditNoteDialog, _super);
     function EditNoteDialog(deck) {
-        var _this = _super.call(this, "createNoteDialog") || this;
+        var _this = _super.call(this, "editNoteDialog") || this;
         _this.deck = deck;
         _this.onSubmit = new EventHandler();
-        _this.foregroundElm.append(new Elm().class("edit").append(new Elm("h2").append("Create Note"), _this.typeSelectElm = new Elm("select").class("typeSelect")
-            .on("change", function () { return _this.updateInputsElm(); }), _this.inputsContainer = new Elm().class("inputs"), new Elm("button").append("Add")
-            .on("click", function () { return _this.submit(); })), new Elm().class("preview").append(new Elm("h3").append("Preview"), _this.cardPreview = new CardPreview()));
+        _this.onDeleteButtonClick = new EventHandler();
+        _this.foregroundElm.append(new Elm().class("edit").append(_this.title = new Elm("h2").append("Create Note"), _this.typeSelectElm = new Elm("select").class("typeSelect")
+            .on("change", function () { return _this.updateInputsElm(); }), _this.inputsContainer = new Elm().class("inputs"), _this.actionButtons = new Elm().append(new Elm("button").append("Add")
+            .on("click", function () { return _this.addButtonClickHandler(); }))), new Elm().class("preview").append(new Elm("h3").append("Preview"), _this.cardPreview = new CardPreview()));
         _this.loadNoteTypes();
         return _this;
     }
@@ -72,6 +73,7 @@ var EditNoteDialog = /** @class */ (function (_super) {
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
+                        this.setEditMode();
                         this.typeSelectElm.getHTMLElement().value =
                             this.deck.database.getNoteTypes().indexOf(note.type).toString();
                         return [4 /*yield*/, this.updateInputsElm()];
@@ -95,6 +97,13 @@ var EditNoteDialog = /** @class */ (function (_super) {
     EditNoteDialog.prototype.setCreatingNote = function () {
         this.updateInputsElm();
     };
+    EditNoteDialog.prototype.setEditMode = function () {
+        var _this = this;
+        this.title.replaceContents("Edit note");
+        this.actionButtons.replaceContents(new Elm("button").append("Save")
+            .on("click", function () { return _this.dispatchSubmit(); }), new Elm("button").append("Delete")
+            .on("click", function () { return _this.onDeleteButtonClick.dispatch(); }));
+    };
     EditNoteDialog.prototype.loadNoteTypes = function () {
         var noteTypes = this.deck.database.getNoteTypes();
         for (var i = 0; i < noteTypes.length; i++) {
@@ -105,6 +114,7 @@ var EditNoteDialog = /** @class */ (function (_super) {
     EditNoteDialog.prototype.updateInputsElm = function () {
         return __awaiter(this, void 0, void 0, function () {
             var noteTypes, noteType, noteTypeIntegrated, _i, _a, fieldName, inputElm;
+            var _this = this;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
@@ -120,6 +130,7 @@ var EditNoteDialog = /** @class */ (function (_super) {
                         for (_i = 0, _a = noteTypeIntegrated.fieldNames; _i < _a.length; _i++) {
                             fieldName = _a[_i];
                             inputElm = new InputElm().class("cardFieldInput");
+                            inputElm.on("change", function () { return _this.inputChangeHandler(); });
                             this.inputElms.push(inputElm);
                             this.inputsContainer.append(new Elm("label").class("cardFieldLabel").append(fieldName, inputElm));
                         }
@@ -136,16 +147,25 @@ var EditNoteDialog = /** @class */ (function (_super) {
         var noteType = noteTypes[this.noteTypeIndex];
         this.cardPreview.setNote(Note.create(noteType, this.getFields()));
     };
-    EditNoteDialog.prototype.submit = function () {
-        if (this.noteTypeIndex === undefined || !this.inputElms) {
+    EditNoteDialog.prototype.inputChangeHandler = function () {
+        this.updatePreview();
+    };
+    EditNoteDialog.prototype.addButtonClickHandler = function () {
+        if (!this.inputElms) {
             return;
         }
-        this.onSubmit.dispatch(Note.create(this.deck.database.getNoteTypes()[this.noteTypeIndex], this.getFields()));
+        this.dispatchSubmit();
         for (var _i = 0, _a = this.inputElms; _i < _a.length; _i++) {
             var inputElm = _a[_i];
             inputElm.setValue("");
         }
         this.inputElms[0].getHTMLElement().focus();
+    };
+    EditNoteDialog.prototype.dispatchSubmit = function () {
+        if (this.noteTypeIndex === undefined) {
+            return;
+        }
+        this.onSubmit.dispatch(Note.create(this.deck.database.getNoteTypes()[this.noteTypeIndex], this.getFields()));
     };
     EditNoteDialog.prototype.getFields = function () {
         var _a;
@@ -157,7 +177,11 @@ export { EditNoteDialog };
 var CardPreview = /** @class */ (function (_super) {
     __extends(CardPreview, _super);
     function CardPreview() {
-        return _super.call(this, "cardPreview") || this;
+        var _this = _super.call(this, "cardPreview") || this;
+        _this.rendererPool = [];
+        _this.rendererIndex = 0;
+        _this.numRenderersShowing = 0;
+        return _this;
     }
     CardPreview.prototype.setNote = function (note) {
         return __awaiter(this, void 0, void 0, function () {
@@ -167,12 +191,20 @@ var CardPreview = /** @class */ (function (_super) {
                     case 0: return [4 /*yield*/, note.type.getIntegratedNoteType()];
                     case 1:
                         integratedNoteType = _b.sent();
-                        this.elm.clear();
+                        this.rendererIndex = 0;
                         _loop_1 = function (cardType) {
-                            var renderer = new CardRenderer().appendTo(this_1.elm);
+                            var showingBack = false;
+                            var renderer = this_1.getAndShowRenderer();
                             renderer.renderFrontNote(note, cardType);
                             renderer.elm.on("click", function () {
-                                renderer.renderBackNote(note, cardType);
+                                if (showingBack) {
+                                    renderer.renderFrontNote(note, cardType);
+                                    showingBack = false;
+                                }
+                                else {
+                                    renderer.renderBackNote(note, cardType);
+                                    showingBack = true;
+                                }
                             });
                         };
                         this_1 = this;
@@ -180,10 +212,37 @@ var CardPreview = /** @class */ (function (_super) {
                             cardType = _a[_i];
                             _loop_1(cardType);
                         }
+                        this.hideUnusedRenderers();
                         return [2 /*return*/];
                 }
             });
         });
+    };
+    CardPreview.prototype.getAndShowRenderer = function () {
+        var renderer = this.getRenderer();
+        renderer.elm.removeClass("hidden");
+        if (this.rendererIndex > this.numRenderersShowing) {
+            this.numRenderersShowing = this.rendererIndex;
+        }
+        return renderer;
+    };
+    CardPreview.prototype.hideUnusedRenderers = function () {
+        for (var i = this.rendererIndex; i < this.numRenderersShowing; i++) {
+            this.rendererPool[i].elm.class("hidden");
+        }
+        this.numRenderersShowing = this.rendererIndex;
+    };
+    CardPreview.prototype.getRenderer = function () {
+        var currIndex = this.rendererIndex++;
+        var availRenderer = this.rendererPool[currIndex];
+        if (availRenderer) {
+            return availRenderer;
+        }
+        else {
+            var newRenderer = new CardRenderer().appendTo(this.elm);
+            this.rendererPool[currIndex] = newRenderer;
+            return newRenderer;
+        }
     };
     return CardPreview;
 }(Component));

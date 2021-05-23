@@ -167,14 +167,20 @@ var CardRenderer = /** @class */ (function (_super) {
                     throw new Error("iframe loaded but no window");
                 }
                 _this.cardIFrameDocument = iframeWindow.document;
-                _this.setPropogateKeyEvents(iframeWindow);
+                _this.setPropogateKeyboardAndMouseEvents(iframeWindow);
                 res();
             });
         });
     };
-    CardRenderer.prototype.setPropogateKeyEvents = function (iframeWindow) {
+    CardRenderer.prototype.setPropogateKeyboardAndMouseEvents = function (iframeWindow) {
+        for (var _i = 0, _a = ["keydown", "keyup", "click", "mousedown", "mouseup"]; _i < _a.length; _i++) {
+            var event_1 = _a[_i];
+            this.setPropogate(event_1, iframeWindow);
+        }
+    };
+    CardRenderer.prototype.setPropogate = function (eventName, iframeWindow) {
         var _this = this;
-        iframeWindow.addEventListener("keydown", function (e) {
+        iframeWindow.addEventListener(eventName, function (e) {
             setImmediatePolyfill(function () { return _this.cardIFrame.getHTMLElement().dispatchEvent(e); });
         });
     };

@@ -40,15 +40,24 @@ var ManageNotesDialog = /** @class */ (function (_super) {
             });
             _this.notesList.setDataList(results);
         })), _this.notesList = new NotesRecyclingList(deck.database.getNotes(), deck));
-        _this.notesList.onClick.addHandler(function (data) {
-            console.log(data);
+        _this.notesList.onClick.addHandler(function (selectedCard) {
+            console.log(selectedCard);
             var editNoteDialog = new EditNoteDialog(deck);
-            editNoteDialog.setEditingNote(data);
+            editNoteDialog.setEditingNote(selectedCard);
             editNoteDialog.appendTo(_this.elm);
-            // if (confirm("Delete note?\n(Delete note is WIP)")) {
-            //     deck.database.removeNote(data);
-            //     this.notesList.update();
-            // }
+            editNoteDialog.onSubmit.addHandler(function (editReturnCard) {
+                var selectedCardEdit = selectedCard.clone();
+                selectedCardEdit.fields = editReturnCard.fields;
+                deck.database.writeEdit(selectedCardEdit);
+                editNoteDialog.remove();
+            });
+            editNoteDialog.onDeleteButtonClick.addHandler(function () {
+                if (confirm("Delete note?\n(Delete note is WIP)")) {
+                    deck.database.removeNote(selectedCard);
+                    _this.notesList.update();
+                    editNoteDialog.remove();
+                }
+            });
         });
         return _this;
     }

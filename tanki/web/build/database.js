@@ -51,7 +51,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 import { CardState, dataTypeVersion, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated } from "./dataTypes.js";
 import { clearData } from "./storage.js";
-import { arrayRemoveTrailingUndefinedOrNull } from "./utils.js";
+import { arrayRemoveTrailingUndefinedOrNull, EventHandler } from "./utils.js";
 var DatabaseObject = /** @class */ (function () {
     function DatabaseObject() {
         this._uid = -1;
@@ -60,7 +60,13 @@ var DatabaseObject = /** @class */ (function () {
 }());
 var TankiDatabase = /** @class */ (function () {
     function TankiDatabase(deckData) {
+        var _this = this;
         this.deckData = deckData;
+        this.onAddNote = new EventHandler();
+        this.onRemoveNote = new EventHandler();
+        this.onEdit = new EventHandler();
+        this.onUndo = new EventHandler();
+        this.onAnyChange = new EventHandler();
         this.cards = [];
         this.notes = [];
         /**
@@ -78,11 +84,15 @@ var TankiDatabase = /** @class */ (function () {
             }
             throw new Error("Versions don't match");
         }
-        this.logs = new UndoLog();
+        this.logs = new DatabaseChangeLog();
         this.logs.freeze = true;
         this.noteTypes = this.initNoteTypes();
         this.initCards();
         this.logs.freeze = false;
+        this.onAddNote.addHandler(function (e) { return _this.onAnyChange.dispatch(e); });
+        this.onRemoveNote.addHandler(function (e) { return _this.onAnyChange.dispatch(e); });
+        this.onEdit.addHandler(function (e) { return _this.onAnyChange.dispatch(e); });
+        this.onUndo.addHandler(function (e) { return _this.onAnyChange.dispatch(e); });
     }
     TankiDatabase.prototype.getCards = function () {
         return this.cards;
@@ -123,11 +133,16 @@ var TankiDatabase = /** @class */ (function () {
             throw new Error("Trying to write to unregisted object");
         }
         var existing = this.objects[copying._uid];
+        var original = existing.clone();
         this.logs.logEdit({
             target: existing,
-            original: existing.clone()
+            original: original
         });
         existing.overwriteWith(copying);
+        this.onEdit.dispatch({
+            before: original,
+            current: existing
+        });
     };
     TankiDatabase.prototype.activateCard = function (card) {
         if (card instanceof ActivatedCard) {
@@ -159,6 +174,7 @@ var TankiDatabase = /** @class */ (function () {
     TankiDatabase.prototype.addNote = function (note) {
         this.logs.startGroup();
         this.initNote(note);
+        this.onAddNote.dispatch(note);
         this.logs.endGroup();
     };
     TankiDatabase.prototype.removeNote = function (note) {
@@ -182,10 +198,23 @@ var TankiDatabase = /** @class */ (function () {
                 target: card
             });
         }
+        this.onRemoveNote.dispatch(note);
         this.logs.endGroup();
     };
     TankiDatabase.prototype.addNoteType = function (noteType) {
         this.noteTypes.push(noteType);
+    };
+    TankiDatabase.prototype.undo = function () {
+        var log = this.logs.undo();
+        if (log) {
+            this.onUndo.dispatch(log);
+        }
+    };
+    TankiDatabase.prototype.startUndoLogGroup = function () {
+        this.logs.startGroup();
+    };
+    TankiDatabase.prototype.endUndoLogGroup = function () {
+        this.logs.endGroup();
     };
     // todo: process changed cards
     TankiDatabase.prototype.toJSON = function () {
@@ -246,35 +275,35 @@ var TankiDatabase = /** @class */ (function () {
     return TankiDatabase;
 }());
 export { TankiDatabase };
-var UndoLog = /** @class */ (function () {
-    function UndoLog() {
+var DatabaseChangeLog = /** @class */ (function () {
+    function DatabaseChangeLog() {
         this.freeze = false;
         this.currentLogGroup = this.createLogGroup();
         this.logGroupHistory = [];
         this.groupDepth = 0;
     }
-    UndoLog.prototype.logEdit = function (edit) {
+    DatabaseChangeLog.prototype.logEdit = function (edit) {
         if (this.freeze) {
             return;
         }
         this.currentLogGroup.edits.push(edit);
     };
-    UndoLog.prototype.logAdd = function (add) {
+    DatabaseChangeLog.prototype.logAdd = function (add) {
         if (this.freeze) {
             return;
         }
         this.currentLogGroup.adds.push(add);
     };
-    UndoLog.prototype.logRemove = function (remove) {
+    DatabaseChangeLog.prototype.logRemove = function (remove) {
         if (this.freeze) {
             return;
         }
         this.currentLogGroup.removes.push(remove);
     };
-    UndoLog.prototype.startGroup = function () {
+    DatabaseChangeLog.prototype.startGroup = function () {
         this.groupDepth++;
     };
-    UndoLog.prototype.endGroup = function () {
+    DatabaseChangeLog.prototype.endGroup = function () {
         this.groupDepth--;
         if (this.groupDepth > 0) {
             return;
@@ -284,7 +313,7 @@ var UndoLog = /** @class */ (function () {
         }
         this.flushLogGroupToHistory();
     };
-    UndoLog.prototype.undo = function () {
+    DatabaseChangeLog.prototype.undo = function () {
         this.flushLogGroupToHistory();
         var logGroup = this.logGroupHistory.pop();
         if (!logGroup) {
@@ -306,8 +335,9 @@ var UndoLog = /** @class */ (function () {
             var remove = removes[i];
             remove.location.splice(remove.index, 0, remove.target);
         }
+        return logGroup;
     };
-    UndoLog.prototype.flushLogGroupToHistory = function () {
+    DatabaseChangeLog.prototype.flushLogGroupToHistory = function () {
         if (this.currentLogGroup.adds.length <= 0 &&
             this.currentLogGroup.edits.length <= 0 &&
             this.currentLogGroup.removes.length <= 0) {
@@ -316,10 +346,10 @@ var UndoLog = /** @class */ (function () {
         this.logGroupHistory.push(this.currentLogGroup);
         this.currentLogGroup = this.createLogGroup();
     };
-    UndoLog.prototype.createLogGroup = function () {
+    DatabaseChangeLog.prototype.createLogGroup = function () {
         return { adds: [], edits: [], removes: [] };
     };
-    return UndoLog;
+    return DatabaseChangeLog;
 }());
 var Note = /** @class */ (function (_super) {
     __extends(Note, _super);

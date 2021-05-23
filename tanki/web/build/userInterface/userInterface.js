@@ -78,11 +78,11 @@ var TankiInterface = /** @class */ (function (_super) {
                 return;
             }
             if (e.code === "KeyZ") {
-                deck.database.logs.undo();
-                deck.updateCache();
-                _this.deckPresenter.update();
-                _this.showSnackbar("Undid", 1500);
+                deck.database.undo();
             }
+        });
+        deck.database.onUndo.addHandler(function () {
+            return _this.showSnackbar("Undid", 1500);
         });
         _this.deckPresenter.onExit.addHandler(function () { return writeOut(deck); });
         return _this;
@@ -116,7 +116,6 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.presenting = false;
         _this.cardPresenter = new CardPresenter();
         _this.deckTimeline = new DeckTimeline(_this.deck);
-        deck.loaded.then(function () { return _this.deckTimeline.update(); });
         _this.elm.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
             .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm("button").class("exitButton")
             .append("Exit")
@@ -137,7 +136,7 @@ var DeckPresenter = /** @class */ (function (_super) {
             .on("click", function () {
             //* this button is temporary
             // todo: automatically gradate cards
-            _this.deck.database.logs.startGroup();
+            _this.deck.database.startUndoLogGroup();
             var cards = _this.deck.database.getCards();
             for (var _i = 0, cards_1 = cards; _i < cards_1.length; _i++) {
                 var card = cards_1[_i];
@@ -150,9 +149,7 @@ var DeckPresenter = /** @class */ (function (_super) {
                     _this.deck.database.writeEdit(cardEdit);
                 }
             }
-            _this.deck.updateCache();
-            _this.deckTimeline.update();
-            _this.deck.database.logs.endGroup();
+            _this.deck.database.endUndoLogGroup();
         }));
         _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
         jishoWithHistory.getData.addHandler(function (data) {
@@ -161,9 +158,6 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.enterCardPresenter();
         return _this;
     }
-    DeckPresenter.prototype.update = function () {
-        this.deckTimeline.update();
-    };
     DeckPresenter.prototype.presentingLoop = function () {
         return __awaiter(this, void 0, void 0, function () {
             var selectedCard, result, interrupt_1;
@@ -192,14 +186,12 @@ var DeckPresenter = /** @class */ (function (_super) {
                         console.log(interrupt_1);
                         return [3 /*break*/, 8];
                     case 5:
-                        this.deck.database.logs.startGroup();
+                        this.deck.database.startUndoLogGroup();
                         this.deck.applyResultToCard(selectedCard, result);
-                        this.deck.database.logs.endGroup();
+                        this.deck.database.endUndoLogGroup();
                         return [3 /*break*/, 7];
                     case 6: return [3 /*break*/, 8];
-                    case 7:
-                        this.deckTimeline.update();
-                        return [3 /*break*/, 1];
+                    case 7: return [3 /*break*/, 1];
                     case 8:
                         this.exitCardPresenter();
                         this.onExit.dispatch();
@@ -236,10 +228,9 @@ var DeckPresenter = /** @class */ (function (_super) {
                             })];
                     case 1:
                         note = _a.sent();
-                        this.deck.database.logs.startGroup();
-                        this.deck.addNoteAndUpdate(note);
-                        this.deck.database.logs.endGroup();
-                        this.deckTimeline.update();
+                        this.deck.database.startUndoLogGroup();
+                        this.deck.database.addNote(note);
+                        this.deck.database.endUndoLogGroup();
                         createNoteDialog.remove();
                         return [2 /*return*/];
                 }
@@ -257,11 +248,9 @@ var DeckPresenter = /** @class */ (function (_super) {
         });
     };
     DeckPresenter.prototype.openImportNotesDialog = function () {
-        var _this = this;
         this.exitCardPresenter();
         var importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
         importNotesDialog.onImported.addHandler(function () {
-            _this.deckTimeline.update();
             importNotesDialog.remove();
         });
         return importNotesDialog;

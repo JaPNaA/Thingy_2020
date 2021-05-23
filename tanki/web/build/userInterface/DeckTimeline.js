@@ -28,10 +28,20 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.timelineGraph = new TimelineGraph(_this.deck);
         _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
+        _this.deck.database.onAnyChange.addHandler(function () { return _this.rateLimitedUpdate(); });
+        _this.deck.loaded.then(function () { return _this.rateLimitedUpdate(); });
         _this.setMinutelyUpdateIntervals();
         return _this;
     }
+    DeckTimeline.prototype.rateLimitedUpdate = function () {
+        var _this = this;
+        if (this.rateLimitTimeoutID) {
+            clearTimeout(this.rateLimitTimeoutID);
+        }
+        this.rateLimitTimeoutID = setTimeout(function () { return _this.update(); }, 10);
+    };
     DeckTimeline.prototype.update = function () {
+        console.log("timeline update");
         var counts = this.deck.getCardCount();
         var minutesToNextCard = this.deck.getMinutesToNextCard();
         var minutesToNext25Cards = this.deck.getMinutesToNextCard(24);
@@ -46,7 +56,7 @@ var DeckTimeline = /** @class */ (function (_super) {
         var _this = this;
         var timeToNextMinute = (Math.floor(Date.now() / 60e3) + 1) * 60e3 - Date.now();
         setTimeout(function () {
-            _this.update();
+            _this.rateLimitedUpdate();
             _this.setMinutelyUpdateIntervals();
         }, timeToNextMinute);
     };
