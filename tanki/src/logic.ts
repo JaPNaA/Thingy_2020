@@ -1,4 +1,4 @@
-import { ActivatedCard, Card, Note, TankiDatabase } from "./database.js";
+import { ActivatedCard, Card, TankiDatabase } from "./database.js";
 import { CardFlag, CardState, DeckData } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored, Immutable } from "./utils.js";
 
@@ -13,13 +13,11 @@ export class Deck {
 
     constructor(data: DeckData) {
         this.database = new TankiDatabase(data);
-        this.loaded = this.updateCache()
-            .then(() => {
-                this.database.onAddNote.addHandler(() => this.updateCache());
-                this.database.onRemoveNote.addHandler(() => this.updateCache())
-                this.database.onEditNote.addHandler(() => this.updateCache())
-                this.database.onUndo.addHandler(() => this.updateCache())
-            });
+
+        this.updateCache();
+        this.loaded = Promise.resolve();
+
+        this.addDatabaseHandlers();
     }
 
     public selectCard(): Immutable<Card> | undefined {
@@ -145,7 +143,7 @@ export class Deck {
         );
     }
 
-    private async updateCache() {
+    private updateCache() {
         console.log("update cache triggered");
         this.inactiveCardCache.length = 0;
         this.newCardCache.length = 0;
@@ -158,13 +156,46 @@ export class Deck {
         this.sortSeenAndReviewCards();
     }
 
+    private addDatabaseHandlers() {
+        this.database.onAddNote.addHandler(note => {
+            for (const card of note.cardUids) {
+                this.sortCardIntoCache(this.database.getCardByUid(card));
+            }
+        });
+
+        this.database.onEdit.addHandler(({ before, current }) => {
+            if (!(before instanceof Card && current instanceof Card)) { return; }
+            const beforeArray = this.getArrayForCard(before);
+            const afterArray = this.getArrayForCard(current);
+
+            if (beforeArray !== afterArray) {
+                const beforeArrayIndex = beforeArray.indexOf(current);
+                if (beforeArrayIndex < 0) {
+                    console.warn("Tried to move card in cache, but wasn't found in expected array. Full refresh of cache");
+                    this.updateCache();
+                } else {
+                    beforeArray.splice(beforeArrayIndex, 1);
+                    afterArray.push(current);
+                }
+            }
+        });
+
+        this.database.onRemoveNote.addHandler(() => this.updateCache());
+        this.database.onUndo.addHandler(() => this.updateCache());
+    }
+
     private sortCardIntoCache(card: Immutable<Card>) {
+        const array = this.getArrayForCard(card);
+        array.push(card);
+    }
+
+    private getArrayForCard(card: Immutable<Card>) {
         if (card.state === CardState.inactive || card.hasFlag(CardFlag.suspended)) {
-            this.inactiveCardCache.push(card);
+            return this.inactiveCardCache;
         } else if (card.state === CardState.active && card instanceof ActivatedCard) {
-            this.activeCardCache.push(card);
+            return this.activeCardCache;
         } else if (card.state === CardState.new) {
-            this.newCardCache.push(card);
+            return this.newCardCache;
         } else {
             console.error("Unexpected card state", card, this.database);
             throw new Error("Unexpected card state");

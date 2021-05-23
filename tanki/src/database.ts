@@ -8,12 +8,17 @@ abstract class DatabaseObject {
     abstract clone(): DatabaseObject;
 }
 
+interface DatabaseEditEvent<T> {
+    before: T,
+    current: T
+}
+
 export class TankiDatabase {
     public onAddNote = new EventHandler<Immutable<Note>>();
     public onRemoveNote = new EventHandler<Immutable<Note>>();
-    public onEditNote = new EventHandler<Immutable<Note>>();
+    public onEdit = new EventHandler<DatabaseEditEvent<Immutable<DatabaseObject>>>();
     public onUndo = new EventHandler<Immutable<LogGroup>>();
-    public onAnyChange = new EventHandler<Immutable<LogGroup> | Immutable<Note>>();
+    public onAnyChange = new EventHandler<any>();
 
     private logs: DatabaseChangeLog;
 
@@ -50,7 +55,7 @@ export class TankiDatabase {
 
         this.onAddNote.addHandler(e => this.onAnyChange.dispatch(e));
         this.onRemoveNote.addHandler(e => this.onAnyChange.dispatch(e));
-        this.onEditNote.addHandler(e => this.onAnyChange.dispatch(e));
+        this.onEdit.addHandler(e => this.onAnyChange.dispatch(e));
         this.onUndo.addHandler(e => this.onAnyChange.dispatch(e));
     }
 
@@ -93,18 +98,18 @@ export class TankiDatabase {
     public writeEdit(copying: Immutable<DatabaseObject>) {
         if (copying._uid < 0) { throw new Error("Trying to write to unregisted object"); }
         const existing = this.objects[copying._uid];
+        const original = existing.clone();
 
         this.logs.logEdit({
             target: existing,
-            original: existing.clone()
+            original: original
         });
         existing.overwriteWith(copying);
 
-        if (existing instanceof Card) {
-            this.onEditNote.dispatch(existing.parentNote);
-        } else if (existing instanceof Note) {
-            this.onEditNote.dispatch(existing);
-        }
+        this.onEdit.dispatch({
+            before: original,
+            current: existing
+        });
     }
 
     public activateCard(card: Immutable<Card>): Immutable<ActivatedCard> {
