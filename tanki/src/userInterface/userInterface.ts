@@ -114,7 +114,10 @@ class DeckPresenter extends Component {
                         }
                     }
                     this.deck.database.endUndoLogGroup();
-                })
+                }),
+            new Elm("button").class("undo")
+                .append("Undo")
+                .on("click", () => deck.database.undo())
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
