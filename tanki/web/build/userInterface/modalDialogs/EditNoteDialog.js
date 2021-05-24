@@ -103,6 +103,7 @@ var EditNoteDialog = /** @class */ (function (_super) {
         this.actionButtons.replaceContents(new Elm("button").append("Save")
             .on("click", function () { return _this.dispatchSubmit(); }), new Elm("button").append("Delete")
             .on("click", function () { return _this.onDeleteButtonClick.dispatch(); }));
+        this.typeSelectElm.attribute("disabled", "disabled");
     };
     EditNoteDialog.prototype.loadNoteTypes = function () {
         var noteTypes = this.deck.database.getNoteTypes();

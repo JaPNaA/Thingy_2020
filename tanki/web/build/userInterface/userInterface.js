@@ -61,6 +61,7 @@ import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
 import jishoWithHistory from "../jishoWithHistory.js";
 import { CardRenderer } from "./CardRenderer.js";
+import { EditNoteTypeDialog } from "./modalDialogs/EditNoteTypeDialog.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -117,21 +118,19 @@ var DeckPresenter = /** @class */ (function (_super) {
         _this.cardPresenter = new CardPresenter();
         _this.deckTimeline = new DeckTimeline(_this.deck);
         _this.elm.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
-            .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm("button").class("exitButton")
+            .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm().append(new Elm("button").class("exitButton")
             .append("Exit")
             .on("click", function () { return _this.exitCardPresenter(); }), new Elm("button").class("enterButton")
             .append("Enter")
-            .on("click", function () { return _this.enterCardPresenter(); }), new Elm("button").class("createNote")
+            .on("click", function () { return _this.enterCardPresenter(); })), new Elm().append(new Elm("button").class("createNote")
             .append("Create Note")
             .on("click", function () { return _this.openCreateNoteDialog(); }), new Elm("button").class("importNotes")
             .append("Import Notes")
             .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("manageNotes")
             .append("Manage Notes")
-            .on("click", function () { return _this.openManageNotesDialog(); }), new Elm("button").class("JishoWithHistory")
-            .append("Jisho With History")
-            .on("click", function () {
-            jishoWithHistory.openWindow();
-        }), new Elm("button").class("graduateNotes")
+            .on("click", function () { return _this.openDialog(ManageNotesDialog); }), new Elm("button").class("editNoteType")
+            .append("Edit Note Templates")
+            .on("click", function () { return _this.openDialog(EditNoteTypeDialog); }), new Elm("button").class("graduateNotes")
             .append("Graduate Notes")
             .on("click", function () {
             //* this button is temporary
@@ -150,7 +149,13 @@ var DeckPresenter = /** @class */ (function (_super) {
                 }
             }
             _this.deck.database.endUndoLogGroup();
-        }));
+        })), new Elm().append(new Elm("button").class("JishoWithHistory")
+            .append("Jisho With History")
+            .on("click", function () {
+            jishoWithHistory.openWindow();
+        })), new Elm("button").class("undo")
+            .append("Undo")
+            .on("click", function () { return deck.database.undo(); }));
         _this.escKeyExitHandler = _this.escKeyExitHandler.bind(_this);
         jishoWithHistory.getData.addHandler(function (data) {
             _this.openImportNotesDialogWithJishoApiData(data);
@@ -214,26 +219,18 @@ var DeckPresenter = /** @class */ (function (_super) {
     };
     DeckPresenter.prototype.openCreateNoteDialog = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var createNoteDialog, note;
+            var createNoteDialog;
+            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        this.exitCardPresenter();
-                        createNoteDialog = new EditNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
-                        createNoteDialog.setCreatingNote();
-                        return [4 /*yield*/, new Promise(function (res) {
-                                createNoteDialog.onSubmit.addHandler(function (note) {
-                                    res(note);
-                                });
-                            })];
-                    case 1:
-                        note = _a.sent();
-                        this.deck.database.startUndoLogGroup();
-                        this.deck.database.addNote(note);
-                        this.deck.database.endUndoLogGroup();
-                        createNoteDialog.remove();
-                        return [2 /*return*/];
-                }
+                this.exitCardPresenter();
+                createNoteDialog = new EditNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
+                createNoteDialog.setCreatingNote();
+                createNoteDialog.onSubmit.addHandler(function (note) {
+                    _this.deck.database.startUndoLogGroup();
+                    _this.deck.database.addNote(note);
+                    _this.deck.database.endUndoLogGroup();
+                });
+                return [2 /*return*/];
             });
         });
     };
@@ -248,16 +245,15 @@ var DeckPresenter = /** @class */ (function (_super) {
         });
     };
     DeckPresenter.prototype.openImportNotesDialog = function () {
-        this.exitCardPresenter();
-        var importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        var importNotesDialog = this.openDialog(ImportNotesDialog);
         importNotesDialog.onImported.addHandler(function () {
             importNotesDialog.remove();
         });
         return importNotesDialog;
     };
-    DeckPresenter.prototype.openManageNotesDialog = function () {
+    DeckPresenter.prototype.openDialog = function (dialog) {
         this.exitCardPresenter();
-        new ManageNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        return new dialog(this.deck).appendTo(this.elm).setPositionFixed();
     };
     DeckPresenter.prototype.exitCardPresenter = function () {
         this.cardPresenter.discardState();

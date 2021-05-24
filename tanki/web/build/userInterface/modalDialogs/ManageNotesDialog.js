@@ -52,11 +52,9 @@ var ManageNotesDialog = /** @class */ (function (_super) {
                 editNoteDialog.remove();
             });
             editNoteDialog.onDeleteButtonClick.addHandler(function () {
-                if (confirm("Delete note?\n(Delete note is WIP)")) {
-                    deck.database.removeNote(selectedCard);
-                    _this.notesList.update();
-                    editNoteDialog.remove();
-                }
+                deck.database.removeNote(selectedCard);
+                _this.notesList.update();
+                editNoteDialog.remove();
             });
         });
         return _this;

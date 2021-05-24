@@ -237,7 +237,9 @@ var TankiDatabase = /** @class */ (function () {
         var noteTypes = [];
         for (var _i = 0, _a = this.deckData.noteTypes; _i < _a.length; _i++) {
             var noteTypeData = _a[_i];
-            noteTypes.push(new NoteType(noteTypeData));
+            var noteType = new NoteType(noteTypeData);
+            noteTypes.push(noteType);
+            this.registerObject(noteType);
         }
         return noteTypes;
     };
@@ -418,15 +420,26 @@ var Note = /** @class */ (function (_super) {
     return Note;
 }(DatabaseObject));
 export { Note };
-var NoteType = /** @class */ (function () {
+var NoteType = /** @class */ (function (_super) {
+    __extends(NoteType, _super);
     function NoteType(noteTypeData) {
-        this.noteTypeData = noteTypeData;
-        this.name = noteTypeData.name;
-        this.numCardTypes = isNoteTypeDataIntegrated(noteTypeData) ?
+        var _this = _super.call(this) || this;
+        _this.noteTypeData = noteTypeData;
+        _this.name = noteTypeData.name;
+        _this.numCardTypes = (_this.isExternal = isNoteTypeDataIntegrated(noteTypeData)) ?
             noteTypeData.cardTypes.length : noteTypeData.numCardTypes;
+        return _this;
     }
     NoteType.prototype.serialize = function () {
         return this.noteTypeData;
+    };
+    NoteType.prototype.clone = function () {
+        var clone = new NoteType(JSON.parse(JSON.stringify(this.noteTypeData)));
+        clone._uid = this._uid;
+        return clone;
+    };
+    NoteType.prototype.overwriteWith = function (noteType) {
+        this.noteTypeData = JSON.parse(JSON.stringify(noteType.noteTypeData));
     };
     NoteType.prototype.getIntegratedNoteType = function () {
         return __awaiter(this, void 0, void 0, function () {
@@ -461,7 +474,7 @@ var NoteType = /** @class */ (function () {
     };
     NoteType.externalNoteTypesCache = new Map();
     return NoteType;
-}());
+}(DatabaseObject));
 export { NoteType };
 var Card = /** @class */ (function (_super) {
     __extends(Card, _super);
