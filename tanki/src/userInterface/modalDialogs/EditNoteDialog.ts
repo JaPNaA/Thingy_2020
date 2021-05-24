@@ -69,6 +69,7 @@ export class EditNoteDialog extends ModalDialog {
             new Elm("button").append("Delete")
                 .on("click", () => this.onDeleteButtonClick.dispatch())
         );
+        this.typeSelectElm.attribute("disabled", "disabled");
     }
 
     private loadNoteTypes() {
