@@ -460,14 +460,14 @@ export class Note extends DatabaseObject {
 export class NoteType extends DatabaseObject {
     private static externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
 
-    public isExternal: boolean;
+    public isIntegrated: boolean;
     public name: string;
     public numCardTypes: number;
 
     constructor(private noteTypeData: NoteTypeData) {
         super();
         this.name = noteTypeData.name;
-        this.numCardTypes = (this.isExternal = isNoteTypeDataIntegrated(noteTypeData)) ?
+        this.numCardTypes = (this.isIntegrated = isNoteTypeDataIntegrated(noteTypeData)) ?
             noteTypeData.cardTypes.length : noteTypeData.numCardTypes;
     }
 

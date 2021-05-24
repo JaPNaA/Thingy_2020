@@ -28,9 +28,13 @@ export class EditNoteTypeDialog extends ModalDialog {
 
     private async editNoteType(type: Immutable<NoteType>) {
         this.selectNoteElm.remove();
+        if (!type.isIntegrated) {
+            this.foregroundElm.append("This note is external. You can't edit this note. Yet...");
+            return;
+        }
 
         const typeEdit = type.clone();
-        const integratedNoteType = await typeEdit.getIntegratedNoteType() as NoteTypeDataIntegrated; // allowed because cloned
+        const integratedNoteType = await typeEdit.getIntegratedNoteType() as NoteTypeDataIntegrated; // allowed because cloned + non-external
 
         const elm = new Elm();
 
