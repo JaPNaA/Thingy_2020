@@ -1,4 +1,4 @@
-import { CardData, CardDataActivated, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataExternal, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
+import { CardData, CardDataActivated, CardDataBasic, CardFlag, CardSchedulingSettingsData, CardState, dataTypeVersion, DeckData, isCardActivated, isEmptyValue, isNoteTypeDataIntegrated, NoteData, NoteTypeData, NoteTypeDataIntegrated, Optional } from "./dataTypes.js";
 import { clearData } from "./storage.js";
 import { arrayRemoveTrailingUndefinedOrNull, EventHandler, Immutable } from "./utils.js";
 
@@ -226,7 +226,9 @@ export class TankiDatabase {
         const noteTypes = [];
 
         for (const noteTypeData of this.deckData.noteTypes) {
-            noteTypes.push(new NoteType(noteTypeData));
+            const noteType = new NoteType(noteTypeData);
+            noteTypes.push(noteType);
+            this.registerObject(noteType);
         }
 
         return noteTypes;
@@ -455,20 +457,34 @@ export class Note extends DatabaseObject {
     }
 }
 
-export class NoteType {
+export class NoteType extends DatabaseObject {
     private static externalNoteTypesCache: Map<string, NoteTypeDataIntegrated> = new Map();
 
+    public isExternal: boolean;
     public name: string;
     public numCardTypes: number;
 
     constructor(private noteTypeData: NoteTypeData) {
+        super();
         this.name = noteTypeData.name;
-        this.numCardTypes = isNoteTypeDataIntegrated(noteTypeData) ?
+        this.numCardTypes = (this.isExternal = isNoteTypeDataIntegrated(noteTypeData)) ?
             noteTypeData.cardTypes.length : noteTypeData.numCardTypes;
     }
 
     public serialize(): NoteTypeData {
         return this.noteTypeData;
+    }
+
+    public clone(): NoteType {
+        const clone = new NoteType(JSON.parse(JSON.stringify(this.noteTypeData)));
+        clone._uid = this._uid;
+        return clone;
+    }
+
+    public overwriteWith(noteType: Immutable<NoteType>) {
+        this.noteTypeData = JSON.parse(
+            JSON.stringify((noteType as NoteType).noteTypeData)
+        );
     }
 
     public async getIntegratedNoteType(): Promise<Immutable<NoteTypeDataIntegrated>> {
