@@ -75,54 +75,60 @@ class DeckPresenter extends Component {
             this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
                 .append(this.cardPresenter),
             new Elm().class("timeline").append(this.deckTimeline),
-            new Elm("button").class("exitButton")
-                .append("Exit")
-                .on("click", () => this.exitCardPresenter()),
-            new Elm("button").class("enterButton")
-                .append("Enter")
-                .on("click", () => this.enterCardPresenter()),
-            new Elm("button").class("createNote")
-                .append("Create Note")
-                .on("click", () => this.openCreateNoteDialog()),
-            new Elm("button").class("importNotes")
-                .append("Import Notes")
-                .on("click", () => this.openImportNotesDialog()),
-            new Elm("button").class("manageNotes")
-                .append("Manage Notes")
-                .on("click", () => this.openDialog(ManageNotesDialog)),
-            new Elm("button").class("JishoWithHistory")
-                .append("Jisho With History")
-                .on("click", () => {
-                    jishoWithHistory.openWindow();
-                }),
-            new Elm("button").class("graduateNotes")
-                .append("Graduate Notes")
-                .on("click", () => {
-                    //* this button is temporary
-                    // todo: automatically gradate cards
+            new Elm().append(
+                new Elm("button").class("exitButton")
+                    .append("Exit")
+                    .on("click", () => this.exitCardPresenter()),
+                new Elm("button").class("enterButton")
+                    .append("Enter")
+                    .on("click", () => this.enterCardPresenter())
+            ),
+            new Elm().append(
+                new Elm("button").class("createNote")
+                    .append("Create Note")
+                    .on("click", () => this.openCreateNoteDialog()),
+                new Elm("button").class("importNotes")
+                    .append("Import Notes")
+                    .on("click", () => this.openImportNotesDialog()),
+                new Elm("button").class("manageNotes")
+                    .append("Manage Notes")
+                    .on("click", () => this.openDialog(ManageNotesDialog)),
+                new Elm("button").class("editNoteType")
+                    .append("Edit Note Templates")
+                    .on("click", () => this.openDialog(EditNoteTypeDialog)),
+                new Elm("button").class("graduateNotes")
+                    .append("Graduate Notes")
+                    .on("click", () => {
+                        //* this button is temporary
+                        // todo: automatically gradate cards
 
-                    this.deck.database.startUndoLogGroup();
-                    const cards = this.deck.database.getCards();
-                    for (const card of cards) {
-                        if (
-                            card instanceof ActivatedCard &&
-                            card.state === CardState.active &&
-                            card.interval > 21 * 24 * 60
-                        ) {
-                            const cardEdit = card.clone();
-                            cardEdit.state = CardState.inactive;
-                            cardEdit.addFlag(CardFlag.graduated);
-                            this.deck.database.writeEdit(cardEdit);
+                        this.deck.database.startUndoLogGroup();
+                        const cards = this.deck.database.getCards();
+                        for (const card of cards) {
+                            if (
+                                card instanceof ActivatedCard &&
+                                card.state === CardState.active &&
+                                card.interval > 21 * 24 * 60
+                            ) {
+                                const cardEdit = card.clone();
+                                cardEdit.state = CardState.inactive;
+                                cardEdit.addFlag(CardFlag.graduated);
+                                this.deck.database.writeEdit(cardEdit);
+                            }
                         }
-                    }
-                    this.deck.database.endUndoLogGroup();
-                }),
+                        this.deck.database.endUndoLogGroup();
+                    })
+            ),
+            new Elm().append(
+                new Elm("button").class("JishoWithHistory")
+                    .append("Jisho With History")
+                    .on("click", () => {
+                        jishoWithHistory.openWindow();
+                    })
+            ),
             new Elm("button").class("undo")
                 .append("Undo")
-                .on("click", () => deck.database.undo()),
-            new Elm("button").class("editNoteType")
-                .append("Edit Note Templates")
-                .on("click", () => this.openDialog(EditNoteTypeDialog))
+                .on("click", () => deck.database.undo())
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
