@@ -11,6 +11,8 @@ import AnimateInOutElm from "./AnimateInOutElm.js";
 import { CardFlag, CardState } from "../dataTypes.js";
 import jishoWithHistory from "../jishoWithHistory.js";
 import { CardRenderer } from "./CardRenderer.js";
+import { ModalDialog } from "./modalDialogs/ModalDialog.js";
+import { EditNoteTypeDialog } from "./modalDialogs/EditNoteTypeDialog.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -87,7 +89,7 @@ class DeckPresenter extends Component {
                 .on("click", () => this.openImportNotesDialog()),
             new Elm("button").class("manageNotes")
                 .append("Manage Notes")
-                .on("click", () => this.openManageNotesDialog()),
+                .on("click", () => this.openDialog(ManageNotesDialog)),
             new Elm("button").class("JishoWithHistory")
                 .append("Jisho With History")
                 .on("click", () => {
@@ -117,7 +119,10 @@ class DeckPresenter extends Component {
                 }),
             new Elm("button").class("undo")
                 .append("Undo")
-                .on("click", () => deck.database.undo())
+                .on("click", () => deck.database.undo()),
+            new Elm("button").class("editNoteType")
+                .append("Edit Note Templates")
+                .on("click", () => this.openDialog(EditNoteTypeDialog))
         );
 
         this.escKeyExitHandler = this.escKeyExitHandler.bind(this);
@@ -190,9 +195,7 @@ class DeckPresenter extends Component {
     }
 
     private openImportNotesDialog() {
-        this.exitCardPresenter();
-
-        const importNotesDialog = new ImportNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        const importNotesDialog = this.openDialog(ImportNotesDialog);
         importNotesDialog.onImported.addHandler(() => {
             importNotesDialog.remove();
         });
@@ -200,10 +203,9 @@ class DeckPresenter extends Component {
         return importNotesDialog;
     }
 
-    private openManageNotesDialog() {
+    private openDialog<T extends ModalDialog>(dialog: new (deck: Deck) => T): T {
         this.exitCardPresenter();
-
-        new ManageNotesDialog(this.deck).appendTo(this.elm).setPositionFixed();
+        return new dialog(this.deck).appendTo(this.elm).setPositionFixed();
     }
 
     private exitCardPresenter() {
