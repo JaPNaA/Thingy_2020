@@ -173,17 +173,12 @@ class DeckPresenter extends Component {
 
         const createNoteDialog = new EditNoteDialog(this.deck).appendTo(this.elm).setPositionFixed();
         createNoteDialog.setCreatingNote();
-        const note = await new Promise<Note>(res => {
-            createNoteDialog.onSubmit.addHandler(note => {
-                res(note);
-            });
+
+        createNoteDialog.onSubmit.addHandler(note => {
+            this.deck.database.startUndoLogGroup();
+            this.deck.database.addNote(note);
+            this.deck.database.endUndoLogGroup();
         });
-
-        this.deck.database.startUndoLogGroup();
-        this.deck.database.addNote(note);
-        this.deck.database.endUndoLogGroup();
-
-        createNoteDialog.remove();
     }
 
     private async openImportNotesDialogWithJishoApiData(data: string) {
