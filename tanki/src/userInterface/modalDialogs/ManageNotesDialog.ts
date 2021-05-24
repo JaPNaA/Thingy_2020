@@ -57,11 +57,9 @@ export class ManageNotesDialog extends ModalDialog {
             });
 
             editNoteDialog.onDeleteButtonClick.addHandler(() => {
-                if (confirm("Delete note?\n(Delete note is WIP)")) {
-                    deck.database.removeNote(selectedCard);
-                    this.notesList.update();
-                    editNoteDialog.remove();
-                }
+                deck.database.removeNote(selectedCard);
+                this.notesList.update();
+                editNoteDialog.remove();
             });
         });
     }
