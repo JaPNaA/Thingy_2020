@@ -12,12 +12,15 @@ export class DeckTimeline extends Component {
 
     private rateLimitTimeoutID?: NodeJS.Timeout;
 
+    private notifyNext25Cards = false;
+
     constructor(private deck: Deck) {
         super("deckTimeline");
 
         this.elm.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
-            new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm),
+            new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm)
+                .on("click", () => this.notifyNext25Cards = true),
             this.timelineGraph,
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
@@ -66,7 +69,19 @@ export class DeckTimeline extends Component {
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
 
+        if (this.notifyNext25Cards && minutesToNext25Cards && minutesToNext25Cards <= 0) {
+            this.sendCardsDueNotification();
+            this.notifyNext25Cards = false;
+        }
+
         this.timelineGraph.update();
+    }
+
+    private sendCardsDueNotification() {
+        if (!window.Notification) { return; }
+        new Notification("Tanki - 25 cards are due!", {
+            body: "25 or more cards are due -- let's get them done!"
+        });
     }
 
     private setMinutelyUpdateIntervals() {
