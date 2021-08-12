@@ -1,4 +1,4 @@
-const { BrowserWindow, app, session, ipcMain, Menu } = require("electron");
+const { BrowserWindow, app, session, ipcMain, Menu, dialog } = require("electron");
 const http = require("http");
 const os = require("os");
 
@@ -13,8 +13,26 @@ function createWindow() {
         titleBarStyle: "hidden"
     });
 
+    let shouldWarnBeforeClose = false;
+
+    window.on("close", function (e) {
+        if (!shouldWarnBeforeClose) { return; }
+
+        const choice = dialog.showMessageBoxSync(this, {
+            type: 'question',
+            buttons: ['Yes', 'No'],
+            title: 'Confirm',
+            message: 'Are you sure you want to quit?'
+        });
+
+        if (choice === 1) {
+            e.preventDefault();
+        }
+    });
+
     ipcMain.on("openDevTools", () => window.webContents.openDevTools());
     ipcMain.on("openContextMenu", () => Menu.getApplicationMenu().popup());
+    ipcMain.on("set:shouldWarnBeforeClose", (e, data) => shouldWarnBeforeClose = data);
 
     ipcMain.on("get:httpServerAllowed", e => {
         e.sender.send("get:httpServerAllowed", true);

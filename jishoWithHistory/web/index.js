@@ -42,6 +42,29 @@ class Main extends Component {
         /** @type {Elm} */
         this.lookupContainer = null;
 
+        this.changedSinceLastExport = false;
+
+        this.lookupHistory.addChangeHandler(() => {
+            if (this.lookupHistory.getData().length <= 0) {
+                this.setFlagExported();
+                return;
+            }
+
+            if (!this.changedSinceLastExport) {
+                this.changedSinceLastExport = true;
+
+                if (ipc) {
+                    ipc.send("set:shouldWarnBeforeClose", true);
+                }
+            }
+        });
+
+        window.onbeforeunload = () => {
+            if (!ipc && this.changedSinceLastExport) {
+                return "Are you sure you want to quit?";
+            }
+        };
+
         this._setup();
     }
 
@@ -51,6 +74,13 @@ class Main extends Component {
 
     getHistory() {
         return this.lookupHistory.getData();
+    }
+
+    setFlagExported() {
+        this.changedSinceLastExport = false;
+        if (ipc) {
+            ipc.send("set:shouldWarnBeforeClose", false);
+        }
     }
 
     _setup() {
@@ -192,8 +222,12 @@ class ExportButton extends Elm {
         this.copyButton = new Elm("button").append("Copy");
         this.sendButton = this.createSendButton();
         this.contentTextarea = new Elm("textarea")
-            .attribute("readonly") // @ts-ignore
-            .on("click", function () { this.select(); });
+            .attribute("readonly")
+            .on("click", function () {
+                // @ts-ignore
+                this.select();
+                main.setFlagExported();
+            })
 
         this.on("click", () => {
             const modal = new Modal();
@@ -210,6 +244,7 @@ class ExportButton extends Elm {
 
         this.copyButton.on("click", () => {
             navigator.clipboard.writeText(this.getDataStr())
+                .then(() => main.setFlagExported())
                 .catch(err => {
                     const modal = new Modal();
                     modal.appendContent(new Elm().append("Failed to copy.\nPlease try selecting the textarea and pressing ctrl-c"));
@@ -262,6 +297,7 @@ class ExportButton extends Elm {
                 const serverModal = new SendByHTTPServerModal(this.getDataStr());
                 serverModal.show();
             }
+            main.setFlagExported();
         });
 
         return sendButton;
@@ -537,9 +573,7 @@ class Lookup extends Component {
 
             Lookup.useProxy = true;
             this._showProxyWarning();
-            const requestWithProxy = fetch(Lookup.getProxyUrl(url));
-            requestWithProxy.catch(err => { Lookup.useProxy = false; });
-            return requestWithProxy;
+            return fetch(Lookup.getProxyUrl(url));
         }
     }
 
