@@ -280,7 +280,7 @@ class FileDisplay {
 
 class LoadableFile {
     /**
-     * @typedef {(() => Promise<Blob>} FileLoader
+     * @typedef {() => Promise<Blob>} FileLoader
      * @param {Blob | FileLoader} fileOrLoader
      */
     constructor(fileOrLoader) {
@@ -313,14 +313,6 @@ class FileDirectory {
         this.name = undefined;
         /** @type {string | undefined} */
         this.parentPath = undefined;
-    }
-
-    /** @param {LoadableFile} file */
-    addFile(file) {
-        /** @type {string} */ // @ts-ignore
-        const path = file.webkitRelativePath;
-
-        this.addBlob(path, file);
     }
 
     /**
@@ -395,7 +387,8 @@ directoryFileInput.addEventListener("change", function (e) {
     const directory = new FileDirectory();
 
     for (const file of directoryFileInput.files) {
-        directory.addFile(new LoadableFile(file));
+        // @ts-ignore
+        directory.addBlob(file.webkitRelativePath, new LoadableFile(file));
     }
 
     updateFiles(directory);
