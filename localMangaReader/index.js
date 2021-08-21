@@ -24,6 +24,15 @@ const langMapProm = (async function setUserLanguage() {
     return langMap;
 })();
 
+/**
+ * @param {string} key 
+ */
+function createLocaleStringSpan(key) {
+    const elm = new Elm("span");
+    langMapProm.then(map => elm.replaceContents(map[key]));
+    return elm;
+}
+
 langMapProm.then(map => document.title = map.localMangaReaderTitle);
 
 // ---
@@ -194,7 +203,6 @@ class ChapterFiles {
     /** @param {number} yPosition */
     loadFilesUpTo(yPosition) {
         if (yPosition < this.scrollLazyLoadTriggerTreshold) { return; }
-        console.log("scroll");
 
         const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
         const displayPageIndex = Math.min(this.pagesPerRow * closestRowY, this.pages.length - 1);
@@ -211,7 +219,6 @@ class ChapterFiles {
         for (let i = this.pagesLoaded; i < pagesToLoad; i++) {
             this.pages[i].loadFile();
         }
-        console.log("Loading pages up to " + pagesToLoad);
 
         this.pagesLoaded = pagesToLoad;
         this.scrollLazyLoadTriggerTreshold =
@@ -380,19 +387,35 @@ const zipFileInput = new InputElm().setType("file").attribute("accept", "applica
         });
 
         updateFiles(directory);
-    });;
+    });
+
+const wideViewCheckbox = new InputElm().setType("checkbox")
+    .on("change", function () {
+        //
+    });
 
 new Elm("div").class("main").append(
     fileDisplay.elm,
 
-    new Elm("label").append(
-        filesInputLabelText = new Elm("span").withSelf(async elm => elm.append((await langMapProm).selectMangaFolder)),
-        directoryFileInput
-    ),
+    new Elm().class("controlsContainer").append(
+        new Elm("h1").append(createLocaleStringSpan("selectFile")),
 
-    new Elm("label").append(
-        new Elm("span").withSelf(async elm => elm.append((await langMapProm).selectMangaZip)),
-        zipFileInput
+        new Elm("label").append(
+            filesInputLabelText = createLocaleStringSpan("selectMangaFolder").class("block"),
+            directoryFileInput
+        ),
+
+        new Elm("label").append(
+            createLocaleStringSpan("selectMangaZip").class("block"),
+            zipFileInput
+        ),
+
+        new Elm("h1").append(createLocaleStringSpan("viewerOptions")),
+
+        new Elm("label").append(
+            wideViewCheckbox,
+            createLocaleStringSpan("wideView")
+        )
     )
 ).appendTo(document.body);
 

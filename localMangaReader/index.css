@@ -4,6 +4,23 @@ body {
     color: white;
 }
 
+.block {
+    display: block;
+}
+
+.main {
+    text-align: center;
+}
+
+.controlsContainer {
+    text-align: left;
+    width: 460px;
+    background-color: #8a8a8a42;
+    padding: 24px;
+    margin: 64px;
+    display: inline-block;
+}
+
 .row {
     scroll-snap-align: start;
     display: block;

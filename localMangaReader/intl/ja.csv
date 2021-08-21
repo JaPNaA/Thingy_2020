@@ -1,4 +1,7 @@
-localMangaReaderTitle,自己資源の漫画リーダ
-selectMangaFolder,漫画のフォルダーを選択してください。
-selectMangaZip,またはZIPを選択してください。
-selectAdditionalMangaFolder,もう一つ漫画を選択したら、それを追加される。
+localMangaReaderTitle,自己資源漫画リーダ
+selectMangaFolder,漫画のフォルダーを選択
+selectMangaZip,またはZIPを選択
+selectAdditionalMangaFolder,もう一つ漫画のフォルダーを追加
+selectFile,開く
+viewerOptions,リーダ　オプション
+wideView,広いリーダ

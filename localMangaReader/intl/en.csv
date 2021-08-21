@@ -1,4 +1,7 @@
 localMangaReaderTitle,Local Manga Reader
-selectMangaFolder,Select the manga's folder
-selectMangaZip,Or, select a .zip of the manga
+selectMangaFolder,Select a manga folder
+selectMangaZip,Or, select a manga ZIP
 selectAdditionalMangaFolder,Add another manga folder
+selectFile,Open a Manga
+viewerOptions,Viewer Options
+wideView,Wide View
