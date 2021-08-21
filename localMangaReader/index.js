@@ -1,5 +1,7 @@
 // --- Language Loading
 
+import { Elm, InputElm } from "./elements.js";
+
 const availableLangs = ['en', 'ja'];
 
 // availableLangs.length = 1; // for testing purposes
@@ -342,73 +344,58 @@ class FileDirectory {
         currDirectory.items.set(fileName, file);
     }
 }
-
-const main = document.createElement("div");
-main.classList.add("main");
+/** @type {Elm} */
+let filesInputLabelText;
 
 const fileDisplay = new FileDisplay();
-main.appendChild(fileDisplay.elm);
 
-const directoryFileInput = document.createElement("input");
-directoryFileInput.type = "file";
-directoryFileInput.multiple = true;
-directoryFileInput.setAttribute("webkitdirectory", "true");
-directoryFileInput.setAttribute("directory", "true");
+const directoryFileInput = new InputElm().setType("file").attribute("multiple").attribute("webkitdirectory").attribute("directory")
+    .on("change", async () => {
+        const directory = new FileDirectory();
 
-const zipFileInput = document.createElement("input");
-zipFileInput.type = "file";
-zipFileInput.accept = "application/zip";
-
-const filesInputLabelText = document.createElement("span");
-langMapProm.then(map => filesInputLabelText.innerText = map.selectMangaFolder);
-
-const directoryFileInputLabel = document.createElement("label");
-directoryFileInputLabel.appendChild(filesInputLabelText);
-directoryFileInputLabel.appendChild(directoryFileInput);
-
-main.appendChild(directoryFileInputLabel);
-
-
-const zipFileInputLabelText = document.createElement("span");
-langMapProm.then(map => zipFileInputLabelText.innerText = map.selectMangaZip);
-
-const zipFileInputLabel = document.createElement("label");
-zipFileInputLabel.appendChild(zipFileInputLabelText);
-zipFileInputLabel.appendChild(zipFileInput);
-
-main.appendChild(zipFileInputLabel)
-
-document.body.appendChild(main);
-
-
-directoryFileInput.addEventListener("change", function (e) {
-    langMapProm.then(map => filesInputLabelText.innerText = map.selectAdditionalMangaFolder);
-
-    const directory = new FileDirectory();
-
-    for (const file of directoryFileInput.files) {
         // @ts-ignore
-        directory.addBlob(file.webkitRelativePath, new LoadableFile(file));
-    }
+        for (const file of directoryFileInput.elm.files) {
+            // @ts-ignore
+            directory.addBlob(file.webkitRelativePath, new LoadableFile(file));
+        }
 
-    updateFiles(directory);
-});
+        updateFiles(directory);
 
-zipFileInput.addEventListener("change", async function (e) {
-    await loadJSZip();
-    const zip = new JSZip();
-    await zip.loadAsync(zipFileInput.files[0]);
-
-    const directory = new FileDirectory();
-
-    zip.forEach(function (relPath, file) {
-        directory.addBlob(relPath,
-            new LoadableFile(async () => await file.async("blob"))
-        );
+        filesInputLabelText.replaceContents((await langMapProm).selectAdditionalMangaFolder);
     });
 
-    updateFiles(directory);
-});
+const zipFileInput = new InputElm().setType("file").attribute("accept", "application/zip")
+    .on("change", async function (e) {
+        await loadJSZip();
+        const zip = new JSZip();
+        // @ts-ignore
+        await zip.loadAsync(zipFileInput.elm.files[0]);
+
+        const directory = new FileDirectory();
+
+        zip.forEach(function (relPath, file) {
+            directory.addBlob(relPath,
+                new LoadableFile(async () => await file.async("blob"))
+            );
+        });
+
+        updateFiles(directory);
+    });;
+
+new Elm("div").class("main").append(
+    fileDisplay.elm,
+
+    new Elm("label").append(
+        filesInputLabelText = new Elm("span").withSelf(async elm => elm.append((await langMapProm).selectMangaFolder)),
+        directoryFileInput
+    ),
+
+    new Elm("label").append(
+        new Elm("span").withSelf(async elm => elm.append((await langMapProm).selectMangaZip)),
+        zipFileInput
+    )
+).appendTo(document.body);
+
 
 /**
  * @param {FileDirectory} directory
