@@ -357,6 +357,15 @@ class FileDirectory {
         currDirectory.items.set(fileName, file);
     }
 }
+
+const supportedSet = new Set(["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico", "cur", "tif", "tiff"]);
+
+/** @param {string} name */
+function isImageFile(name) {
+    const ext = name.slice(name.lastIndexOf(".") + 1);
+    return supportedSet.has(ext);
+}
+
 /** @type {Elm} */
 let filesInputLabelText;
 
@@ -368,8 +377,9 @@ const directoryFileInput = new InputElm().setType("file").attribute("multiple").
 
         // @ts-ignore
         for (const file of directoryFileInput.elm.files) {
-            // @ts-ignore
-            directory.addBlob(file.webkitRelativePath, new LoadableFile(file));
+            const path = file.webkitRelativePath;
+            if (!isImageFile(path)) { continue; }
+            directory.addBlob(path, new LoadableFile(file));
         }
 
         updateFiles(directory);
@@ -387,6 +397,7 @@ const zipFileInput = new InputElm().setType("file").attribute("accept", "applica
         const directory = new FileDirectory();
 
         zip.forEach(function (relPath, file) {
+            if (!isImageFile(relPath)) { return; }
             directory.addBlob(relPath,
                 new LoadableFile(async () => await file.async("blob"))
             );
