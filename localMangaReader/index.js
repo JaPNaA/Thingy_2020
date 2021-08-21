@@ -103,7 +103,7 @@ class ChapterFiles {
     }
 
     resizeHandler() {
-        const newPagesPerRow = portraitMode ? 1 : 2;
+        const newPagesPerRow = (portraitMode || wideMode) ? 1 : 2;
         if (newPagesPerRow != this.pagesPerRow) {
             this.pagesPerRow = newPagesPerRow;
             this.updateElements();
@@ -113,6 +113,12 @@ class ChapterFiles {
             this.elm.classList.add("portrait");
         } else {
             this.elm.classList.remove("portrait");
+        }
+
+        if (wideMode) {
+            this.elm.classList.add("wide");
+        } else {
+            this.elm.classList.remove("wide");
         }
     }
 
@@ -391,7 +397,9 @@ const zipFileInput = new InputElm().setType("file").attribute("accept", "applica
 
 const wideViewCheckbox = new InputElm().setType("checkbox")
     .on("change", function () {
-        //
+        // @ts-expect-error
+        wideMode = wideViewCheckbox.getValue();
+        resizeHandler();
     });
 
 new Elm("div").class("main").append(
@@ -455,7 +463,8 @@ addEventListener("keydown", function (e) {
 
     e.preventDefault();
 
-    const pageHeight = innerHeight;
+    // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
+    const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
 
     let newScroll = document.documentElement.scrollTop;
 
@@ -465,7 +474,10 @@ addEventListener("keydown", function (e) {
         newScroll -= pageHeight;
     }
 
-    document.documentElement.scrollTop = fileDisplay.currentChapter.closestRowY(newScroll);
+    document.documentElement.scrollTop =
+        wideMode ?
+            newScroll :
+            fileDisplay.currentChapter.closestRowY(newScroll);
 });
 
 addEventListener("scroll", function () {
@@ -487,6 +499,7 @@ addEventListener("resize", function () {
 const resizeSubscribers = [];
 
 let portraitMode = false;
+let wideMode = false;
 
 function resizeHandler() {
     lastWidth = innerWidth;
