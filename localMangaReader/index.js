@@ -13,7 +13,6 @@ const langMapProm = (async function setUserLanguage() {
 
     const textData = await fetch("intl/" + userLang + ".csv").then(e => e.text());
     const lines = textData.split("\n");
-    const map = new Map();
 
     for (const line of lines) {
         if (!line) { continue; }
