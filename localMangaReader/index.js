@@ -536,3 +536,57 @@ async function loadJSZip() {
     return JSZip;
 }
 
+{
+    /** @type {FileDirectory} */
+    let directory;
+
+    const loadingFileMap = new Map();
+
+    addEventListener("message", function (event) {
+        if (typeof event.data !== "string") { return; }
+        const colonIndex = event.data.indexOf(":");
+        let command;
+        let argument = null;
+
+        if (colonIndex < 0) {
+            command = event.data;
+        } else {
+            command = event.data.slice(0, colonIndex);
+            argument = JSON.parse(event.data.slice(colonIndex + 1));
+        }
+
+        function returnMessage(command, message) {
+            // @ts-ignore
+            event.source.postMessage(command + ":" + JSON.stringify(message), event.origin);
+        }
+
+        switch (command) {
+            case "enableEmbedMode":
+                returnMessage("get", "pages");
+
+                directory = new FileDirectory();
+
+                break;
+            case "sent pages":
+                if (!argument) { break; }
+                for (let i = argument.start; i < argument.end; i++) {
+                    directory.addBlob(i.toString(), new LoadableFile(() => new Promise(res => {
+                        loadingFileMap.set(i, res);
+                        returnMessage("getPageSrc", i);
+                    })));
+                }
+
+                updateFiles(directory);
+
+                break;
+            case "pageSrc":
+                if (!argument) { break; }
+                const [number, src] = argument;
+                const promRes = loadingFileMap.get(number);
+                if (promRes) {
+                    promRes(fetch(src).then(e => e.blob()));
+                }
+                break;
+        }
+    });
+}
