@@ -538,9 +538,10 @@ async function loadJSZip() {
 
 {
     /** @type {FileDirectory} */
-    let directory;
+    let rootDirectory;
 
-    const loadingFileMap = new Map();
+    const loadingFilesMap = new Map();
+    let loadingFilesMapCurrId = 0;
 
     addEventListener("message", function (event) {
         if (typeof event.data !== "string") { return; }
@@ -556,36 +557,56 @@ async function loadJSZip() {
         }
 
         function returnMessage(command, message) {
+            let str = command;
+            if (message) {
+                str += ":" + JSON.stringify(message);
+            }
             // @ts-ignore
-            event.source.postMessage(command + ":" + JSON.stringify(message), event.origin);
+            event.source.postMessage(str, event.origin);
         }
 
         switch (command) {
             case "enableEmbedMode":
-                returnMessage("get", "pages");
-
-                directory = new FileDirectory();
-
+                rootDirectory = new FileDirectory();
+                returnMessage("getDirectory");
                 break;
-            case "sent pages":
+
+            case "setDirectory":
                 if (!argument) { break; }
-                for (let i = argument.start; i < argument.end; i++) {
-                    directory.addBlob(i.toString(), new LoadableFile(() => new Promise(res => {
-                        loadingFileMap.set(i, res);
-                        returnMessage("getPageSrc", i);
-                    })));
+
+                const directories = argument.directories;
+                const directoriesKeys = Object.keys(directories);
+
+                for (const directoryKey of directoriesKeys) {
+                    const directory = directories[directoryKey];
+
+                    const start = directory.start === undefined ? 1 : directory.start;
+                    for (let i = start; i <= directory.end; i++) {
+                        rootDirectory.addBlob(directoryKey + "/" + i.toString(), new LoadableFile(() => new Promise(res => {
+                            const returnId = loadingFilesMapCurrId++;
+
+                            loadingFilesMap.set(returnId, res);
+                            returnMessage("getPageSrc", {
+                                returnId: returnId,
+                                directory: directoryKey,
+                                page: i
+                            });
+                        })));
+                    }
                 }
 
-                updateFiles(directory);
 
+                updateFiles(rootDirectory);
                 break;
-            case "pageSrc":
+
+            case "setPageSrc":
                 if (!argument) { break; }
-                const [number, src] = argument;
-                const promRes = loadingFileMap.get(number);
+                const { returnId, src } = argument;
+                const promRes = loadingFilesMap.get(returnId);
                 if (promRes) {
                     promRes(fetch(src).then(e => e.blob()));
                 }
+                loadingFilesMap.delete(returnId);
                 break;
         }
     });
