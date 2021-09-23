@@ -17,7 +17,7 @@ The protocol is done through `postMessage`s.
 Embed `https://japnaa.github.io/Thingy_2020/localMangaReader/` on your website.
 
 ```html
-<iframe src="https://japnaa.github.io/Thingy_2020/localMangaReader/"><>
+<iframe src="https://japnaa.github.io/Thingy_2020/localMangaReader/"></iframe>
 ```
 
 Tell the reader you want to put your own content on it by posting `enableEmbedMode`.
@@ -67,7 +67,7 @@ The format of this JSON string shoud look like the following (without comments):
 }
 ```
 
-The website expects something like the following to come back:
+The reader expects something like the following to come back:
 
 ```json
 setDirectory:{"directories":{"volume1/chapter1":{"start": 1,"end": 19},"volume1/chapter2":{"end": 19},"extras":{"end": 10}}}
