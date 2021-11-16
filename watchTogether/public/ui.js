@@ -4,9 +4,7 @@ import { YouTubeIFrame } from "./youtubeIframeAPI.js";
 
 export const triggers = {
     /** @type {EventHandlers<string>} */
-    selectRoom: new EventHandlers(),
-    /** @type {EventHandlers<string>} */
-    changeVideoID: new EventHandlers()
+    selectRoom: new EventHandlers()
 };
 
 export class MainInterface extends Component {
@@ -45,9 +43,9 @@ class RoomPlayer extends Component {
         this.elm.append(
             "Video ID: ",
             this.videoIDElm = new InputElm().on("change", () => {
-                triggers.changeVideoID.dispatch(this.videoIDElm.getValue());
+                this.iframe.setVideoId(this.videoIDElm.getValue())
             }),
-            new YouTubeIFrame()
+            this.iframe = new YouTubeIFrame()
         );
     }
 }

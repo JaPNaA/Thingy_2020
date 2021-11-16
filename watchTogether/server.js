@@ -22,7 +22,7 @@ wsServer.addListener("request", function (req) {
     function roomCodeMessageHandler(message) {
         const room = rooms.get(message.utf8Data);
         if (!room) {
-            console.log("closed connection: no room ", message.utf8Data);
+            console.log("closed connection: no room", message.utf8Data);
             connection.close();
             return;
         }
@@ -30,7 +30,6 @@ wsServer.addListener("request", function (req) {
         room.addMember(connection);
         connection.removeListener("message", roomCodeMessageHandler);
     }
-
 });
 
 class Room {

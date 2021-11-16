@@ -11,89 +11,88 @@ export class YouTubeIFrame extends Component {
     constructor() {
         super("YouTubeIFrame");
         // appendTo document.body as workaround for YouTube's API
-        this.player = new Elm().attribute("id", "player").appendTo(document.body);
+        this.playerElm = new Elm().attribute("id", "player").appendTo(document.body);
+        this.server = getServer();
 
-        onYoutubeIframeAPIReady(() => {
-            createYoutubeIframe(getServer());
+        if (!isReady) { throw new Error("YouTube API not ready"); }
+
+        this.lastPlayerState = null;
+        /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
+        this.playerState = new TrackableObject({
+            timestamp: 0,
+            videoId: "",
+            playing: false,
+            ended: false,
+            position: 0,
+            playbackRate: 1
         });
 
-        this.elm.append(this.player);
-    }
-}
+        this.player = new YT.Player("player", {
+            height: "360",
+            width: "640",
+            videoId: "QH2-TGUlwu4",
+            playerVars: { rel: 0 },
+            events: {
+                onReady: () => {
+                    this.playerState.setIfPossible("videoId", "QH2-TGUlwu4");
+                    this._updatePlayerState(this.playerState.getCurrObj());
+                },
+                onStateChange: event => {
+                    const playerState = this.player.getPlayerState();
 
-
-/** @param {ServerConnection} server */
-function createYoutubeIframe(server) {
-    let lastPlayerState = null;
-    /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
-    const playerState = new TrackableObject({
-        timestamp: 0,
-        videoId: "",
-        playing: false,
-        ended: false,
-        position: 0,
-        playbackRate: 1
-    });
-
-    const player = new YT.Player("player", {
-        height: "360",
-        width: "640",
-        videoId: "QH2-TGUlwu4",
-        playerVars: { rel: 0 },
-        events: {
-            onReady: () => {
-                playerState.setIfPossible("videoId", "QH2-TGUlwu4");
-                updatePlayerState(playerState.getCurrObj());
-            },
-            onStateChange: event => {
-                const playerState = player.getPlayerState();
-
-                if (lastPlayerState === playerState) {
-                    server.sendVideoPositionChange(player.getCurrentTime());
-                } else if (playerState === YT.PlayerState.PLAYING) {
-                    server.sendVideoStart(player.getCurrentTime());
-                } else {
-                    server.sendVideoPause(player.getCurrentTime());
+                    if (this.lastPlayerState === playerState) {
+                        this.server.sendVideoPositionChange(this.player.getCurrentTime());
+                    } else if (playerState === YT.PlayerState.PLAYING) {
+                        this.server.sendVideoStart(this.player.getCurrentTime());
+                    } else {
+                        this.server.sendVideoPause(this.player.getCurrentTime());
+                    }
                 }
             }
-        }
-    });
+        });;
 
-    server.onPositionChange.addHandler(data => {
-        playerState.writeOverIfPossible(data);
+        this.server.onPositionChange.addHandler(data => {
+            this.playerState.writeOverIfPossible(data);
 
-        const dirt = playerState.extractDirtInObject();
+            const dirt = this.playerState.extractDirtInObject();
 
-        updatePlayerState(dirt);
-        playerState.clean();
-    });
+            this._updatePlayerState(dirt);
+            this.playerState.clean();
+        });
+
+        this.elm.append(this.playerElm);
+    }
+
+    /** @param {string} videoId */
+    setVideoId(videoId) {
+        this.player.loadVideoById(videoId);
+        this.server.sendVideoId(videoId);
+    }
 
     /** @param {Partial<VideoStateData>} dirt */
-    function updatePlayerState(dirt) {
+    _updatePlayerState(dirt) {
         if (dirt.position) {
-            player.seekTo(dirt.position);
+            this.player.seekTo(dirt.position);
         }
 
         if (dirt.playing === true) {
-            if (player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                player.playVideo();
+            if (this.player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                this.player.playVideo();
             }
         } else if (dirt.playing === false) {
-            if (player.getPlayerState() === YT.PlayerState.PLAYING) {
-                player.pauseVideo();
+            if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
+                this.player.pauseVideo();
             }
         }
 
         if (dirt.playbackRate) {
-            player.setPlaybackRate(dirt.playbackRate);
+            this.player.setPlaybackRate(dirt.playbackRate);
         }
 
         if (dirt.videoId) {
-            player.loadVideoById(dirt.videoId);
+            this.player.loadVideoById(dirt.videoId);
         }
     }
-
-    console.log(player);
 }
 
 /** @param {() => void} handler */

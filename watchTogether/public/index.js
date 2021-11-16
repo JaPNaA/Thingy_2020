@@ -13,10 +13,6 @@ triggers.selectRoom.addHandler(roomCode => {
     server = newServer;
 });
 
-triggers.changeVideoID.addHandler(videoId => {
-    server.sendVideoId(videoId);
-});
-
 new MainInterface().elm.appendTo(document.body);
 
 export function getServer() {
