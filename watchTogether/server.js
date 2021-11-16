@@ -17,10 +17,15 @@ const mimeByExt = {
     "css": "text/css"
 };
 
+const urlAliases = {
+    "/": "/index.html"
+}
+
 const cache = new Map();
 
 const server = createServer(function (req, res) {
-    const filepath = path.join(publicDirectory, path.resolve("/", req.url));
+    const url = urlAliases[req.url] || req.url;
+    const filepath = path.join(publicDirectory, path.resolve("/", url));
 
     const cachedFile = cache.get(filepath);
     if (cachedFile && !IGNORE_CACHE) {
