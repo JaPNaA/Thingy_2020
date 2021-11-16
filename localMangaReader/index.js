@@ -535,3 +535,78 @@ async function loadJSZip() {
     return JSZip;
 }
 
+{
+    /** @type {FileDirectory} */
+    let rootDirectory;
+
+    const loadingFilesMap = new Map();
+    let loadingFilesMapCurrId = 0;
+
+    addEventListener("message", function (event) {
+        if (typeof event.data !== "string") { return; }
+        const colonIndex = event.data.indexOf(":");
+        let command;
+        let argument = null;
+
+        if (colonIndex < 0) {
+            command = event.data;
+        } else {
+            command = event.data.slice(0, colonIndex);
+            argument = JSON.parse(event.data.slice(colonIndex + 1));
+        }
+
+        function returnMessage(command, message) {
+            let str = command;
+            if (message) {
+                str += ":" + JSON.stringify(message);
+            }
+            // @ts-ignore
+            event.source.postMessage(str, event.origin);
+        }
+
+        switch (command) {
+            case "enableEmbedMode":
+                rootDirectory = new FileDirectory();
+                returnMessage("getDirectory");
+                break;
+
+            case "setDirectory":
+                if (!argument) { break; }
+
+                const directories = argument.directories;
+                const directoriesKeys = Object.keys(directories);
+
+                for (const directoryKey of directoriesKeys) {
+                    const directory = directories[directoryKey];
+
+                    const start = directory.start === undefined ? 1 : directory.start;
+                    for (let i = start; i <= directory.end; i++) {
+                        rootDirectory.addBlob(directoryKey + "/" + i.toString(), new LoadableFile(() => new Promise(res => {
+                            const returnId = loadingFilesMapCurrId++;
+
+                            loadingFilesMap.set(returnId, res);
+                            returnMessage("getPageSrc", {
+                                returnId: returnId,
+                                directory: directoryKey,
+                                page: i
+                            });
+                        })));
+                    }
+                }
+
+
+                updateFiles(rootDirectory);
+                break;
+
+            case "setPageSrc":
+                if (!argument) { break; }
+                const { returnId, src } = argument;
+                const promRes = loadingFilesMap.get(returnId);
+                if (promRes) {
+                    promRes(fetch(src).then(e => e.blob()));
+                }
+                loadingFilesMap.delete(returnId);
+                break;
+        }
+    });
+}
