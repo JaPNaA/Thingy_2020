@@ -124,6 +124,7 @@ class RoomMember {
 
     giveControllerPermission() {
         this._isController = true;
+        this.send("permissionChange:1");
     }
 
     /** @param {string} data */

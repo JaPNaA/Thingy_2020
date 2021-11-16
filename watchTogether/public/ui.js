@@ -2,9 +2,14 @@ import { EventHandlers } from "./common.js";
 import { Component, Elm, InputElm } from "./elements.js";
 import { YouTubeIFrame } from "./youtubeIframeAPI.js";
 
-export const triggers = {
+export const userTriggers = {
     /** @type {EventHandlers<string>} */
     selectRoom: new EventHandlers()
+};
+
+export const networkTrigger = {
+    /** @type {EventHandlers<boolean>} */
+    permissionUpdate: new EventHandlers()
 };
 
 export class MainInterface extends Component {
@@ -15,9 +20,9 @@ export class MainInterface extends Component {
 
         this.elm.append(this.roomSelectElm);
 
-        triggers.selectRoom.addHandler(() => {
+        userTriggers.selectRoom.addHandler(() => {
             this.roomSelectElm.elm.remove();
-            this.elm.append(new RoomPlayer());
+            this.elm.append(new RoomView());
         });
     }
 }
@@ -32,12 +37,12 @@ class RoomsSelect extends Component {
         );
 
         this.roomCodeInput.on("change", () => {
-            triggers.selectRoom.dispatch(this.roomCodeInput.getValue());
+            userTriggers.selectRoom.dispatch(this.roomCodeInput.getValue());
         });
     }
 }
 
-class RoomPlayer extends Component {
+class RoomView extends Component {
     constructor() {
         super("roomPlayer");
         this.elm.append(
@@ -47,5 +52,9 @@ class RoomPlayer extends Component {
             }),
             this.iframe = new YouTubeIFrame()
         );
+
+        networkTrigger.permissionUpdate.addHandler(permission => {
+            console.log("permissions?:", permission);
+        });
     }
 }

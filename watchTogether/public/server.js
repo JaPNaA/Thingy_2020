@@ -33,6 +33,9 @@ export class ServerConnection {
         this.onConnect = new EventHandlers();
         this.onClose = new EventHandlers();
 
+        /** @type {EventHandlers<boolean>} */
+        this.onPermissionChange = new EventHandlers();
+
         /** @type {EventHandlers<Error>} */
         this.onError = new EventHandlers();
     }
@@ -87,7 +90,8 @@ export class ServerConnection {
     _commandHandler(command, data) {
         /** @type {(data: string) => void} */
         const fn = {
-            stateUpdate: () => this.onPositionChange.dispatch(JSON.parse(data))
+            stateUpdate: () => this.onPositionChange.dispatch(JSON.parse(data)),
+            permissionChange: () => this.onPermissionChange.dispatch(Boolean(data))
         }[command];
         if (fn) {
             fn.call(this, data);
