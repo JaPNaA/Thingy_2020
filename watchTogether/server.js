@@ -1,14 +1,55 @@
 import { createServer } from "http";
 import { server as WSServer } from "websocket";
 import { EventHandlers, TrackableObject } from "./public/common.js";
+import path from "path";
+import fs from "fs";
+
+const PORT = 8080;
+const IGNORE_CACHE = true;
 
 /** @type {Map<string, Room>} */
 const rooms = new Map();
+const publicDirectory = path.join(process.cwd(), "public/");
+
+const mimeByExt = {
+    "html": "text/html",
+    "js": "application/javascript",
+    "css": "text/css"
+};
+
+const cache = new Map();
 
 const server = createServer(function (req, res) {
-    res.writeHead(404);
-    res.end("404 There's nothing here, and therefore, nothing can be found");
-}).listen(3000);
+    const filepath = path.join(publicDirectory, path.resolve("/", req.url));
+
+    const cachedFile = cache.get(filepath);
+    if (cachedFile && !IGNORE_CACHE) {
+        res.writeHead(200, headerOfFilepath(filepath));
+        res.end(cachedFile);
+        return;
+    }
+
+
+    console.log("read", filepath);
+
+    fs.readFile(filepath, (err, data) => {
+        if (err) {
+            res.writeHead(404);
+            res.end("404 Not found");
+            return;
+        }
+        cache.set(filepath, data);
+        res.writeHead(200, headerOfFilepath(filepath));
+        res.end(data);
+    });
+}).listen(PORT);
+
+/** @param {string} filepath */
+function headerOfFilepath(filepath) {
+    return {
+        "Content-Type": mimeByExt[filepath.slice(filepath.lastIndexOf(".") + 1)] || "text/plain"
+    };
+}
 
 const wsServer = new WSServer({
     httpServer: server
@@ -18,8 +59,9 @@ wsServer.addListener("request", function (req) {
     const connection = req.accept();
     connection.addListener("message", roomCodeMessageHandler);
 
-    /** @param {import("websocket").IMessage} message */
+    /** @param {import("websocket").Message} message */
     function roomCodeMessageHandler(message) {
+        if (message.type !== "utf8") { return; }
         const room = rooms.get(message.utf8Data);
         if (!room) {
             console.log("closed connection: no room", message.utf8Data);
@@ -134,7 +176,7 @@ class RoomMember {
 
     _addConnectionEventHandlers() {
         this._connection.addListener("message", event => {
-            if (!event.utf8Data) { return; }
+            if (event.type !== "utf8") { return; }
             const firstColonIndex = event.utf8Data.indexOf(":");
             let command = event.utf8Data.slice(0, firstColonIndex);
             let data = event.utf8Data.slice(firstColonIndex + 1);

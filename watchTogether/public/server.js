@@ -3,7 +3,7 @@ import { EventHandlers } from "./common.js";
 export class ServerConnection {
     /** @param {String} roomCode */
     constructor(roomCode) {
-        this.socket = new WebSocket("ws://localhost:3000");
+        this.socket = new WebSocket(location.origin.replace("http", "ws"));
 
         this.socket.addEventListener("open", () => {
             // send room code
