@@ -1,11 +1,29 @@
 import { EventHandlers, TrackableObject } from "./common.js";
+import { Component, Elm } from "./elements.js";
+import { getServer } from "./index.js";
 import { ServerConnection } from "./server.js";
 
 let isReady = false;
 const readyHandlers = new EventHandlers();
 
+export class YouTubeIFrame extends Component {
+    /** @type {ServerConnection} */
+    constructor() {
+        super("YouTubeIFrame");
+        // appendTo document.body as workaround for YouTube's API
+        this.player = new Elm().attribute("id", "player").appendTo(document.body);
+
+        onYoutubeIframeAPIReady(() => {
+            createYoutubeIframe(getServer());
+        });
+
+        this.elm.append(this.player);
+    }
+}
+
+
 /** @param {ServerConnection} server */
-export function createYoutubeIframe(server) {
+function createYoutubeIframe(server) {
     let lastPlayerState = null;
     /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
     const playerState = new TrackableObject({
@@ -79,7 +97,7 @@ export function createYoutubeIframe(server) {
 }
 
 /** @param {() => void} handler */
-export function onYoutubeIframeAPIReady(handler) {
+function onYoutubeIframeAPIReady(handler) {
     if (isReady) {
         handler();
     } else {

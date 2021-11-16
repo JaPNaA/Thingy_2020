@@ -8,6 +8,7 @@ export class ServerConnection {
         this.socket.addEventListener("open", () => {
             // send room code
             this.socket.send(roomCode);
+            this.onConnect.dispatch();
         });
 
         this.socket.addEventListener("message", e => {
@@ -19,8 +20,21 @@ export class ServerConnection {
             this._commandHandler(command, data);
         });
 
+        this.socket.addEventListener("close", e => {
+            this.onClose.dispatch();
+        });
+
+        this.socket.addEventListener("error", e => {
+            this.onError.dispatch(new Error("Failed to connect"));
+        });
+
         /** @type {EventHandlers<Partial<VideoStateData>>} */
         this.onPositionChange = new EventHandlers();
+        this.onConnect = new EventHandlers();
+        this.onClose = new EventHandlers();
+
+        /** @type {EventHandlers<Error>} */
+        this.onError = new EventHandlers();
     }
 
     disconnect() {
@@ -50,6 +64,14 @@ export class ServerConnection {
             timestamp: Date.now(),
             position: position,
             playing: false
+        });
+    }
+
+    /** @param {string} id */
+    sendVideoId(id) {
+        this._sendStateUpdate({
+            timestamp: Date.now(),
+            videoId: id
         });
     }
 

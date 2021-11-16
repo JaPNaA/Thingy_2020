@@ -1,16 +1,26 @@
 import { EventHandlers } from "./common.js";
-import { Component, InputElm } from "./elements.js";
+import { Component, Elm, InputElm } from "./elements.js";
+import { YouTubeIFrame } from "./youtubeIframeAPI.js";
 
 export const triggers = {
     /** @type {EventHandlers<string>} */
-    selectRoom: new EventHandlers()
+    selectRoom: new EventHandlers(),
+    /** @type {EventHandlers<string>} */
+    changeVideoID: new EventHandlers()
 };
 
 export class MainInterface extends Component {
     constructor() {
         super("mainInterface");
 
-        this.elm.append(new RoomsSelect());
+        this.roomSelectElm = new RoomsSelect();
+
+        this.elm.append(this.roomSelectElm);
+
+        triggers.selectRoom.addHandler(() => {
+            this.roomSelectElm.elm.remove();
+            this.elm.append(new RoomPlayer());
+        });
     }
 }
 
@@ -26,5 +36,18 @@ class RoomsSelect extends Component {
         this.roomCodeInput.on("change", () => {
             triggers.selectRoom.dispatch(this.roomCodeInput.getValue());
         });
+    }
+}
+
+class RoomPlayer extends Component {
+    constructor() {
+        super("roomPlayer");
+        this.elm.append(
+            "Video ID: ",
+            this.videoIDElm = new InputElm().on("change", () => {
+                triggers.changeVideoID.dispatch(this.videoIDElm.getValue());
+            }),
+            new YouTubeIFrame()
+        );
     }
 }

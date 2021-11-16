@@ -2,20 +2,24 @@
 
 import { ServerConnection } from "./server.js";
 import { MainInterface, triggers } from "./ui.js";
-import { createYoutubeIframe, onYoutubeIframeAPIReady } from "./youtubeIframeAPI.js";
 
 /** @type {ServerConnection} */
-let prevServer;
+let server;
 
 triggers.selectRoom.addHandler(roomCode => {
-    if (prevServer) { prevServer.disconnect(); }
+    if (server) { server.disconnect(); }
 
-    const server = new ServerConnection(roomCode);
-    prevServer = server;
+    const newServer = new ServerConnection(roomCode);
+    server = newServer;
+});
 
-    onYoutubeIframeAPIReady(() => {
-        createYoutubeIframe(server);
-    });
+triggers.changeVideoID.addHandler(videoId => {
+    server.sendVideoId(videoId);
 });
 
 new MainInterface().elm.appendTo(document.body);
+
+export function getServer() {
+    if (!server) { throw new Error("No server"); }
+    return server;
+}
