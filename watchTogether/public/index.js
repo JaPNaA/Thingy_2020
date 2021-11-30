@@ -12,8 +12,9 @@ userTriggers.selectRoom.addHandler(roomCode => {
     const newServer = new ServerConnection(roomCode);
     server = newServer;
 
-    newServer.onPermissionChange.addHandler(perm =>
-        networkTrigger.permissionUpdate.dispatch(perm));
+    newServer.onPermissionChange.addHandler(perm => {
+        networkTrigger.permissionUpdate.dispatch(perm);
+    });
 });
 
 new MainInterface().elm.appendTo(document.body);

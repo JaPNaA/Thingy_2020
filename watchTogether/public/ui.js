@@ -12,6 +12,12 @@ export const networkTrigger = {
     permissionUpdate: new EventHandlers()
 };
 
+let hasControllerPermissions = false;
+
+networkTrigger.permissionUpdate.addHandler(permission => {
+    hasControllerPermissions = permission;
+});
+
 export class MainInterface extends Component {
     constructor() {
         super("mainInterface");
@@ -53,8 +59,16 @@ class RoomView extends Component {
             this.iframe = new YouTubeIFrame()
         );
 
-        networkTrigger.permissionUpdate.addHandler(permission => {
-            console.log("permissions?:", permission);
-        });
+        networkTrigger.permissionUpdate.addHandler(() => this._onPermissionsUpdate());
+        this._onPermissionsUpdate();
+    }
+
+    _onPermissionsUpdate() {
+        console.log(hasControllerPermissions);
+        if (hasControllerPermissions) {
+            this.videoIDElm.removeAttribute("disabled");
+        } else {
+            this.videoIDElm.attribute("disabled");
+        }
     }
 }

@@ -59,8 +59,8 @@ export class YouTubeIFrame extends Component {
             }
         });
 
-        // No events are fired from API even if the player position changes, so
-        // we check for position changes ourselves.
+        // No events are fired from API if the player position changes while
+        // paused, so we check for position changes ourselves when paused.
         this.intervalUpdateId = setInterval(() => {
             if (!this.playerReady) { return; }
             if (this.lastPlayerState === YT.PlayerState.PLAYING) { return; }
