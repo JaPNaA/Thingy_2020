@@ -1,6 +1,6 @@
 /**
  * Helper class for constructing element trees
- * Version 1.2
+ * Version 1.5 (javascript)
  */
 class Elm {
     /**
@@ -57,24 +57,6 @@ class Elm {
     }
 
     /**
-     * @param {any} any 
-     * @return {Node}
-     */
-    _anyToNode(any) {
-        if (any instanceof Elm) {
-            return any.elm;
-        } else if (typeof any === "string") {
-            return document.createTextNode(any);
-        } else if (any instanceof Node) {
-            return any;
-        } else if (any instanceof Component) {
-            return any.elm.elm;
-        } else {
-            return document.createTextNode(any && any.toString() || "");
-        }
-    }
-
-    /**
      * @param {HTMLElement | Elm} parent 
      */
     appendTo(parent) {
@@ -90,6 +72,11 @@ class Elm {
         while (this.elm.firstChild) {
             this.elm.removeChild(this.elm.firstChild);
         }
+    }
+
+    replaceContents(...elms) {
+        this.clear();
+        this.append(...elms);
     }
 
     remove() {
@@ -132,6 +119,31 @@ class Elm {
         this.elm.setAttribute(key, value || "true");
         return this;
     }
+
+    /**
+     * @param {string} key 
+     */
+    removeAttribute(key) {
+        this.elm.removeAttribute(key);
+    }
+
+    /**
+     * @param {any} any 
+     * @return {Node}
+     */
+    _anyToNode(any) {
+        if (any instanceof Elm) {
+            return any.elm;
+        } else if (typeof any === "string") {
+            return document.createTextNode(any);
+        } else if (any instanceof Node) {
+            return any;
+        } else if (any instanceof Component) {
+            return any.elm.elm;
+        } else {
+            return document.createTextNode(any && any.toString() || "");
+        }
+    }
 }
 
 class InputElm extends Elm {
@@ -143,13 +155,32 @@ class InputElm extends Elm {
     setType(type) {
         /** @type {HTMLInputElement} */
         (this.elm).type = type;
+        return this;
     }
 
+    /**
+     * @returns {boolean | string}
+     */
     getValue() {
-        return (
-            /** @type {HTMLInputElement} */
-            (this.elm).value
-        );
+        if (this.elm.type === "checkbox") {
+            return this.elm.checked;
+        } else {
+            return this.elm.value;
+        }
+    }
+
+    /**
+     * @param {boolean | string | number} value
+     */
+    setValue(value) {
+        if (this.elm.type === "checkbox" && typeof value === "boolean") {
+            this.elm.checked = value;
+        } else if (this.elm.type === "number" && typeof value === "number") {
+            this.elm.value = value.toString();
+        } else {
+            this.elm.value = value.toString();
+        }
+        return this;
     }
 }
 
@@ -159,6 +190,14 @@ class Component {
         this.elm = new Elm();
         this.name = name;
         this.elm.class(this.name);
+    }
+
+    /**
+     * @param {HTMLElement | Elm} parent
+     */
+    appendTo(parent) {
+        this.elm.appendTo(parent);
+        return this;
     }
 }
 
