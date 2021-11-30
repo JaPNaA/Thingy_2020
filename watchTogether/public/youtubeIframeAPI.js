@@ -17,6 +17,7 @@ export class YouTubeIFrame extends Component {
         if (!isReady) { throw new Error("YouTube API not ready"); }
 
         this.lastPlayerState = null;
+        this.lastPlayerPosition = 0;
         /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
         this.playerState = new TrackableObject({
             timestamp: 0,
@@ -40,6 +41,7 @@ export class YouTubeIFrame extends Component {
                 },
                 onStateChange: event => {
                     const playerState = this.player.getPlayerState();
+                    this.lastPlayerPosition = this.player.getCurrentTime();
 
                     if (this.lastPlayerState === playerState) {
                         this.server.sendVideoPositionChange(this.player.getCurrentTime());
@@ -48,9 +50,22 @@ export class YouTubeIFrame extends Component {
                     } else {
                         this.server.sendVideoPause(this.player.getCurrentTime());
                     }
+                    this.lastPlayerState = playerState;
                 }
             }
-        });;
+        });
+
+        // No events are fired from API even if the player position changes, so
+        // we check for position changes ourselves.
+        this.intervalUpdateId = setInterval(() => {
+            if (!this.playerReady) { return; }
+            if (this.lastPlayerState === YT.PlayerState.PLAYING) { return; }
+            const playerPos = this.player.getCurrentTime();
+            if (this.lastPlayerPosition != playerPos) {
+                this.server.sendVideoPositionChange(playerPos);
+            }
+            this.lastPlayerPosition = playerPos;
+        }, 100);
 
         this.server.onPositionChange.addHandler(data => {
             this.playerState.writeOverIfPossible(data);
@@ -73,26 +88,28 @@ export class YouTubeIFrame extends Component {
 
     /** @param {Partial<VideoStateData>} dirt */
     _updatePlayerState(dirt) {
-        if (dirt.position) {
-            this.player.seekTo(dirt.position);
+        if (dirt.videoId) {
+            this.player.loadVideoById(dirt.videoId);
         }
 
         if (dirt.playing === true) {
             if (this.player.getPlayerState() !== YT.PlayerState.PLAYING) {
                 this.player.playVideo();
+                console.log("play");
             }
         } else if (dirt.playing === false) {
             if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
                 this.player.pauseVideo();
+                console.log("pause");
             }
+        }
+
+        if (dirt.position) {
+            this.player.seekTo(dirt.position);
         }
 
         if (dirt.playbackRate) {
             this.player.setPlaybackRate(dirt.playbackRate);
-        }
-
-        if (dirt.videoId) {
-            this.player.loadVideoById(dirt.videoId);
         }
     }
 }

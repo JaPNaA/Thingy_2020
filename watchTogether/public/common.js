@@ -93,6 +93,14 @@ export class TrackableObject {
         return this._obj;
     }
 
+    /**
+     * @param {string} key
+     * @returns {Readonly<T>}
+     */
+    get(key) {
+        return this._obj[key];
+    }
+
     clean() {
         for (const key of this._keys) {
             this._dirtiness[key] = false;
