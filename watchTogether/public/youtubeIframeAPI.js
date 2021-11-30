@@ -27,6 +27,7 @@ export class YouTubeIFrame extends Component {
             playbackRate: 1
         });
 
+        this.playerReady = false;
         this.player = new YT.Player("player", {
             height: "360",
             width: "640",
@@ -34,7 +35,7 @@ export class YouTubeIFrame extends Component {
             playerVars: { rel: 0 },
             events: {
                 onReady: () => {
-                    this.playerState.setIfPossible("videoId", "QH2-TGUlwu4");
+                    this.playerReady = true;
                     this._updatePlayerState(this.playerState.getCurrObj());
                 },
                 onStateChange: event => {
@@ -54,6 +55,7 @@ export class YouTubeIFrame extends Component {
         this.server.onPositionChange.addHandler(data => {
             this.playerState.writeOverIfPossible(data);
 
+            if (!this.playerReady) { return; }
             const dirt = this.playerState.extractDirtInObject();
 
             this._updatePlayerState(dirt);

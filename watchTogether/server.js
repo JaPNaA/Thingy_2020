@@ -112,6 +112,7 @@ class Room {
             member.giveControllerPermission();
             member.giveRoomAdminPermission();
         }
+        this._sendFullStateTo(member);
     }
 
     /** @param {RoomMember} member */
@@ -146,6 +147,11 @@ class Room {
             if (member === exceptionMember) { continue; }
             member.send(commandStr);
         }
+    }
+
+    /** @param {RoomMember} member */
+    _sendFullStateTo(member) {
+        member.send("stateUpdate:" + JSON.stringify(this.state.getCurrObj()));
     }
 }
 
