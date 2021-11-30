@@ -93,15 +93,9 @@ export class YouTubeIFrame extends Component {
         }
 
         if (dirt.playing === true) {
-            if (this.player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                this.player.playVideo();
-                console.log("play");
-            }
+            this.player.playVideo();
         } else if (dirt.playing === false) {
-            if (this.player.getPlayerState() === YT.PlayerState.PLAYING) {
-                this.player.pauseVideo();
-                console.log("pause");
-            }
+            this.player.pauseVideo();
         }
 
         if (dirt.position) {
