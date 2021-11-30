@@ -6,11 +6,20 @@ export class EventHandlers {
     constructor() {
         /** @type {((data: T) => any)[]} */
         this.handlers = [];
+        /** @type {function[]} */
+        this.nextPromiseResolutions = [];
     }
 
     /** @param {(data: T) => any} handler */
     addHandler(handler) {
         this.handlers.push(handler);
+    }
+
+    /** @returns {Promise<T>} */
+    nextPromise() {
+        return new Promise(res => {
+            this.nextPromiseResolutions.push(res);
+        });
     }
 
     /** @param {(data: T) => any} handler */
@@ -25,6 +34,10 @@ export class EventHandlers {
         for (const handler of this.handlers) {
             handler(data);
         }
+        for (const res of this.nextPromiseResolutions) {
+            res();
+        }
+        this.nextPromiseResolutions.length = 0;
     }
 }
 
