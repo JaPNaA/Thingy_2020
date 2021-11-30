@@ -18,6 +18,8 @@ export class YouTubeIFrame extends Component {
 
         this.lastPlayerState = null;
         this.lastPlayerPosition = 0;
+        this.firstSyncDone = false;
+
         /** @type {TrackableObject<VideoStateData>} */ // @ts-ignore
         this.playerState = new TrackableObject({
             timestamp: 0,
@@ -32,7 +34,7 @@ export class YouTubeIFrame extends Component {
         this.player = new YT.Player("player", {
             height: "360",
             width: "640",
-            videoId: "QH2-TGUlwu4",
+            videoId: "",
             playerVars: { rel: 0 },
             events: {
                 onReady: () => {
@@ -40,6 +42,7 @@ export class YouTubeIFrame extends Component {
                     this._updatePlayerState(this.playerState.getCurrObj());
                 },
                 onStateChange: event => {
+                    if (!this.firstSyncDone) { return; }
                     const playerState = this.player.getPlayerState();
                     this.lastPlayerPosition = this.player.getCurrentTime();
 
@@ -50,6 +53,7 @@ export class YouTubeIFrame extends Component {
                     } else {
                         this.server.sendVideoPause(this.player.getCurrentTime());
                     }
+
                     this.lastPlayerState = playerState;
                 }
             }
@@ -87,9 +91,10 @@ export class YouTubeIFrame extends Component {
     }
 
     /** @param {Partial<VideoStateData>} dirt */
-    _updatePlayerState(dirt) {
+    async _updatePlayerState(dirt) {
         if (dirt.videoId) {
             this.player.loadVideoById(dirt.videoId);
+            await wait(300);
         }
 
         if (dirt.playing === true) {
@@ -105,6 +110,8 @@ export class YouTubeIFrame extends Component {
         if (dirt.playbackRate) {
             this.player.setPlaybackRate(dirt.playbackRate);
         }
+
+        this.firstSyncDone = true;
     }
 }
 
@@ -120,6 +127,11 @@ function onYoutubeIframeAPIReady(handler) {
 function onYouTubeIframeAPIReady() {
     isReady = true;
     readyHandlers.dispatch();
+}
+
+/** @param {number} ms */
+function wait(ms) {
+    return new Promise(res => setTimeout(() => res(), ms));
 }
 
 // @ts-ignore
