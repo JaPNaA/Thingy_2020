@@ -97,14 +97,14 @@ export class YouTubeIFrame extends Component {
             await wait(300);
         }
 
+        if (dirt.position) {
+            this.player.seekTo(dirt.position);
+        }
+
         if (dirt.playing === true) {
             this.player.playVideo();
         } else if (dirt.playing === false) {
             this.player.pauseVideo();
-        }
-
-        if (dirt.position) {
-            this.player.seekTo(dirt.position);
         }
 
         if (dirt.playbackRate) {
