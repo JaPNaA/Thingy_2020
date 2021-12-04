@@ -14,7 +14,7 @@ export class YouTubeIFrame extends Component {
         this.playerElm = new Elm().attribute("id", "player").appendTo(document.body);
         this.server = getServer();
 
-        if (!isReady) { throw new Error("YouTube API not ready"); }
+        if (!isReady && !window.YT) { throw new Error("YouTube API not ready"); }
 
         this.lastPlayerState = null;
         this.lastPlayerPosition = 0;
