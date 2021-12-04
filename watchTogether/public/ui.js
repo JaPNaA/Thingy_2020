@@ -43,7 +43,7 @@ class RoomsSelect extends Component {
         );
 
         this.roomCodeInput.on("change", () => {
-            userTriggers.selectRoom.dispatch(this.roomCodeInput.getValue());
+            userTriggers.selectRoom.dispatch(this.roomCodeInput.getValue().toString());
         });
     }
 }
@@ -54,7 +54,7 @@ class RoomView extends Component {
         this.elm.append(
             "Video ID: ",
             this.videoIDElm = new InputElm().on("change", () => {
-                this.iframe.setVideoId(this.videoIDElm.getValue())
+                this.iframe.setVideoId(this.videoIDElm.getValue().toString())
             }),
             this.iframe = new YouTubeIFrame()
         );
