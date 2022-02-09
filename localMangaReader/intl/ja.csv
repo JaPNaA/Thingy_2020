@@ -1,6 +1,7 @@
 localMangaReaderTitle,自己資源漫画リーダ
 selectMangaFolder,漫画のフォルダーを選択
-selectMangaZip,またはZIPを選択
+selectMangaZip,ZIPを選択
+selectPDF,PDFを選択
 selectAdditionalMangaFolder,もう一つ漫画のフォルダーを追加
 selectFile,開く
 viewerOptions,リーダ　オプション

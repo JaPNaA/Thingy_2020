@@ -28,7 +28,7 @@ const langMapProm = (async function setUserLanguage() {
  */
 function createLocaleStringSpan(key) {
     const elm = new Elm("span");
-    langMapProm.then(map => elm.replaceContents(map[key]));
+    langMapProm.then(map => elm.replaceContents(map[key] || key));
     return elm;
 }
 
@@ -357,6 +357,42 @@ class FileDirectory {
     }
 }
 
+class CanvasPool {
+    constructor() {
+        /** @type {{canvas: HTMLCanvasElement, X: CanvasRenderingContext2D, inUse: boolean}[]} */
+        this._canvases = [];
+    }
+
+    /** @param {({canvas: HTMLCanvasElement, X: CanvasRenderingContext2D}) => Promise<any>} f */
+    async useCanvas(f) {
+        let canvas;
+        for (const existing of this._canvases) {
+            if (!existing.inUse) {
+                canvas = existing;
+            }
+        }
+
+        if (!canvas) {
+            canvas = this._createCanvas();
+        }
+
+        canvas.inUse = true;
+        await f(canvas)
+        canvas.inUse = false;
+    }
+
+    _createCanvas() {
+        const canvasElm = document.createElement("canvas");
+        const newCanvas = {
+            canvas: canvasElm,
+            X: canvasElm.getContext("2d"),
+            inUse: false
+        };
+        this._canvases.push(newCanvas);
+        return newCanvas;
+    }
+}
+
 const supportedSet = new Set(["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico", "cur", "tif", "tiff"]);
 
 /** @param {string} name */
@@ -405,6 +441,45 @@ const zipFileInput = new InputElm().setType("file").attribute("accept", "applica
         updateFiles(directory);
     });
 
+const pdfFileInput = new InputElm().setType("file").attribute("accept", "application/pdf")
+    .on("change", async function (e) {
+        //
+        await loadPDFJS();
+        /** @type {HTMLInputElement} */ // @ts-ignore
+        const input = pdfFileInput.elm;
+        const pdf = await pdfJS.getDocument(URL.createObjectURL(input.files[0])).promise;
+
+        const directory = new FileDirectory();
+        const canvasPool = new CanvasPool();
+        console.log(canvasPool);
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            directory.addBlob(i.toString(), new LoadableFile(async () => {
+                const page = await pdf.getPage(i);
+                const viewport = page.getViewport({ scale: 1.5 });
+                let blob;
+
+                await canvasPool.useCanvas(async context => {
+                    context.canvas.width = viewport.width;
+                    context.canvas.height = viewport.height;
+                    await page.render({
+                        canvasContext: context.X,
+                        transform: null,
+                        viewport: viewport
+                    }).promise;
+                    blob = new Promise(res => {
+                        context.canvas.toBlob(blob => res(blob));
+                    });
+                });
+
+                return blob;
+            }))
+        }
+
+        updateFiles(directory);
+
+    })
+
 const wideViewCheckbox = new InputElm().setType("checkbox")
     .on("change", function () {
         // @ts-expect-error
@@ -426,6 +501,11 @@ new Elm("div").class("main").append(
         new Elm("label").append(
             createLocaleStringSpan("selectMangaZip").class("block"),
             zipFileInput
+        ),
+
+        new Elm("label").append(
+            createLocaleStringSpan("selectPDF").class("block"),
+            pdfFileInput
         ),
 
         new Elm("h1").append(createLocaleStringSpan("viewerOptions")),
@@ -533,6 +613,25 @@ async function loadJSZip() {
         .then(e => eval(e));
 
     return JSZip;
+}
+
+/** @type {import("./libs/pdfjs-2.12.313-dist/build/pdf.js")} */
+let pdfJS;
+
+/**
+ * Terribly hacky function to import PDF.js in the browser without
+ * external libraries
+ */
+async function loadPDFJS() {
+    window.exports = {}
+    // @ts-ignore
+    window.module = {};
+    await import("./libs/pdfjs-2.12.313-dist/build/pdf.js");
+    delete window.exports;
+    pdfJS = module.exports;
+    delete window.module;
+
+    pdfJS.GlobalWorkerOptions.workerSrc = "./libs/pdfjs-2.12.313-dist/build/pdf.worker.js";
 }
 
 {
