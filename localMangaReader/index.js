@@ -123,29 +123,24 @@ class ChapterFiles {
 
     initializeAndOrganizePageFiles() {
         /** @type {PageFile[]} */
-        const mainPages = [];
-
-        /** @type {PageFile[]} */
-        const extraPages = [];
+        const pages = [];
 
         for (const [name, file] of this.directory.items) {
             if (!(file instanceof LoadableFile)) { continue; }
 
             const match = name.match(pageNumberRegex);
+            let pageFile;
             if (match) {
-                mainPages.push(new PageFile(this, file, name, parseInt(match[match.length - 1])));
+                pageFile = new PageFile(this, file, name, parseInt(match[match.length - 1]));
             } else {
-                extraPages.push(new PageFile(this, file, name));
+                pageFile = new PageFile(this, file, name);
             }
+            pages.push(pageFile);
         }
 
-        mainPages.sort((a, b) => a.pageNumber - b.pageNumber);
-        extraPages.sort((a, b) => a.fileName < b.fileName ? -1 : 1);
+        sortStringsNumbered(pages, page => page.fileName);
 
-        for (const page of mainPages) {
-            this.pages.push(page);
-        }
-        for (const page of extraPages) {
+        for (const page of pages) {
             this.pages.push(page);
         }
 
@@ -401,6 +396,45 @@ function isImageFile(name) {
     return supportedSet.has(ext);
 }
 
+const CLUSTER_REGEX = /(\d+)|(\D+)/g;
+const NUMBER_REGEX = /^\d/;
+
+/**
+ * Sorts strings, parsing numbers in between
+ * @template T
+ * @param {T[]} items
+ * @param {(item: T) => string} mapper
+ * @returns {T[]}
+ */
+function sortStringsNumbered(items, mapper) {
+    /** @type {[T, (string|number)[]][]} */
+    const itemsAndStringSegs = [];
+    for (const item of items) {
+        const segments = mapper(item).match(CLUSTER_REGEX)
+            .map(match => NUMBER_REGEX.test(match) ? parseInt(match) : match);
+        itemsAndStringSegs.push([item, segments]);
+    }
+    return itemsAndStringSegs.sort((a, b) => {
+        const aSeg = a[1];
+        const bSeg = b[1];
+        const shorter = Math.min(aSeg.length, bSeg.length);
+        for (let i = 0; i < shorter; i++) {
+            if (typeof aSeg[i] != typeof bSeg[i]) {
+                // fail-safe/redundant (should never reach this time)
+                return typeof aSeg[i] === "number" ? -1 : 1;
+            }
+            if (aSeg[i] < bSeg[i]) {
+                return -1;
+            } else if (aSeg[i] > bSeg[i]) {
+                return 1;
+            }
+        }
+
+        // shorter first
+        return aSeg.length - bSeg.length;
+    }).map(stringAndSegment => stringAndSegment[0]);
+}
+
 /** @type {Elm} */
 let filesInputLabelText;
 
@@ -528,8 +562,8 @@ function updateFiles(directory) {
         const currDir = dirQue.pop();
         let addedDir = false;
 
-        // sort is reversed because directories added to dirQue will be read in reverse order
-        const sortedEntries = Array.from(currDir.items).sort((a, b) => a[0] < b[0] ? 1 : -1);
+        // reversed because directories added to dirQue will be read in reverse order
+        const sortedEntries = sortStringsNumbered(Array.from(currDir.items), item => item[0]).reverse();
 
         for (const [path, item] of sortedEntries) {
             if (item instanceof FileDirectory) {
