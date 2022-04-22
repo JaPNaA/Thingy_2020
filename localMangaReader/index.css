@@ -8,17 +8,28 @@ body {
     display: block;
 }
 
+.hidden {
+    display: none !important;
+}
+
 .main {
     text-align: center;
 }
 
-.controlsContainer {
+.grayBox {
     text-align: left;
     width: 460px;
     background-color: #8a8a8a42;
     padding: 24px;
     margin: 64px;
     display: inline-block;
+}
+
+.chapterDirectory {
+    cursor: pointer;
+    background-color: #8a8a8a42;
+    padding: 8px;
+    margin: 8px 0;
 }
 
 .row {

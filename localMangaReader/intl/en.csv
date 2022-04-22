@@ -4,5 +4,6 @@ selectMangaZip,Select a manga ZIP
 selectPDF,Select a PDF
 selectAdditionalMangaFolder,Add another manga folder
 selectFile,Open a Manga
+selectChapter,Select a chapter
 viewerOptions,Viewer Options
 wideView,Wide View

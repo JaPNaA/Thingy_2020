@@ -4,5 +4,6 @@ selectMangaZip,ZIPを選択
 selectPDF,PDFを選択
 selectAdditionalMangaFolder,もう一つ漫画のフォルダーを追加
 selectFile,開く
+selectChapter,チャプター選択
 viewerOptions,リーダ　オプション
 wideView,広いリーダ

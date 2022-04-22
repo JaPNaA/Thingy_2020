@@ -1,6 +1,6 @@
 // --- Language Loading
 
-import { Elm, InputElm } from "./elements.js";
+import { Component, Elm, InputElm } from "./elements.js";
 
 const availableLangs = ['en', 'ja'];
 
@@ -237,23 +237,22 @@ class ChapterFiles {
     }
 }
 
-class FileDisplay {
+class FileDisplay extends Component {
     constructor() {
+        super("fileDisplay");
+
         /** @type {ChapterFiles[]} */
         this.chapters = [];
         /** @type {ChapterFiles | undefined} */
         this.currentChapter = undefined;
 
-        this.elm = document.createElement("div");
-        this.elm.classList.add("pagesDisplay");
-
-        this.chapterSelectElm = document.createElement('div');
-        this.chapterSelectElm.classList.add("chapterSelect");
-        this.elm.appendChild(this.chapterSelectElm);
-
-        this.chapterContainer = document.createElement("diiv");
-        this.chapterContainer.classList.add("chapterContainer");
-        this.elm.appendChild(this.chapterContainer);
+        this.elm.append(
+            this.chapterSelectContainer = new Elm().class("chapterSelectContainer", "grayBox", "hidden").append(
+                new Elm("h1").append(createLocaleStringSpan('selectChapter')),
+                this.chapterSelectElm = new Elm().class("chapterSelect")
+            ),
+            this.chapterContainer = new Elm().class("chapterContainer")
+        );
     }
 
     /**
@@ -262,28 +261,22 @@ class FileDisplay {
      */
     addChapter(chapter, name) {
         this.chapters.push(chapter);
+        this.chapterSelectContainer.removeClass("hidden");
 
-        const chapterOption = document.createElement("div");
-        chapterOption.innerText = name || "root";
-        chapterOption.addEventListener("click", () => {
-            this.setChapter(chapter);
-        });
-        this.chapterSelectElm.appendChild(chapterOption);
+        this.chapterSelectElm.append(
+            new Elm().class("chapterDirectory").append(name || "root")
+                .on("click", () => {
+                    this.setChapter(chapter);
+                }));
     }
 
     /**
      * @param {ChapterFiles} chapter 
      */
     setChapter(chapter) {
-        this._clearChapterContainer();
-        this.chapterContainer.appendChild(chapter.elm);
+        this.chapterContainer.clear();
+        this.chapterContainer.append(chapter.elm);
         this.currentChapter = chapter;
-    }
-
-    _clearChapterContainer() {
-        while (this.chapterContainer.firstChild) {
-            this.chapterContainer.removeChild(this.chapterContainer.firstChild);
-        }
     }
 }
 
@@ -524,7 +517,7 @@ const wideViewCheckbox = new InputElm().setType("checkbox")
 new Elm("div").class("main").append(
     fileDisplay.elm,
 
-    new Elm().class("controlsContainer").append(
+    new Elm().class("controlsContainer", "grayBox").append(
         new Elm("h1").append(createLocaleStringSpan("selectFile")),
 
         new Elm("label").append(
@@ -605,7 +598,9 @@ addEventListener("keydown", function (e) {
 });
 
 addEventListener("scroll", function () {
-    fileDisplay.currentChapter.loadFilesUpTo(document.documentElement.scrollTop);
+    if (fileDisplay.currentChapter) {
+        fileDisplay.currentChapter.loadFilesUpTo(document.documentElement.scrollTop);
+    }
 });
 
 let lastWidth = -1;
