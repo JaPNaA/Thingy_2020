@@ -573,6 +573,19 @@ function updateFiles(directory) {
     console.log(directory);
 }
 
+/** @param {number} pages */
+function scrollPagesBy(pages) {
+    // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
+    const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
+
+    let newScroll = document.documentElement.scrollTop + pages * pageHeight;
+
+    document.documentElement.scrollTop =
+        wideMode ?
+            newScroll :
+            fileDisplay.currentChapter.closestRowY(newScroll);
+}
+
 addEventListener("keydown", function (e) {
     let goingUp = e.key === "ArrowUp" || e.key === "ArrowRight";
     let goingDown = e.key === "ArrowDown" || e.key === "ArrowLeft";
@@ -580,21 +593,34 @@ addEventListener("keydown", function (e) {
 
     e.preventDefault();
 
-    // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
-    const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
-
-    let newScroll = document.documentElement.scrollTop;
-
+    let deltaPage = 0;
     if (goingDown) {
-        newScroll += pageHeight;
+        deltaPage += 1;
     } else if (goingUp) {
-        newScroll -= pageHeight;
+        deltaPage -= 1;
     }
 
-    document.documentElement.scrollTop =
-        wideMode ?
-            newScroll :
-            fileDisplay.currentChapter.closestRowY(newScroll);
+    scrollPagesBy(deltaPage);
+});
+
+let touchDragged = false;
+
+addEventListener("touchstart", () => { touchDragged = false; });
+addEventListener("touchmove", () => { touchDragged = true; });
+addEventListener("touchend", e => {
+    if (touchDragged) { return; }
+    const touchX = e.changedTouches[0].clientX;
+    let deltaPage = 0;
+
+    if (touchX < innerWidth * 0.3) {
+        deltaPage += 1;
+    } else if (touchX > innerWidth * 0.7) {
+        deltaPage -= 1;
+    } else {
+        return;
+    }
+
+    scrollPagesBy(deltaPage);
 });
 
 addEventListener("scroll", function () {
