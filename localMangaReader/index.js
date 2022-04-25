@@ -549,7 +549,7 @@ const wideViewCheckbox = new InputElm().setType("checkbox")
         resizeHandler();
     });
 
-new Elm("div").class("main").append(
+const main = new Elm("div").class("main").append(
     fileDisplay.elm,
 
     new Elm().class("controlsContainer", "grayBox").append(
@@ -609,6 +609,8 @@ function scrollPagesBy(pages) {
             fileDisplay.currentChapter.closestRowY(newScroll);
 }
 
+let cursorHidden = false;
+
 addEventListener("keydown", function (e) {
     let goingUp = e.key === "ArrowUp" || e.key === "ArrowRight";
     let goingDown = e.key === "ArrowDown" || e.key === "ArrowLeft";
@@ -623,8 +625,20 @@ addEventListener("keydown", function (e) {
         deltaPage -= 1;
     }
 
+    if (!cursorHidden) {
+        main.class("hideCursor");
+        cursorHidden = true;
+    }
+
     scrollPagesBy(deltaPage);
 });
+
+addEventListener("mousemove", function() {
+    if (cursorHidden) {
+        main.removeClass("hideCursor");
+        cursorHidden = false;
+    }
+})
 
 let touchDragged = false;
 

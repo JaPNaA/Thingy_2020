@@ -16,6 +16,10 @@ body {
     text-align: center;
 }
 
+.main.hideCursor {
+    cursor: none;
+}
+
 .grayBox {
     text-align: left;
     width: 460px;
