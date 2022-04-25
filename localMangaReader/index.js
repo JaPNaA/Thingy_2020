@@ -72,16 +72,20 @@ class PageFile {
 
 const pageNumberRegex = /(\d+)/g;
 
-class ChapterFiles {
+class ChapterFiles extends Component {
     /**
      * @param {FileDirectory} directory 
      */
     constructor(directory) {
+        super("chapter");
+
         this.directory = directory;
         /** @type {(PageFile | null)[]} */
         this.pages = [];
         /** @type {(PageFile | null)[]} */
         this.displayPages = [];
+        /** @type {Elm[]} */
+        this.rowElms = [];
 
         this.pagesPerRow = 2;
 
@@ -89,9 +93,6 @@ class ChapterFiles {
         this.pageLoadBufferMin = 2;
         this.pageLoadBufferStep = 50;
         this.scrollLazyLoadTriggerTreshold = 0;
-
-        this.elm = document.createElement("div");
-        this.elm.classList.add("chapter");
 
         resizeSubscribers.push(() => this.resizeHandler());
         this.resizeHandler();
@@ -109,15 +110,15 @@ class ChapterFiles {
         }
 
         if (portraitMode) {
-            this.elm.classList.add("portrait");
+            this.elm.class("portrait");
         } else {
-            this.elm.classList.remove("portrait");
+            this.elm.removeClass("portrait");
         }
 
         if (wideMode) {
-            this.elm.classList.add("wide");
+            this.elm.class("wide");
         } else {
-            this.elm.classList.remove("wide");
+            this.elm.removeClass("wide");
         }
     }
 
@@ -149,62 +150,64 @@ class ChapterFiles {
     }
 
     updateElements() {
-        while (this.elm.firstElementChild) { this.elm.removeChild(this.elm.firstElementChild); }
+        this.elm.clear();
+        this.rowElms.length = 0;
 
         for (let i = 0; i < this.displayPages.length; i += this.pagesPerRow) {
-            const rowElm = document.createElement("div");
+            const rowElm = new Elm().class("row");
             const rowArr = [];
-            rowElm.classList.add("row");
             let actualPagesInRow = 0;
 
             for (let j = 0; j < this.pagesPerRow; j++) {
                 const page = this.displayPages[i + j];
                 if (page) {
-                    rowElm.appendChild(page.img);
+                    rowElm.append(page.img);
                     rowArr.push(page);
                     actualPagesInRow++;
                 }
             }
 
             if (actualPagesInRow === 1) {
-                rowElm.classList.add("singlePage");
+                rowElm.class("singlePage");
             }
 
-            this.elm.appendChild(rowElm);
+            this.rowElms.push(rowElm);
+            this.elm.append(rowElm);
         }
     }
 
-    /** @returns {number} */
+    /**
+     * @param {number} yPosition
+     * @returns {number}
+     */
     closestRowY(yPosition) {
-        const approximateRowIndex = this.closestRowIndexAtY(yPosition);
-        /** @type {HTMLDivElement} */ // @ts-ignore
-        const row = this.elm.children[approximateRowIndex];
+        const offset = this.elm.elm.offsetTop;
+        const relativeYPosition = yPosition - offset;
+        const approximateRowIndex = this.closestRowIndexAtY(relativeYPosition);
+        const row = this.rowElms[approximateRowIndex];
 
         if (row) {
-            return row.offsetTop;
+            return row.elm.offsetTop;
         } else {
-            return approximateRowIndex * this.getPageHeight();
+            return approximateRowIndex * this.getPageHeight() + offset;
         }
     }
 
-    /** @param {number} yPosition */
-    closestRowIndexAtY(yPosition) {
-        const yRelative = yPosition - this.elm.offsetTop;
-        const approximateRowIndex = Math.round(yRelative / this.getPageHeight());
-
-        return approximateRowIndex;
+    /** @param {number} yRel */
+    closestRowIndexAtY(yRel) {
+        return Math.round(yRel / this.getPageHeight());
     }
 
     getPageHeight() {
-        const firstRow = this.elm.firstElementChild;
-        return firstRow.getBoundingClientRect().height + 16; // 16 is margin-bottom
+        return this.rowElms[0].elm.getBoundingClientRect().height + 16; // 16 is margin-bottom
     }
 
     /** @param {number} yPosition */
     loadFilesUpTo(yPosition) {
         if (yPosition < this.scrollLazyLoadTriggerTreshold) { return; }
 
-        const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
+        const offset = this.elm.elm.offsetTop;
+        const closestRowY = this.closestRowIndexAtY(yPosition - offset) + 1;
         const displayPageIndex = Math.min(this.pagesPerRow * closestRowY, this.displayPages.length - 1);
         const pageIndex = this.displayPageToPageIndex(displayPageIndex) + this.pageLoadBufferMin;
 
@@ -222,7 +225,7 @@ class ChapterFiles {
 
         this.pagesLoaded = pagesToLoad;
         this.scrollLazyLoadTriggerTreshold =
-            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight();
+            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight() + offset;
     }
 
     /** @param {number} displayPageIndex */
@@ -598,6 +601,8 @@ function updateFiles(directory) {
 
 /** @param {number} pages */
 function scrollPagesBy(pages) {
+    if (!fileDisplay.currentChapter) { return; }
+
     // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
     const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
 
@@ -633,7 +638,7 @@ addEventListener("keydown", function (e) {
     scrollPagesBy(deltaPage);
 });
 
-addEventListener("mousemove", function() {
+addEventListener("mousemove", function () {
     if (cursorHidden) {
         main.removeClass("hideCursor");
         cursorHidden = false;
