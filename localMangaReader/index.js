@@ -288,6 +288,12 @@ class FileDisplay extends Component {
         this.chapterContainer.append(chapter.elm);
         this.currentChapter = chapter;
     }
+
+    openOnlyChapterIfOnlyChapter() {
+        if (this.chapters.length === 1) {
+            this.setChapter(this.chapters[0]);
+        }
+    }
 }
 
 class LoadableFile {
@@ -583,6 +589,9 @@ function updateFiles(directory) {
             }
         }
     }
+
+    fileDisplay.openOnlyChapterIfOnlyChapter();
+    scrollPagesBy(0);
 
     console.log(directory);
 }
