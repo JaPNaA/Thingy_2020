@@ -148,9 +148,9 @@ class ChapterFiles extends Component {
             pages.push(pageFile);
         }
 
-        sortStringsNumbered(pages, page => page.fileName);
+        const pagesSorted = sortStringsNumbered(pages, page => page.fileName);
 
-        for (const page of pages) {
+        for (const page of pagesSorted) {
             this.pages.push(page);
         }
 
