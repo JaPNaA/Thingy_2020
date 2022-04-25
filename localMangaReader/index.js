@@ -93,8 +93,15 @@ class ChapterFiles extends Component {
         this.pageLoadBufferMin = 2;
         this.pageLoadBufferStep = 50;
         this.scrollLazyLoadTriggerTreshold = 0;
+        this.pageHeight = 0;
 
-        resizeSubscribers.push(() => this.resizeHandler());
+        this.activated = false;
+    }
+
+    activate() {
+        if (this.activated) { return; }
+        this.activated = true;
+
         this.resizeHandler();
 
         this.initializeAndOrganizePageFiles();
@@ -108,6 +115,8 @@ class ChapterFiles extends Component {
             this.pagesPerRow = newPagesPerRow;
             this.updateElements();
         }
+
+        this.updatePageHeight();
 
         if (portraitMode) {
             this.elm.class("portrait");
@@ -174,6 +183,13 @@ class ChapterFiles extends Component {
             this.rowElms.push(rowElm);
             this.elm.append(rowElm);
         }
+
+        this.updatePageHeight();
+    }
+
+    updatePageHeight() {
+        if (this.rowElms.length <= 0) { return; }
+        this.pageHeight = this.rowElms[0].elm.getBoundingClientRect().height + 16; // 16 is margin-bottom
     }
 
     /**
@@ -189,17 +205,27 @@ class ChapterFiles extends Component {
         if (row) {
             return row.elm.offsetTop;
         } else {
-            return approximateRowIndex * this.getPageHeight() + offset;
+            return approximateRowIndex * this.pageHeight + offset;
         }
     }
 
     /** @param {number} yRel */
     closestRowIndexAtY(yRel) {
-        return Math.round(yRel / this.getPageHeight());
+        return Math.round(yRel / this.pageHeight);
     }
 
-    getPageHeight() {
-        return this.rowElms[0].elm.getBoundingClientRect().height + 16; // 16 is margin-bottom
+    /**
+     * @param {number} oldScrollTop 
+     * @param {number} oldPageHeight 
+     * @param {number} oldPagesPerRow 
+     */
+    getNewScrollTop(oldScrollTop, oldPageHeight, oldPagesPerRow) {
+        const offset = this.elm.elm.offsetTop;
+        const estOldPageNumber = (oldScrollTop - offset) / oldPageHeight * oldPagesPerRow;
+        if (estOldPageNumber < 0) {
+            return oldScrollTop;
+        }
+        return estOldPageNumber / this.pagesPerRow * this.pageHeight + offset;
     }
 
     /** @param {number} yPosition */
@@ -225,7 +251,7 @@ class ChapterFiles extends Component {
 
         this.pagesLoaded = pagesToLoad;
         this.scrollLazyLoadTriggerTreshold =
-            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight() + offset;
+            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.pageHeight + offset;
     }
 
     /** @param {number} displayPageIndex */
@@ -258,6 +284,7 @@ class FileDisplay extends Component {
         this.chapters = [];
         /** @type {ChapterFiles | undefined} */
         this.currentChapter = undefined;
+        resizeSubscribers.push(() => this.resizeHandler());
 
         this.elm.append(
             this.chapterSelectContainer = new Elm().class("chapterSelectContainer", "grayBox", "hidden").append(
@@ -265,6 +292,16 @@ class FileDisplay extends Component {
                 this.chapterSelectElm = new Elm().class("chapterSelect")
             ),
             this.chapterContainer = new Elm().class("chapterContainer")
+        );
+    }
+
+    resizeHandler() {
+        if (!this.currentChapter) { return; }
+        const lastPagePerRow = this.currentChapter.pagesPerRow;
+        const lastPageHeight = this.currentChapter.pageHeight;
+        this.currentChapter.resizeHandler();
+        main.lastScrollTop = document.documentElement.scrollTop = this.currentChapter.getNewScrollTop(
+            main.lastScrollTop, lastPageHeight, lastPagePerRow
         );
     }
 
@@ -290,6 +327,8 @@ class FileDisplay extends Component {
         this.chapterContainer.clear();
         this.chapterContainer.append(chapter.elm);
         this.currentChapter = chapter;
+        chapter.activate();
+        main.scrollToChapter();
     }
 
     openOnlyChapterIfOnlyChapter() {
@@ -400,6 +439,244 @@ class CanvasPool {
     }
 }
 
+class Main {
+    constructor() {
+        /** @type {Elm} */
+        let filesInputLabelText;
+
+        this.fileDisplay = new FileDisplay();
+
+        this.directoryFileInput = new InputElm().setType("file").attribute("multiple").attribute("webkitdirectory").attribute("directory")
+            .on("change", async () => {
+                const directory = new FileDirectory();
+
+                // @ts-ignore
+                for (const file of this.directoryFileInput.elm.files) {
+                    const path = file.webkitRelativePath;
+                    if (!isImageFile(path)) { continue; }
+                    directory.addBlob(path, new LoadableFile(file));
+                }
+
+                this.updateFiles(directory);
+
+                filesInputLabelText.replaceContents((await langMapProm).selectAdditionalMangaFolder);
+            });
+
+        this.zipFileInput = new InputElm().setType("file").attribute("accept", "application/zip")
+            .on("change", async (e) => {
+                await loadJSZip();
+                const zip = new JSZip();
+                // @ts-ignore
+                await zip.loadAsync(this.zipFileInput.elm.files[0]);
+
+                const directory = new FileDirectory();
+
+                zip.forEach(function (relPath, file) {
+                    if (!isImageFile(relPath)) { return; }
+                    directory.addBlob(relPath,
+                        new LoadableFile(async () => await file.async("blob"))
+                    );
+                });
+
+                this.updateFiles(directory);
+            });
+
+        this.pdfFileInput = new InputElm().setType("file").attribute("accept", "application/pdf")
+            .on("change", async (e) => {
+                await loadPDFJS();
+                /** @type {HTMLInputElement} */ // @ts-ignore
+                const input = this.pdfFileInput.elm;
+                const pdf = await pdfJS.getDocument(URL.createObjectURL(input.files[0])).promise;
+
+                const directory = new FileDirectory();
+                const canvasPool = new CanvasPool();
+                console.log(canvasPool);
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    directory.addBlob(i.toString(), new LoadableFile(async () => {
+                        const page = await pdf.getPage(i);
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        let blob;
+
+                        await canvasPool.useCanvas(async context => {
+                            context.canvas.width = viewport.width;
+                            context.canvas.height = viewport.height;
+                            await page.render({
+                                canvasContext: context.X,
+                                transform: null,
+                                viewport: viewport
+                            }).promise;
+                            blob = new Promise(res => {
+                                context.canvas.toBlob(blob => res(blob));
+                            });
+                        });
+
+                        return blob;
+                    }))
+                }
+
+                this.updateFiles(directory);
+
+            })
+
+        this.selectFileOpenContainer = new Elm().class("selectFileOpenContainer").append(
+            new Elm("h1").append(createLocaleStringSpan("selectFile")),
+
+            new Elm("label").append(
+                filesInputLabelText = createLocaleStringSpan("selectMangaFolder").class("block"),
+                this.directoryFileInput
+            ),
+
+            new Elm("label").append(
+                createLocaleStringSpan("selectMangaZip").class("block"),
+                this.zipFileInput
+            ),
+
+            new Elm("label").append(
+                createLocaleStringSpan("selectPDF").class("block"),
+                this.pdfFileInput
+            )
+        );
+
+        this.wideViewCheckbox = new InputElm().setType("checkbox")
+            .on("change", () => {
+                // @ts-expect-error
+                wideMode = this.wideViewCheckbox.getValue();
+                resizeHandler();
+            });
+
+        this.main = new Elm("div").class("main").append(
+            this.fileDisplay.elm,
+
+            new Elm().class("controlsContainer", "grayBox").append(
+                this.selectFileOpenContainer,
+
+                new Elm("h1").append(createLocaleStringSpan("viewerOptions")),
+
+                new Elm("label").append(
+                    this.wideViewCheckbox,
+                    createLocaleStringSpan("wideView")
+                )
+            )
+        ).appendTo(document.body);
+
+        this.lastScrollTop = 0;
+
+        this.addEventHandlers();
+    }
+    /**
+     * @param {FileDirectory} directory
+     */
+    updateFiles(directory) {
+        let dirQue = [directory];
+
+        while (dirQue.length > 0) {
+            const currDir = dirQue.pop();
+            let addedDir = false;
+
+            // reversed because directories added to dirQue will be read in reverse order
+            const sortedEntries = sortStringsNumbered(Array.from(currDir.items), item => item[0]).reverse();
+
+            for (const [path, item] of sortedEntries) {
+                if (item instanceof FileDirectory) {
+                    dirQue.push(item);
+                } else {
+                    if (addedDir) { continue; }
+                    const chapterFiles = new ChapterFiles(currDir);
+                    this.fileDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
+                    addedDir = true;
+                }
+            }
+        }
+
+        this.fileDisplay.openOnlyChapterIfOnlyChapter();
+        this.scrollPagesBy(0);
+
+        console.log(directory);
+    }
+
+    /** @param {number} pages */
+    scrollPagesBy(pages) {
+        if (!this.fileDisplay.currentChapter) { return; }
+
+        // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
+        const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
+
+        let newScroll = document.documentElement.scrollTop + pages * pageHeight;
+
+        document.documentElement.scrollTop =
+            wideMode ?
+                newScroll :
+                this.fileDisplay.currentChapter.closestRowY(newScroll);
+    }
+
+    scrollToChapter() {
+        document.documentElement.scrollTop = this.fileDisplay.currentChapter.elm.elm.offsetTop;
+    }
+
+    addEventHandlers() {
+        let cursorHidden = false;
+
+        addEventListener("keydown", e => {
+            let goingUp = e.key === "ArrowUp" || e.key === "ArrowRight";
+            let goingDown = e.key === "ArrowDown" || e.key === "ArrowLeft";
+            if (!(goingUp || goingDown)) { return; }
+
+            e.preventDefault();
+
+            let deltaPage = 0;
+            if (goingDown) {
+                deltaPage += 1;
+            } else if (goingUp) {
+                deltaPage -= 1;
+            }
+
+            if (!cursorHidden) {
+                this.main.class("hideCursor");
+                cursorHidden = true;
+            }
+
+            this.scrollPagesBy(deltaPage);
+        });
+
+        addEventListener("mousemove", () => {
+            if (cursorHidden) {
+                this.main.removeClass("hideCursor");
+                cursorHidden = false;
+            }
+        })
+
+        let touchDragged = false;
+
+        addEventListener("touchstart", () => { touchDragged = false; });
+        addEventListener("touchmove", () => { touchDragged = true; });
+        addEventListener("touchend", e => {
+            if (touchDragged) { return; }
+            const touchX = e.changedTouches[0].clientX;
+            let deltaPage = 0;
+
+            if (touchX < innerWidth * 0.3) {
+                deltaPage += 1;
+            } else if (touchX > innerWidth * 0.7) {
+                deltaPage -= 1;
+            } else {
+                return;
+            }
+
+            this.scrollPagesBy(deltaPage);
+        });
+
+        addEventListener("scroll", () => {
+            const scrollTop = document.documentElement.scrollTop;
+            if (this.fileDisplay.currentChapter) {
+                this.fileDisplay.currentChapter.loadFilesUpTo(scrollTop);
+            }
+            this.lastScrollTop = scrollTop;
+        });
+    }
+
+}
+
 const supportedSet = new Set(["apng", "avif", "gif", "jpg", "jpeg", "jfif", "pjpeg", "pjp", "png", "svg", "webp", "bmp", "ico", "cur", "tif", "tiff"]);
 
 /** @param {string} name */
@@ -447,229 +724,6 @@ function sortStringsNumbered(items, mapper) {
     }).map(stringAndSegment => stringAndSegment[0]);
 }
 
-/** @type {Elm} */
-let filesInputLabelText;
-
-const fileDisplay = new FileDisplay();
-
-const directoryFileInput = new InputElm().setType("file").attribute("multiple").attribute("webkitdirectory").attribute("directory")
-    .on("change", async () => {
-        const directory = new FileDirectory();
-
-        // @ts-ignore
-        for (const file of directoryFileInput.elm.files) {
-            const path = file.webkitRelativePath;
-            if (!isImageFile(path)) { continue; }
-            directory.addBlob(path, new LoadableFile(file));
-        }
-
-        updateFiles(directory);
-
-        filesInputLabelText.replaceContents((await langMapProm).selectAdditionalMangaFolder);
-    });
-
-const zipFileInput = new InputElm().setType("file").attribute("accept", "application/zip")
-    .on("change", async function (e) {
-        await loadJSZip();
-        const zip = new JSZip();
-        // @ts-ignore
-        await zip.loadAsync(zipFileInput.elm.files[0]);
-
-        const directory = new FileDirectory();
-
-        zip.forEach(function (relPath, file) {
-            if (!isImageFile(relPath)) { return; }
-            directory.addBlob(relPath,
-                new LoadableFile(async () => await file.async("blob"))
-            );
-        });
-
-        updateFiles(directory);
-    });
-
-const pdfFileInput = new InputElm().setType("file").attribute("accept", "application/pdf")
-    .on("change", async function (e) {
-        //
-        await loadPDFJS();
-        /** @type {HTMLInputElement} */ // @ts-ignore
-        const input = pdfFileInput.elm;
-        const pdf = await pdfJS.getDocument(URL.createObjectURL(input.files[0])).promise;
-
-        const directory = new FileDirectory();
-        const canvasPool = new CanvasPool();
-        console.log(canvasPool);
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-            directory.addBlob(i.toString(), new LoadableFile(async () => {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1.5 });
-                let blob;
-
-                await canvasPool.useCanvas(async context => {
-                    context.canvas.width = viewport.width;
-                    context.canvas.height = viewport.height;
-                    await page.render({
-                        canvasContext: context.X,
-                        transform: null,
-                        viewport: viewport
-                    }).promise;
-                    blob = new Promise(res => {
-                        context.canvas.toBlob(blob => res(blob));
-                    });
-                });
-
-                return blob;
-            }))
-        }
-
-        updateFiles(directory);
-
-    })
-
-const selectFileOpenContainer = new Elm().class("selectFileOpenContainer").append(
-    new Elm("h1").append(createLocaleStringSpan("selectFile")),
-
-    new Elm("label").append(
-        filesInputLabelText = createLocaleStringSpan("selectMangaFolder").class("block"),
-        directoryFileInput
-    ),
-
-    new Elm("label").append(
-        createLocaleStringSpan("selectMangaZip").class("block"),
-        zipFileInput
-    ),
-
-    new Elm("label").append(
-        createLocaleStringSpan("selectPDF").class("block"),
-        pdfFileInput
-    )
-);
-
-const wideViewCheckbox = new InputElm().setType("checkbox")
-    .on("change", function () {
-        // @ts-expect-error
-        wideMode = wideViewCheckbox.getValue();
-        resizeHandler();
-    });
-
-const main = new Elm("div").class("main").append(
-    fileDisplay.elm,
-
-    new Elm().class("controlsContainer", "grayBox").append(
-        selectFileOpenContainer,
-
-        new Elm("h1").append(createLocaleStringSpan("viewerOptions")),
-
-        new Elm("label").append(
-            wideViewCheckbox,
-            createLocaleStringSpan("wideView")
-        )
-    )
-).appendTo(document.body);
-
-
-/**
- * @param {FileDirectory} directory
- */
-function updateFiles(directory) {
-    let dirQue = [directory];
-
-    while (dirQue.length > 0) {
-        const currDir = dirQue.pop();
-        let addedDir = false;
-
-        // reversed because directories added to dirQue will be read in reverse order
-        const sortedEntries = sortStringsNumbered(Array.from(currDir.items), item => item[0]).reverse();
-
-        for (const [path, item] of sortedEntries) {
-            if (item instanceof FileDirectory) {
-                dirQue.push(item);
-            } else {
-                if (addedDir) { continue; }
-                const chapterFiles = new ChapterFiles(currDir);
-                fileDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
-                addedDir = true;
-            }
-        }
-    }
-
-    fileDisplay.openOnlyChapterIfOnlyChapter();
-    scrollPagesBy(0);
-
-    console.log(directory);
-}
-
-/** @param {number} pages */
-function scrollPagesBy(pages) {
-    if (!fileDisplay.currentChapter) { return; }
-
-    // in wideMode, prefer page up/down-like functionality (pages expected be higher than screen)
-    const pageHeight = wideMode ? innerHeight * 0.8 : innerHeight;
-
-    let newScroll = document.documentElement.scrollTop + pages * pageHeight;
-
-    document.documentElement.scrollTop =
-        wideMode ?
-            newScroll :
-            fileDisplay.currentChapter.closestRowY(newScroll);
-}
-
-let cursorHidden = false;
-
-addEventListener("keydown", function (e) {
-    let goingUp = e.key === "ArrowUp" || e.key === "ArrowRight";
-    let goingDown = e.key === "ArrowDown" || e.key === "ArrowLeft";
-    if (!(goingUp || goingDown)) { return; }
-
-    e.preventDefault();
-
-    let deltaPage = 0;
-    if (goingDown) {
-        deltaPage += 1;
-    } else if (goingUp) {
-        deltaPage -= 1;
-    }
-
-    if (!cursorHidden) {
-        main.class("hideCursor");
-        cursorHidden = true;
-    }
-
-    scrollPagesBy(deltaPage);
-});
-
-addEventListener("mousemove", function () {
-    if (cursorHidden) {
-        main.removeClass("hideCursor");
-        cursorHidden = false;
-    }
-})
-
-let touchDragged = false;
-
-addEventListener("touchstart", () => { touchDragged = false; });
-addEventListener("touchmove", () => { touchDragged = true; });
-addEventListener("touchend", e => {
-    if (touchDragged) { return; }
-    const touchX = e.changedTouches[0].clientX;
-    let deltaPage = 0;
-
-    if (touchX < innerWidth * 0.3) {
-        deltaPage += 1;
-    } else if (touchX > innerWidth * 0.7) {
-        deltaPage -= 1;
-    } else {
-        return;
-    }
-
-    scrollPagesBy(deltaPage);
-});
-
-addEventListener("scroll", function () {
-    if (fileDisplay.currentChapter) {
-        fileDisplay.currentChapter.loadFilesUpTo(document.documentElement.scrollTop);
-    }
-});
 
 let lastWidth = -1;
 let lastHeight = -1;
@@ -689,14 +743,14 @@ let portraitMode = false;
 let wideMode = false;
 
 function resizeHandler() {
-    lastWidth = innerWidth;
-    lastHeight = innerHeight;
-
     portraitMode = innerHeight > innerWidth;
 
     for (const subscriber of resizeSubscribers) {
         subscriber();
     }
+
+    lastWidth = innerWidth;
+    lastHeight = innerHeight;
 }
 
 resizeHandler();
@@ -763,7 +817,7 @@ async function loadPDFJS() {
         switch (command) {
             case "enableEmbedMode":
                 rootDirectory = new FileDirectory();
-                selectFileOpenContainer.class("hidden");
+                main.selectFileOpenContainer.class("hidden");
                 returnMessage("getDirectory");
                 break;
 
@@ -792,7 +846,7 @@ async function loadPDFJS() {
                 }
 
 
-                updateFiles(rootDirectory);
+                main.updateFiles(rootDirectory);
                 break;
 
             case "setPageSrc":
@@ -807,3 +861,5 @@ async function loadPDFJS() {
         }
     });
 }
+
+const main = new Main();
