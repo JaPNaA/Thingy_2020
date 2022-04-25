@@ -517,6 +517,25 @@ const pdfFileInput = new InputElm().setType("file").attribute("accept", "applica
 
     })
 
+const selectFileOpenContainer = new Elm().class("selectFileOpenContainer").append(
+    new Elm("h1").append(createLocaleStringSpan("selectFile")),
+
+    new Elm("label").append(
+        filesInputLabelText = createLocaleStringSpan("selectMangaFolder").class("block"),
+        directoryFileInput
+    ),
+
+    new Elm("label").append(
+        createLocaleStringSpan("selectMangaZip").class("block"),
+        zipFileInput
+    ),
+
+    new Elm("label").append(
+        createLocaleStringSpan("selectPDF").class("block"),
+        pdfFileInput
+    )
+);
+
 const wideViewCheckbox = new InputElm().setType("checkbox")
     .on("change", function () {
         // @ts-expect-error
@@ -528,22 +547,7 @@ new Elm("div").class("main").append(
     fileDisplay.elm,
 
     new Elm().class("controlsContainer", "grayBox").append(
-        new Elm("h1").append(createLocaleStringSpan("selectFile")),
-
-        new Elm("label").append(
-            filesInputLabelText = createLocaleStringSpan("selectMangaFolder").class("block"),
-            directoryFileInput
-        ),
-
-        new Elm("label").append(
-            createLocaleStringSpan("selectMangaZip").class("block"),
-            zipFileInput
-        ),
-
-        new Elm("label").append(
-            createLocaleStringSpan("selectPDF").class("block"),
-            pdfFileInput
-        ),
+        selectFileOpenContainer,
 
         new Elm("h1").append(createLocaleStringSpan("viewerOptions")),
 
@@ -731,6 +735,7 @@ async function loadPDFJS() {
         switch (command) {
             case "enableEmbedMode":
                 rootDirectory = new FileDirectory();
+                selectFileOpenContainer.class("hidden");
                 returnMessage("getDirectory");
                 break;
 
