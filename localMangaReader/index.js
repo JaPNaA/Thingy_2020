@@ -205,8 +205,8 @@ class ChapterFiles {
         if (yPosition < this.scrollLazyLoadTriggerTreshold) { return; }
 
         const closestRowY = this.closestRowIndexAtY(yPosition) + 1;
-        const displayPageIndex = Math.min(this.pagesPerRow * closestRowY, this.pages.length - 1);
-        const pageIndex = this.pages.indexOf(this.displayPages[displayPageIndex]) + this.pageLoadBufferMin;
+        const displayPageIndex = Math.min(this.pagesPerRow * closestRowY, this.displayPages.length - 1);
+        const pageIndex = this.displayPageToPageIndex(displayPageIndex) + this.pageLoadBufferMin;
 
         if (pageIndex < this.pagesLoaded) {
             this.scrollLazyLoadTriggerTreshold =
@@ -223,6 +223,16 @@ class ChapterFiles {
         this.pagesLoaded = pagesToLoad;
         this.scrollLazyLoadTriggerTreshold =
             this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.getPageHeight();
+    }
+
+    /** @param {number} displayPageIndex */
+    displayPageToPageIndex(displayPageIndex) {
+        let nonNullDisplayPage = null;
+        let i = displayPageIndex;
+        while (i >= 0 && nonNullDisplayPage === null) {
+            nonNullDisplayPage = this.displayPages[i--];
+        }
+        return this.pages.indexOf(nonNullDisplayPage);
     }
 
     /** @param {PageFile} page */
