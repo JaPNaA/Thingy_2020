@@ -544,6 +544,17 @@ class Main {
                 wideMode = this.wideViewCheckbox.getValue();
                 resizeHandler();
             });
+        
+        this.leftToRightCheckbox = new InputElm().setType("checkbox")
+            .on("change", () => {
+                // @ts-expect-error
+                this.leftToRight = this.leftToRightCheckbox.getValue();
+                if (this.leftToRight) {
+                    this.fileDisplay.elm.class("leftToRight");
+                } else {
+                    this.fileDisplay.elm.removeClass("leftToRight");
+                }
+            })
 
         this.main = new Elm("div").class("main").append(
             this.fileDisplay.elm,
@@ -556,11 +567,17 @@ class Main {
                 new Elm("label").append(
                     this.wideViewCheckbox,
                     createLocaleStringSpan("wideView")
+                ),
+
+                new Elm("label").append(
+                    this.leftToRightCheckbox,
+                    createLocaleStringSpan("leftToRight")
                 )
             )
         ).appendTo(document.body);
 
         this.lastScrollTop = 0;
+        this.leftToRight = false;
 
         this.addEventHandlers();
     }

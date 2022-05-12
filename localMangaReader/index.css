@@ -46,6 +46,10 @@ body {
     text-align: center;
 }
 
+.leftToRight .row {
+    direction: ltr;
+}
+
 .row:empty::after {
     content: "This page is blank";
     display: block;
