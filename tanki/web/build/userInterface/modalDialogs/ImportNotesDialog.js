@@ -63,7 +63,8 @@ var ImportNotesDialog = /** @class */ (function (_super) {
         /** Flag to prevent double-importing */
         _this.imported = false;
         _this.foregroundElm.append(new Elm("h3").append("Import Notes"), _this.sourcesListElm = new Elm().class("sourcesList").append(new Elm("button").append("jishoAPIData (jishoWithHistory)")
-            .on("click", function () { return _this.importFromJishoAPIData(); })));
+            .on("click", function () { return _this.importFromJishoAPIData(); }), new Elm("button").append("CSV")
+            .on("click", function () { return _this.importFromCSV(); })));
         console.log(deck);
         return _this;
     }
@@ -110,6 +111,40 @@ var ImportNotesDialog = /** @class */ (function (_super) {
                         _this.deck.database.writeEdit(card);
                     }
                 }
+            }
+            _this.deck.database.endUndoLogGroup();
+            _this.onImported.dispatch();
+        }));
+    };
+    ImportNotesDialog.prototype.importFromCSV = function () {
+        var _a;
+        var _this = this;
+        this.sourcesListElm.remove();
+        this.imported = false;
+        var textarea = new DragAndDropTextarea();
+        var firstLineIsHeaderCheckbox = this.createCheckedCheckbox("First line is header");
+        var noteTypes = this.deck.database.getNoteTypes();
+        var noteTypeSelect = (_a = new Elm("select")).append.apply(_a, noteTypes.map(function (type) { return new Elm("option").append(type.name); }));
+        this.foregroundElm.append(new Elm("label").append(new Elm().append("Select note type"), noteTypeSelect), textarea, new Elm().class("options").append(firstLineIsHeaderCheckbox.container), new Elm("button").append("Import")
+            .on("click", function () {
+            if (_this.imported) {
+                return;
+            }
+            _this.imported = true;
+            var value = textarea.getValue();
+            var parsed = parseCSV(value);
+            var noteType = _this.deck.database.getNoteTypeByName(noteTypeSelect.getHTMLElement().value);
+            if (!noteType) {
+                throw new Error("Selected note type not in database");
+            }
+            if (firstLineIsHeaderCheckbox.input.getValue()) {
+                parsed.shift();
+            }
+            _this.deck.database.startUndoLogGroup();
+            for (var _i = 0, parsed_2 = parsed; _i < parsed_2.length; _i++) {
+                var item = parsed_2[_i];
+                var note = Note.create(noteType, item);
+                _this.deck.database.addNote(note);
             }
             _this.deck.database.endUndoLogGroup();
             _this.onImported.dispatch();
@@ -174,3 +209,67 @@ var DragAndDropTextarea = /** @class */ (function (_super) {
     };
     return DragAndDropTextarea;
 }(Component));
+function parseCSV(csvText) {
+    var csvData = [];
+    var i = 0;
+    while (i < csvText.length) {
+        var _a = _parseCSVLine(csvText, i), data = _a.data, end = _a.end;
+        csvData.push(data);
+        i = end;
+    }
+    return csvData;
+}
+function _parseCSVLine(csvText, start) {
+    var i = start;
+    var dataArr = [];
+    while (i < csvText.length) {
+        var _a = _parseCSVData(csvText, i), end = _a.end, data = _a.data, endLine = _a.endLine;
+        dataArr.push(data);
+        i = end;
+        if (endLine) {
+            break;
+        }
+    }
+    return { data: dataArr, end: i };
+}
+function _parseCSVData(csvText, start) {
+    var i = start;
+    var quoted = false;
+    var dataIsWhitespace = true;
+    var data = "";
+    for (; i < csvText.length; i++) {
+        var char = csvText[i];
+        if (!quoted && (char === "," || char === "\n")) {
+            return { data: data, end: i + 1, endLine: char === "\n" };
+        }
+        else if (char === '"') {
+            if (!quoted) {
+                // start of data
+                if (dataIsWhitespace) {
+                    data = "";
+                    quoted = true;
+                }
+                else { // part of data
+                    data += char;
+                }
+            }
+            else {
+                // double double-quote (escaped double-quote)
+                if (csvText[i + 1] === '"') {
+                    data += char;
+                    i++;
+                }
+                else {
+                    quoted = false;
+                }
+            }
+        }
+        else {
+            if (!char.match(/\s/)) {
+                dataIsWhitespace = false;
+            }
+            data += char;
+        }
+    }
+    return { data: data, end: i, endLine: false };
+}
