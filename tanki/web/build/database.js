@@ -426,7 +426,7 @@ var NoteType = /** @class */ (function (_super) {
         var _this = _super.call(this) || this;
         _this.noteTypeData = noteTypeData;
         _this.name = noteTypeData.name;
-        _this.numCardTypes = (_this.isExternal = isNoteTypeDataIntegrated(noteTypeData)) ?
+        _this.numCardTypes = (_this.isIntegrated = isNoteTypeDataIntegrated(noteTypeData)) ?
             noteTypeData.cardTypes.length : noteTypeData.numCardTypes;
         return _this;
     }

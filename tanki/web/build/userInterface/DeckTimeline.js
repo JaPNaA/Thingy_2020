@@ -26,7 +26,9 @@ var DeckTimeline = /** @class */ (function (_super) {
         _this.dueCardsElm = new Elm().class("number");
         _this.graduatedCardsElm = new Elm().class("number");
         _this.timelineGraph = new TimelineGraph(_this.deck);
-        _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
+        _this.notifyNext25Cards = false;
+        _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm)
+            .on("click", function () { return _this.notifyNext25Cards = true; }), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         _this.deck.database.onAnyChange.addHandler(function () { return _this.rateLimitedUpdate(); });
         _this.deck.loaded.then(function () { return _this.rateLimitedUpdate(); });
@@ -50,7 +52,19 @@ var DeckTimeline = /** @class */ (function (_super) {
         this.newCardsElm.replaceContents(counts.new);
         this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
         this.graduatedCardsElm.replaceContents(counts.inactive);
+        if (this.notifyNext25Cards && minutesToNext25Cards && minutesToNext25Cards <= 0) {
+            this.sendCardsDueNotification();
+            this.notifyNext25Cards = false;
+        }
         this.timelineGraph.update();
+    };
+    DeckTimeline.prototype.sendCardsDueNotification = function () {
+        if (!window.Notification) {
+            return;
+        }
+        new Notification("Tanki - 25 cards are due!", {
+            body: "25 or more cards are due -- let's get them done!"
+        });
     };
     DeckTimeline.prototype.setMinutelyUpdateIntervals = function () {
         var _this = this;

@@ -78,6 +78,10 @@ var EditNoteTypeDialog = /** @class */ (function (_super) {
                 switch (_b.label) {
                     case 0:
                         this.selectNoteElm.remove();
+                        if (!type.isIntegrated) {
+                            this.foregroundElm.append("This note is external. You can't edit this note. Yet...");
+                            return [2 /*return*/];
+                        }
                         typeEdit = type.clone();
                         return [4 /*yield*/, typeEdit.getIntegratedNoteType()];
                     case 1:

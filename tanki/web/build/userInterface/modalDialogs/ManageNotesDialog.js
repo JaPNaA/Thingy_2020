@@ -94,7 +94,7 @@ var RecyclingList = /** @class */ (function (_super) {
         var maxStartIndex = this.dataList.length - this.elmsList.length;
         var bufferStartIndex = boundBetween(0, Math.floor(this.elm.getHTMLElement().scrollTop / this.listElmHeight - this.elmsList.length / 2), maxStartIndex);
         this.bufferedPixelsTop = bufferStartIndex * this.listElmHeight;
-        this.listElmsContainer.attribute("style", "margin-top: " + this.bufferedPixelsTop + "px");
+        this.listElmsContainer.attribute("style", "margin-top: ".concat(this.bufferedPixelsTop, "px"));
         for (var i = 0; i < this.elmsList.length; i++) {
             var content = this.dataList[bufferStartIndex + i];
             if (content) {
@@ -102,7 +102,7 @@ var RecyclingList = /** @class */ (function (_super) {
             }
         }
         this.bufferedPixelsBottom = (bufferStartIndex + this.elmsList.length) * this.listElmHeight;
-        this.bottomBufferElm.attribute("style", "height: " + (this.dataList.length * this.listElmHeight - this.bufferedPixelsBottom) + "px");
+        this.bottomBufferElm.attribute("style", "height: ".concat(this.dataList.length * this.listElmHeight - this.bufferedPixelsBottom, "px"));
     };
     RecyclingList.prototype.scrollHandler = function () {
         if (this.bufferedElementsCoversViewbox()) {
