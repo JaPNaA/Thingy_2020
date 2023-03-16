@@ -34,15 +34,15 @@ Scared of forgetting? Let's remember that people didn't always use steroids to l
 
 ## Todo
 
-    - ~~undo system~~
-    - add relearn / review incorrect cards
-    - typing input
-        - sound feedback for typing input
-        - automatic checking
-    - better looking timeline
-        - show timeline while doing cards option
-    - new cards limits
-    - auto reading
-    - "next card" preview
-    - skip learning steps for late cards
-    - "do cards early" button
+- ~~undo system~~
+- add relearn / review incorrect cards
+- typing input
+    - sound feedback for typing input
+    - automatic checking
+- better looking timeline
+    - show timeline while doing cards option
+- new cards limits
+- auto reading
+- "next card" preview
+- skip learning steps for late cards
+- "do cards early" button
