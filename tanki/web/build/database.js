@@ -134,7 +134,8 @@ var TankiDatabase = /** @class */ (function () {
         }
         var existing = this.objects[copying._uid];
         var original = existing.clone();
-        this.logs.logEdit({
+        this.logs.log({
+            type: LogType.edit,
             target: existing,
             original: original
         });
@@ -155,12 +156,14 @@ var TankiDatabase = /** @class */ (function () {
         var activeCard = new ActivatedCard([CardState.active, [], 0, schedulingSettings.initialInterval], card.cardTypeID, card.parentNote);
         this.registerObject(activeCard);
         this.cards[cardIndex] = activeCard;
-        this.logs.logRemove({
+        this.logs.log({
+            type: LogType.remove,
             index: cardIndex,
             location: this.cards,
             target: originalCard
         });
-        this.logs.logAdd({
+        this.logs.log({
+            type: LogType.add,
             index: cardIndex,
             location: this.cards,
             target: activeCard
@@ -170,6 +173,34 @@ var TankiDatabase = /** @class */ (function () {
         this.writeEdit(newNote);
         this.logs.endGroup();
         return activeCard;
+    };
+    TankiDatabase.prototype.deactivateCard = function (card) {
+        if (!(card instanceof ActivatedCard)) {
+            return card;
+        }
+        this.logs.startGroup();
+        var originalCard = this.getCardByUid(card._uid);
+        var cardIndex = this.cards.indexOf(originalCard);
+        var deactivateCard = new Card(undefined, card.cardTypeID, card.parentNote);
+        this.registerObject(deactivateCard);
+        this.cards[cardIndex] = deactivateCard;
+        this.logs.log({
+            type: LogType.remove,
+            index: cardIndex,
+            location: this.cards,
+            target: originalCard
+        });
+        this.logs.log({
+            type: LogType.add,
+            index: cardIndex,
+            location: this.cards,
+            target: deactivateCard
+        });
+        var newNote = card.parentNote.clone();
+        newNote.cardUids[card.cardTypeID] = deactivateCard._uid;
+        this.writeEdit(newNote);
+        this.logs.endGroup();
+        return deactivateCard;
     };
     TankiDatabase.prototype.addNote = function (note) {
         this.logs.startGroup();
@@ -182,7 +213,8 @@ var TankiDatabase = /** @class */ (function () {
         var originalNote = this.getNoteByUid(note._uid);
         var index = this.notes.indexOf(originalNote);
         this.notes.splice(index, 1);
-        this.logs.logRemove({
+        this.logs.log({
+            type: LogType.remove,
             index: index,
             location: this.notes,
             target: originalNote
@@ -192,7 +224,8 @@ var TankiDatabase = /** @class */ (function () {
             var card = this.getCardByUid(cardUid);
             var index_1 = this.cards.indexOf(card);
             this.cards.splice(index_1, 1);
-            this.logs.logRemove({
+            this.logs.log({
+                type: LogType.remove,
                 index: index_1,
                 location: this.cards,
                 target: card
@@ -251,7 +284,8 @@ var TankiDatabase = /** @class */ (function () {
         }
     };
     TankiDatabase.prototype.initNote = function (note) {
-        this.logs.logAdd({
+        this.logs.log({
+            type: LogType.add,
             index: this.notes.push(note) - 1,
             location: this.notes,
             target: note,
@@ -260,7 +294,8 @@ var TankiDatabase = /** @class */ (function () {
         var cards = note._initCards();
         for (var _i = 0, cards_1 = cards; _i < cards_1.length; _i++) {
             var card = cards_1[_i];
-            this.logs.logAdd({
+            this.logs.log({
+                type: LogType.add,
                 index: this.cards.push(card) - 1,
                 location: this.cards,
                 target: card,
@@ -277,30 +312,25 @@ var TankiDatabase = /** @class */ (function () {
     return TankiDatabase;
 }());
 export { TankiDatabase };
+var LogType;
+(function (LogType) {
+    LogType[LogType["edit"] = 0] = "edit";
+    LogType[LogType["add"] = 1] = "add";
+    LogType[LogType["remove"] = 2] = "remove";
+})(LogType || (LogType = {}));
+;
 var DatabaseChangeLog = /** @class */ (function () {
     function DatabaseChangeLog() {
         this.freeze = false;
-        this.currentLogGroup = this.createLogGroup();
+        this.currentLogGroup = [];
         this.logGroupHistory = [];
         this.groupDepth = 0;
     }
-    DatabaseChangeLog.prototype.logEdit = function (edit) {
+    DatabaseChangeLog.prototype.log = function (log) {
         if (this.freeze) {
             return;
         }
-        this.currentLogGroup.edits.push(edit);
-    };
-    DatabaseChangeLog.prototype.logAdd = function (add) {
-        if (this.freeze) {
-            return;
-        }
-        this.currentLogGroup.adds.push(add);
-    };
-    DatabaseChangeLog.prototype.logRemove = function (remove) {
-        if (this.freeze) {
-            return;
-        }
-        this.currentLogGroup.removes.push(remove);
+        this.currentLogGroup.push(log);
     };
     DatabaseChangeLog.prototype.startGroup = function () {
         this.groupDepth++;
@@ -321,35 +351,31 @@ var DatabaseChangeLog = /** @class */ (function () {
         if (!logGroup) {
             return;
         }
-        var adds = logGroup.adds, edits = logGroup.edits, removes = logGroup.removes;
-        for (var i = adds.length - 1; i >= 0; i--) {
-            var add = adds[i];
-            if (add.location[add.index] !== add.target) {
-                throw new Error("Tried to undo add, but encountered unexpected object at location");
+        for (var i = logGroup.length - 1; i >= 0; i--) {
+            var log = logGroup[i];
+            switch (log.type) {
+                case LogType.add:
+                    if (log.location[log.index] !== log.target) {
+                        throw new Error("Tried to undo add, but encountered unexpected object at location");
+                    }
+                    log.location.splice(log.index, 1);
+                    break;
+                case LogType.edit:
+                    log.target.overwriteWith(log.original);
+                    break;
+                case LogType.remove:
+                    log.location.splice(log.index, 0, log.target);
+                    break;
             }
-            add.location.splice(add.index, 1);
-        }
-        for (var i = edits.length - 1; i >= 0; i--) {
-            var edit = edits[i];
-            edit.target.overwriteWith(edit.original);
-        }
-        for (var i = removes.length - 1; i >= 0; i--) {
-            var remove = removes[i];
-            remove.location.splice(remove.index, 0, remove.target);
         }
         return logGroup;
     };
     DatabaseChangeLog.prototype.flushLogGroupToHistory = function () {
-        if (this.currentLogGroup.adds.length <= 0 &&
-            this.currentLogGroup.edits.length <= 0 &&
-            this.currentLogGroup.removes.length <= 0) {
+        if (this.currentLogGroup.length <= 0) {
             return;
         }
         this.logGroupHistory.push(this.currentLogGroup);
-        this.currentLogGroup = this.createLogGroup();
-    };
-    DatabaseChangeLog.prototype.createLogGroup = function () {
-        return { adds: [], edits: [], removes: [] };
+        this.currentLogGroup = [];
     };
     return DatabaseChangeLog;
 }());

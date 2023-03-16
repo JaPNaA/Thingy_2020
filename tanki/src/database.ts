@@ -100,7 +100,8 @@ export class TankiDatabase {
         const existing = this.objects[copying._uid];
         const original = existing.clone();
 
-        this.logs.logEdit({
+        this.logs.log({
+            type: LogType.edit,
             target: existing,
             original: original
         });
@@ -127,12 +128,14 @@ export class TankiDatabase {
         this.registerObject(activeCard);
         this.cards[cardIndex] = activeCard;
 
-        this.logs.logRemove({
+        this.logs.log({
+            type: LogType.remove,
             index: cardIndex,
             location: this.cards,
             target: originalCard
         });
-        this.logs.logAdd({
+        this.logs.log({
+            type: LogType.add,
             index: cardIndex,
             location: this.cards,
             target: activeCard
@@ -145,6 +148,41 @@ export class TankiDatabase {
         this.logs.endGroup();
 
         return activeCard;
+    }
+
+    public deactivateCard(card: Immutable<Card>): Immutable<Card> {
+        if (!(card instanceof ActivatedCard)) { return card; }
+        this.logs.startGroup();
+
+        const originalCard = this.getCardByUid(card._uid) as Card;
+        const cardIndex = this.cards.indexOf(originalCard);
+        const deactivateCard = new Card(
+            undefined,
+            card.cardTypeID, card.parentNote
+        );
+        this.registerObject(deactivateCard);
+        this.cards[cardIndex] = deactivateCard;
+
+        this.logs.log({
+            type: LogType.remove,
+            index: cardIndex,
+            location: this.cards,
+            target: originalCard
+        });
+        this.logs.log({
+            type: LogType.add,
+            index: cardIndex,
+            location: this.cards,
+            target: deactivateCard
+        });
+
+        const newNote = card.parentNote.clone();
+        newNote.cardUids[card.cardTypeID] = deactivateCard._uid;
+        this.writeEdit(newNote);
+
+        this.logs.endGroup();
+
+        return deactivateCard;
     }
 
     public addNote(note: Note): void {
@@ -161,7 +199,8 @@ export class TankiDatabase {
         const index = this.notes.indexOf(originalNote as Note);
         this.notes.splice(index, 1);
 
-        this.logs.logRemove({
+        this.logs.log({
+            type: LogType.remove,
             index: index,
             location: this.notes,
             target: originalNote
@@ -172,7 +211,8 @@ export class TankiDatabase {
             const index = this.cards.indexOf(card as Card);
             this.cards.splice(index, 1);
 
-            this.logs.logRemove({
+            this.logs.log({
+                type: LogType.remove,
                 index: index,
                 location: this.cards,
                 target: card
@@ -242,7 +282,8 @@ export class TankiDatabase {
     }
 
     private initNote(note: Note): void {
-        this.logs.logAdd({
+        this.logs.log({
+            type: LogType.add,
             index: this.notes.push(note) - 1,
             location: this.notes,
             target: note,
@@ -252,7 +293,8 @@ export class TankiDatabase {
 
         const cards = note._initCards();
         for (const card of cards) {
-            this.logs.logAdd({
+            this.logs.log({
+                type: LogType.add,
                 index: this.cards.push(card) - 1,
                 location: this.cards,
                 target: card,
@@ -268,46 +310,45 @@ export class TankiDatabase {
     }
 }
 
+enum LogType {
+    edit, add, remove
+};
+
 interface EditLog {
-    target: DatabaseObject,
-    original: DatabaseObject
+    type: LogType.edit;
+    target: DatabaseObject;
+    original: DatabaseObject;
 }
 
 interface AddLog {
+    type: LogType.add;
     target: DatabaseObject;
     location: any[];
     index: number;
 }
 
-interface RemoveLog extends AddLog { }
-
-interface LogGroup {
-    adds: AddLog[];
-    edits: EditLog[];
-    removes: RemoveLog[];
+interface RemoveLog {
+    type: LogType.remove;
+    target: DatabaseObject;
+    location: any[];
+    index: number;
 }
+
+type ChangeLogEntry = EditLog | AddLog | RemoveLog;
+
+type LogGroup = ChangeLogEntry[];
 
 
 class DatabaseChangeLog {
     public freeze: boolean = false;
 
-    private currentLogGroup: LogGroup = this.createLogGroup();
+    private currentLogGroup: LogGroup = [];
     private logGroupHistory: LogGroup[] = [];
     private groupDepth: number = 0;
 
-    public logEdit(edit: EditLog) {
+    public log(log: EditLog | AddLog | RemoveLog) {
         if (this.freeze) { return; }
-        this.currentLogGroup.edits.push(edit);
-    }
-
-    public logAdd(add: AddLog) {
-        if (this.freeze) { return; }
-        this.currentLogGroup.adds.push(add);
-    }
-
-    public logRemove(remove: RemoveLog) {
-        if (this.freeze) { return; }
-        this.currentLogGroup.removes.push(remove);
+        this.currentLogGroup.push(log);
     }
 
     public startGroup() {
@@ -327,40 +368,33 @@ class DatabaseChangeLog {
 
         const logGroup = this.logGroupHistory.pop();
         if (!logGroup) { return; }
-        const { adds, edits, removes } = logGroup;
 
-        for (let i = adds.length - 1; i >= 0; i--) {
-            const add = adds[i];
-            if (add.location[add.index] !== add.target) { throw new Error("Tried to undo add, but encountered unexpected object at location"); }
-            add.location.splice(add.index, 1);
-        }
-
-        for (let i = edits.length - 1; i >= 0; i--) {
-            const edit = edits[i];
-            edit.target.overwriteWith(edit.original);
-        }
-
-        for (let i = removes.length - 1; i >= 0; i--) {
-            const remove = removes[i];
-            remove.location.splice(remove.index, 0, remove.target);
+        for (let i = logGroup.length - 1; i >= 0; i--) {
+            const log = logGroup[i];
+            switch (log.type) {
+                case LogType.add:
+                    if (log.location[log.index] !== log.target) { throw new Error("Tried to undo add, but encountered unexpected object at location"); }
+                    log.location.splice(log.index, 1);
+                    break;
+                case LogType.edit:
+                    log.target.overwriteWith(log.original);
+                    break;
+                case LogType.remove:
+                    log.location.splice(log.index, 0, log.target);
+                    break;
+            }
         }
 
         return logGroup;
     }
 
     private flushLogGroupToHistory() {
-        if (this.currentLogGroup.adds.length <= 0 &&
-            this.currentLogGroup.edits.length <= 0 &&
-            this.currentLogGroup.removes.length <= 0) {
+        if (this.currentLogGroup.length <= 0) {
             return;
         }
 
         this.logGroupHistory.push(this.currentLogGroup);
-        this.currentLogGroup = this.createLogGroup();
-    }
-
-    private createLogGroup(): LogGroup {
-        return { adds: [], edits: [], removes: [] };
+        this.currentLogGroup = [];
     }
 }
 
