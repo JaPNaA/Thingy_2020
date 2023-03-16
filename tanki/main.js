@@ -5,20 +5,19 @@ function createWindow() {
         width: 800,
         height: 500,
         webPreferences: {
-            nodeIntegration: true,
-            enableRemoteModule: true
+            nodeIntegration: true
         },
         icon: "./tankiIcon.png"
         // titleBarStyle: "hidden"
     });
 
     ipcMain.on("openContextMenu", function () {
-        Menu.getApplicationMenu().popup();
+        Menu.getApplicationMenu()?.popup();
     });
 
     ipcMain.on("hideMenu", function (event) {
         const window = BrowserWindow.fromWebContents(event.sender);
-        window.removeMenu();
+        window?.removeMenu();
     });
 
     // window.removeMenu();
