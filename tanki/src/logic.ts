@@ -1,4 +1,4 @@
-import { ActivatedCard, Card, TankiDatabase } from "./database.js";
+import { ActivatedCard, Card, Note, TankiDatabase } from "./database.js";
 import { CardFlag, CardState, DeckData } from "./dataTypes.js";
 import { binaryBoundarySearch, getCurrMinuteFloored, Immutable } from "./utils.js";
 
@@ -44,18 +44,18 @@ export class Deck {
             const schedulingSettings = this.database.getCardSchedulingSettings(card);
             const newCardIndex = this.newCardCache.indexOf(card);
             if (newCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
-            const poppedCard = this.newCardCache.splice(newCardIndex, 1)[0];
+            const ratedCard = this.newCardCache[newCardIndex];
 
-            let updatedCard = poppedCard;
+            // let updatedCard = poppedCard;
 
             if (result === 1 && schedulingSettings.skipCardIfIsNewButAnsweredCorrectly) {
-                const mutCard = poppedCard.clone();
+                const mutCard = ratedCard.clone();
                 mutCard.state = CardState.inactive;
                 mutCard.addFlag(CardFlag.graduated);
                 this.database.writeEdit(mutCard);
             } else {
-                const activatedCard = this.database.activateCard(poppedCard);
-                updatedCard = activatedCard;
+                const activatedCard = this.database.activateCard(ratedCard);
+                // updatedCard = activatedCard;
 
                 const mutActivatedCard = activatedCard.clone();
                 mutActivatedCard.addFlag(CardFlag.learn);
@@ -64,7 +64,7 @@ export class Deck {
                 this.updateCardScheduleWithResult(activatedCard, result);
             }
 
-            this.sortCardIntoCache(updatedCard);
+            // this.sortCardIntoCache(updatedCard);
         } else if (card instanceof ActivatedCard) {
             this.updateCardScheduleWithResult(card, result);
         } else {
@@ -164,18 +164,38 @@ export class Deck {
         });
 
         this.database.onEdit.addHandler(({ before, current }) => {
-            if (!(before instanceof Card && current instanceof Card)) { return; }
-            const beforeArray = this.getArrayForCard(before);
-            const afterArray = this.getArrayForCard(current);
+            if (before instanceof Card && current instanceof Card) {
+                const beforeArray = this.getArrayForCard(before);
+                const afterArray = this.getArrayForCard(current);
 
-            if (beforeArray !== afterArray) {
-                const beforeArrayIndex = beforeArray.indexOf(current);
-                if (beforeArrayIndex < 0) {
-                    console.warn("Tried to move card in cache, but wasn't found in expected array. Full refresh of cache");
-                    this.updateCache();
-                } else {
-                    beforeArray.splice(beforeArrayIndex, 1);
-                    afterArray.push(current);
+                if (beforeArray !== afterArray) {
+                    const beforeArrayIndex = beforeArray.indexOf(current);
+                    if (beforeArrayIndex < 0) {
+                        console.warn("Tried to move card in cache, but wasn't found in expected array. Full refresh of cache");
+                        this.updateCache();
+                    } else {
+                        beforeArray.splice(beforeArrayIndex, 1);
+                        afterArray.push(current);
+                    }
+                }
+            } else if (before instanceof Note && current instanceof Note) {
+                const numCardUIDs = Math.max(before.cardUids.length, current.cardUids.length);
+                for (let i = 0; i < numCardUIDs; i++) {
+                    if (before.cardUids[i] === current.cardUids[i]) { continue; }
+                    // CardUIDs different
+                    if (before.cardUids[i] !== undefined) {
+                        // remove old card from cache
+                        const oldCard = this.database.getCardByUid(before.cardUids[i]);
+                        const oldArray = this.getArrayForCard(oldCard);
+                        const oldCardIndex = oldArray.indexOf(oldCard);
+                        if (oldCardIndex < 0) { throw new Error("Rated new card that wasn't in new cards array"); }
+                        oldArray.splice(oldCardIndex, 1)[0];
+                    }
+                    if (current.cardUids[i] !== undefined) {
+                        // new card
+                        const newCard = this.database.getCardByUid(current.cardUids[i]);
+                        this.sortCardIntoCache(newCard);
+                    }
                 }
             }
         });
