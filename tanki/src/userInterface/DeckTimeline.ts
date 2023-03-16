@@ -1,26 +1,34 @@
 import { Component, Elm } from "../libs/elements.js";
 import { Deck } from "../logic.js";
-import { getCurrMinuteFloored, minutesToHumanString, setImmediatePolyfill } from "../utils.js";
+import { getCurrMinuteFloored, minutesToHumanString, ReactElm, Watchable } from "../utils.js";
+import { TankiInterface } from "./userInterface.js";
 
 export class DeckTimeline extends Component {
+    private notifyNext25Cards = new Watchable(false);
+
     private nextCardInMinutesElm = new Elm("span");
     private next25CardsInMinutesElm = new Elm("span");
     private newCardsElm = new Elm().class("number");
     private dueCardsElm = new Elm().class("number");
     private graduatedCardsElm = new Elm().class("number");
+    private notificationIndicationElm = new ReactElm("div")
+        .class("notificationIndication")
+        .append("\ud83d\udd14")
+        .attribute("title", "Will notifiy when next 25 cards are available")
+        .addWatchable(this.notifyNext25Cards)
+        .setUpdateHandler(self => this.notifyNext25Cards.get() ? self.class("show") : self.removeClass("show"));
     private timelineGraph = new TimelineGraph(this.deck);
 
     private rateLimitTimeoutID?: NodeJS.Timeout;
 
-    private notifyNext25Cards = false;
-
-    constructor(private deck: Deck) {
+    constructor(private tankiInterface: TankiInterface, private deck: Deck) {
         super("deckTimeline");
 
         this.elm.append(
             new Elm().append("Next review card in ", this.nextCardInMinutesElm),
-            new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm)
-                .on("click", () => this.notifyNext25Cards = true),
+            new Elm().append("Next 25 review cards in ", this.next25CardsInMinutesElm, this.notificationIndicationElm)
+                .class("clickable")
+                .on("click", () => this.set25CardsDueNotification()),
             this.timelineGraph,
             new Elm().class("cardCounts").append(
                 new Elm().class("new").append(
@@ -58,6 +66,7 @@ export class DeckTimeline extends Component {
         const counts = this.deck.getCardCount();
         const minutesToNextCard = this.deck.getMinutesToNextCard();
         const minutesToNext25Cards = this.deck.getMinutesToNextCard(24);
+        const numCardsDue = this.deck.getDueCardsCount();
 
         this.nextCardInMinutesElm.replaceContents(
             minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard)
@@ -66,21 +75,45 @@ export class DeckTimeline extends Component {
             minutesToNext25Cards === undefined ? "~" : minutesToHumanString(minutesToNext25Cards)
         );
         this.newCardsElm.replaceContents(counts.new);
-        this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
+        this.dueCardsElm.replaceContents(numCardsDue);
         this.graduatedCardsElm.replaceContents(counts.inactive);
 
-        if (this.notifyNext25Cards && minutesToNext25Cards && minutesToNext25Cards <= 0) {
-            this.sendCardsDueNotification();
-            this.notifyNext25Cards = false;
+        if (this.notifyNext25Cards.get() && minutesToNext25Cards !== undefined && minutesToNext25Cards <= 0) {
+            this.sendCardsDueNotification(numCardsDue);
+            this.notifyNext25Cards.set(false);
         }
 
         this.timelineGraph.update();
     }
 
-    private sendCardsDueNotification() {
+    public set25CardsDueNotification() {
+        const enabled = this.notifyNext25Cards.get();
+        if (enabled) {
+            this.notifyNext25Cards.set(false);
+            return;
+        }
+        if (!('Notification' in window)) { this.tankiInterface.showSnackbar("Your browser does not support notifications.", 3000); return; }
+        if (Notification.permission === 'granted') {
+            this.notifyNext25Cards.set(true);
+            return;
+        } else if (Notification.permission === 'denied') {
+            this.tankiInterface.showSnackbar("Cannot send notifications (permission denied).", 3000);
+            return;
+        } else {
+            const prevPerm = Notification.permission;
+            this.tankiInterface.showSnackbar("Grant notification permissions to send a notification when 25 cards are due.", 6000);
+            Notification.requestPermission().then(perm => {
+                if (perm != prevPerm) { // infinite 'default' permission loop prevention
+                    this.set25CardsDueNotification();
+                }
+            });
+        }
+    }
+
+    private sendCardsDueNotification(numCards: number) {
         if (!window.Notification) { return; }
-        new Notification("Tanki - 25 cards are due!", {
-            body: "25 or more cards are due -- let's get them done!"
+        new Notification(`Tanki - ${numCards} cards are due!`, {
+            body: `There are ${numCards} waiting for you to review! Let's get them done!`
         });
     }
 

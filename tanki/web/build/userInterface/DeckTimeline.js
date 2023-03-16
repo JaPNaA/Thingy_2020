@@ -14,21 +14,29 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 import { Component, Elm } from "../libs/elements.js";
-import { getCurrMinuteFloored, minutesToHumanString } from "../utils.js";
+import { getCurrMinuteFloored, minutesToHumanString, ReactElm, Watchable } from "../utils.js";
 var DeckTimeline = /** @class */ (function (_super) {
     __extends(DeckTimeline, _super);
-    function DeckTimeline(deck) {
+    function DeckTimeline(tankiInterface, deck) {
         var _this = _super.call(this, "deckTimeline") || this;
+        _this.tankiInterface = tankiInterface;
         _this.deck = deck;
+        _this.notifyNext25Cards = new Watchable(false);
         _this.nextCardInMinutesElm = new Elm("span");
         _this.next25CardsInMinutesElm = new Elm("span");
         _this.newCardsElm = new Elm().class("number");
         _this.dueCardsElm = new Elm().class("number");
         _this.graduatedCardsElm = new Elm().class("number");
+        _this.notificationIndicationElm = new ReactElm("div")
+            .class("notificationIndication")
+            .append("\ud83d\udd14")
+            .attribute("title", "Will notifiy when next 25 cards are available")
+            .addWatchable(_this.notifyNext25Cards)
+            .setUpdateHandler(function (self) { return _this.notifyNext25Cards.get() ? self.class("show") : self.removeClass("show"); });
         _this.timelineGraph = new TimelineGraph(_this.deck);
-        _this.notifyNext25Cards = false;
-        _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm)
-            .on("click", function () { return _this.notifyNext25Cards = true; }), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
+        _this.elm.append(new Elm().append("Next review card in ", _this.nextCardInMinutesElm), new Elm().append("Next 25 review cards in ", _this.next25CardsInMinutesElm, _this.notificationIndicationElm)
+            .class("clickable")
+            .on("click", function () { return _this.set25CardsDueNotification(); }), _this.timelineGraph, new Elm().class("cardCounts").append(new Elm().class("new").append("New: ", _this.newCardsElm), new Elm().class("due").append("Due: ", _this.dueCardsElm), new Elm().class("graduated").append("Inactive: ", _this.graduatedCardsElm)));
         _this.nextCardInMinutesElm.append("~");
         _this.deck.database.onAnyChange.addHandler(function () { return _this.rateLimitedUpdate(); });
         _this.deck.loaded.then(function () { return _this.rateLimitedUpdate(); });
@@ -47,23 +55,53 @@ var DeckTimeline = /** @class */ (function (_super) {
         var counts = this.deck.getCardCount();
         var minutesToNextCard = this.deck.getMinutesToNextCard();
         var minutesToNext25Cards = this.deck.getMinutesToNextCard(24);
+        var numCardsDue = this.deck.getDueCardsCount();
         this.nextCardInMinutesElm.replaceContents(minutesToNextCard === undefined ? "~" : minutesToHumanString(minutesToNextCard));
         this.next25CardsInMinutesElm.replaceContents(minutesToNext25Cards === undefined ? "~" : minutesToHumanString(minutesToNext25Cards));
         this.newCardsElm.replaceContents(counts.new);
-        this.dueCardsElm.replaceContents(this.deck.getDueCardsCount());
+        this.dueCardsElm.replaceContents(numCardsDue);
         this.graduatedCardsElm.replaceContents(counts.inactive);
-        if (this.notifyNext25Cards && minutesToNext25Cards && minutesToNext25Cards <= 0) {
-            this.sendCardsDueNotification();
-            this.notifyNext25Cards = false;
+        if (this.notifyNext25Cards.get() && minutesToNext25Cards !== undefined && minutesToNext25Cards <= 0) {
+            this.sendCardsDueNotification(numCardsDue);
+            this.notifyNext25Cards.set(false);
         }
         this.timelineGraph.update();
     };
-    DeckTimeline.prototype.sendCardsDueNotification = function () {
+    DeckTimeline.prototype.set25CardsDueNotification = function () {
+        var _this = this;
+        var enabled = this.notifyNext25Cards.get();
+        if (enabled) {
+            this.notifyNext25Cards.set(false);
+            return;
+        }
+        if (!('Notification' in window)) {
+            this.tankiInterface.showSnackbar("Your browser does not support notifications.", 3000);
+            return;
+        }
+        if (Notification.permission === 'granted') {
+            this.notifyNext25Cards.set(true);
+            return;
+        }
+        else if (Notification.permission === 'denied') {
+            this.tankiInterface.showSnackbar("Cannot send notifications (permission denied).", 3000);
+            return;
+        }
+        else {
+            var prevPerm_1 = Notification.permission;
+            this.tankiInterface.showSnackbar("Grant notification permissions to send a notification when 25 cards are due.", 6000);
+            Notification.requestPermission().then(function (perm) {
+                if (perm != prevPerm_1) { // infinite 'default' permission loop prevention
+                    _this.set25CardsDueNotification();
+                }
+            });
+        }
+    };
+    DeckTimeline.prototype.sendCardsDueNotification = function (numCards) {
         if (!window.Notification) {
             return;
         }
-        new Notification("Tanki - 25 cards are due!", {
-            body: "25 or more cards are due -- let's get them done!"
+        new Notification("Tanki - ".concat(numCards, " cards are due!"), {
+            body: "There are ".concat(numCards, " waiting for you to review! Let's get them done!")
         });
     };
     DeckTimeline.prototype.setMinutelyUpdateIntervals = function () {

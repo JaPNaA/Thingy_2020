@@ -1,9 +1,9 @@
-import { ActivatedCard, Card, Note } from "../database.js";
+import { ActivatedCard, Card } from "../database.js";
 import { Component, Elm } from "../libs/elements.js";
 import { Deck } from "../logic.js";
 import { writeOut } from "../storage.js";
 import { DeckTimeline } from "./DeckTimeline.js";
-import { EventHandler, Immutable, PromiseRejectFunc, PromiseResolveFunc, setImmediatePolyfill, wait } from "../utils.js";
+import { EventHandler, Immutable, PromiseRejectFunc, PromiseResolveFunc, wait } from "../utils.js";
 import { ManageNotesDialog } from "./modalDialogs/ManageNotesDialog.js";
 import { EditNoteDialog } from "./modalDialogs/EditNoteDialog.js";
 import { ImportNotesDialog } from "./modalDialogs/ImportNotesDialog.js";
@@ -19,7 +19,7 @@ export class TankiInterface extends Component {
 
     constructor(deck: Deck) {
         super("tankiInterface");
-        this.deckPresenter = new DeckPresenter(deck);
+        this.deckPresenter = new DeckPresenter(this, deck);
         this.elm.append(this.deckPresenter);
         this.elm.append(
             new Elm("button").class("writeOut")
@@ -65,11 +65,11 @@ class DeckPresenter extends Component {
 
     private presenting: boolean = false;
 
-    constructor(private deck: Deck) {
+    constructor(private parent: TankiInterface, private deck: Deck) {
         super("deckPresenter");
 
         this.cardPresenter = new CardPresenter();
-        this.deckTimeline = new DeckTimeline(this.deck);
+        this.deckTimeline = new DeckTimeline(this.parent, this.deck);
 
         this.elm.append(
             this.cardPresenterContainer = new Elm().class("cardPresenterContainer")

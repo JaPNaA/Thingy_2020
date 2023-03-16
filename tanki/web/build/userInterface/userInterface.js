@@ -66,7 +66,7 @@ var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
         var _this = _super.call(this, "tankiInterface") || this;
-        _this.deckPresenter = new DeckPresenter(deck);
+        _this.deckPresenter = new DeckPresenter(_this, deck);
         _this.elm.append(_this.deckPresenter);
         _this.elm.append(new Elm("button").class("writeOut")
             .append("Write Out")
@@ -110,13 +110,14 @@ var TankiInterface = /** @class */ (function (_super) {
 export { TankiInterface };
 var DeckPresenter = /** @class */ (function (_super) {
     __extends(DeckPresenter, _super);
-    function DeckPresenter(deck) {
+    function DeckPresenter(parent, deck) {
         var _this = _super.call(this, "deckPresenter") || this;
+        _this.parent = parent;
         _this.deck = deck;
         _this.onExit = new EventHandler();
         _this.presenting = false;
         _this.cardPresenter = new CardPresenter();
-        _this.deckTimeline = new DeckTimeline(_this.deck);
+        _this.deckTimeline = new DeckTimeline(_this.parent, _this.deck);
         _this.elm.append(_this.cardPresenterContainer = new Elm().class("cardPresenterContainer")
             .append(_this.cardPresenter), new Elm().class("timeline").append(_this.deckTimeline), new Elm().append(new Elm("button").class("exitButton")
             .append("Exit")

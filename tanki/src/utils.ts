@@ -1,3 +1,5 @@
+import { Component, Elm } from "./libs/elements.js";
+
 export function wait(millis: number): Promise<void> {
     return new Promise((res) => {
         setTimeout(() => res(), millis);
@@ -32,7 +34,7 @@ export function minutesToHumanString(minutes: number): string {
     return resultStr;
 }
 
-export const setImmediatePolyfill = window.setImmediate || (f => setTimeout(f, 1));
+export const setImmediatePolyfill = window.setImmediate || ((f: Function) => setTimeout(f, 1));
 
 /**
  * Returns the boundary at which isPastCheck first fails
@@ -120,3 +122,58 @@ export class EventHandler<T = void> {
 export function boundBetween(min: number, x: number, max: number): number {
     return Math.min(Math.max(x, min), max);
 }
+
+export class Watchable<T> {
+    public change = new EventHandler<T>();
+
+    constructor(private value: T) { }
+
+    public get(): Readonly<T> {
+        return this.value;
+    }
+
+    public set(v: T) {
+        this.value = v;
+        this.change.dispatch(v);
+    }
+}
+
+/**
+ * Not to be confused with ReactComponent from React. An element that
+ * updates when a watchable updates.
+ */
+export class ReactElm<T extends keyof HTMLElementTagNameMap = "div"> extends Elm<T> {
+    private watchChangeHandler = () => this.update();
+    private watchables: Watchable<any>[] = [];
+    private updateHandler?: (self: this) => void;
+
+    constructor(public type: T) {
+        super(type);
+    }
+
+    public update(): void {
+        if (this.updateHandler) {
+            this.updateHandler(this);
+        }
+    }
+
+    public setUpdateHandler(handler: (self: this) => void) {
+        this.updateHandler = handler;
+        return this;
+    }
+
+    public addWatchable(...watchables: Watchable<any>[]) {
+        for (const watchable of watchables) {
+            watchable.change.addHandler(this.watchChangeHandler);
+            this.watchables.push(watchable);
+        }
+        return this;
+    }
+
+    public dispose() {
+        for (const watchable of this.watchables) {
+            watchable.change.removeHandler(this.watchChangeHandler);
+        }
+    }
+}
+
