@@ -162,9 +162,10 @@ class NotesRecyclingList extends RecyclingList<Immutable<Note>> {
     }
 
     protected getContentForListItem(note: Immutable<Note>): Elm {
-        const label = note.fields[0].slice(0, 20) + "...";
+        const labelRaw = note.fields[0];
+        const labelEllipsized = labelRaw.length <= 23 ? labelRaw : labelRaw.slice(0, 20) + "...";
         return new Elm().append(
-            new Elm().class("label").append(label),
+            new Elm().class("label").append(labelEllipsized),
             new Elm().class("cards").withSelf(cards => {
                 for (const cardUid of note.cardUids) {
                     const card = this.deck.database.getCardByUid(cardUid);

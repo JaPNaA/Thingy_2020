@@ -148,8 +148,9 @@ var NotesRecyclingList = /** @class */ (function (_super) {
     }
     NotesRecyclingList.prototype.getContentForListItem = function (note) {
         var _this = this;
-        var label = note.fields[0].slice(0, 20) + "...";
-        return new Elm().append(new Elm().class("label").append(label), new Elm().class("cards").withSelf(function (cards) {
+        var labelRaw = note.fields[0];
+        var labelEllipsized = labelRaw.length <= 23 ? labelRaw : labelRaw.slice(0, 20) + "...";
+        return new Elm().append(new Elm().class("label").append(labelEllipsized), new Elm().class("cards").withSelf(function (cards) {
             for (var _i = 0, _a = note.cardUids; _i < _a.length; _i++) {
                 var cardUid = _a[_i];
                 var card = _this.deck.database.getCardByUid(cardUid);
