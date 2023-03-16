@@ -19,7 +19,7 @@ _日本語：短記_
 <table>
     <tr> <td> t </td> <td> anki </td> </tr>
     <tr> <td colspan="2"> short term </td> </tr>
-    <tr> <td></td> <td> memorization </td>
+    <tr> <td></td> <td> memorization </td> </tr>
 </table>
 
 And that's what this is. A short term memorization program.
