@@ -5,7 +5,8 @@ function createWindow() {
         width: 800,
         height: 500,
         webPreferences: {
-            nodeIntegration: true
+            nodeIntegration: true,
+            contextIsolation: false
         },
         icon: "./tankiIcon.png"
         // titleBarStyle: "hidden"
