@@ -62,6 +62,8 @@ import { CardFlag, CardState } from "../dataTypes.js";
 import jishoWithHistory from "../jishoWithHistory.js";
 import { CardRenderer } from "./CardRenderer.js";
 import { EditNoteTypeDialog } from "./modalDialogs/EditNoteTypeDialog.js";
+import { ExportNotesDialog } from "./modalDialogs/ExportNotesDialog.js";
+import { ClearDataDialog } from "./modalDialogs/ClearDataDialog.js";
 var TankiInterface = /** @class */ (function (_super) {
     __extends(TankiInterface, _super);
     function TankiInterface(deck) {
@@ -125,9 +127,7 @@ var DeckPresenter = /** @class */ (function (_super) {
             .append("Enter")
             .on("click", function () { return _this.enterCardPresenter(); })), new Elm().append(new Elm("button").class("createNote")
             .append("Create Note")
-            .on("click", function () { return _this.openCreateNoteDialog(); }), new Elm("button").class("importNotes")
-            .append("Import Notes")
-            .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("manageNotes")
+            .on("click", function () { return _this.openCreateNoteDialog(); }), new Elm("button").class("manageNotes")
             .append("Manage Notes")
             .on("click", function () { return _this.openDialog(ManageNotesDialog); }), new Elm("button").class("editNoteType")
             .append("Edit Note Templates")
@@ -150,7 +150,13 @@ var DeckPresenter = /** @class */ (function (_super) {
                 }
             }
             _this.deck.database.endUndoLogGroup();
-        })), new Elm().append(new Elm("button").class("JishoWithHistory")
+        })), new Elm().append(new Elm("button").class("importNotes")
+            .append("Import Notes")
+            .on("click", function () { return _this.openImportNotesDialog(); }), new Elm("button").class("exportNotes")
+            .append("Export Notes")
+            .on("click", function () { return _this.openExportNotesDialog(); }), new Elm("button").class("clearData")
+            .append("Clear Data")
+            .on("click", function () { return _this.openClearDataDialog(); })), new Elm().append(new Elm("button").class("JishoWithHistory")
             .append("Jisho With History")
             .on("click", function () {
             jishoWithHistory.openWindow();
@@ -251,6 +257,16 @@ var DeckPresenter = /** @class */ (function (_super) {
             importNotesDialog.remove();
         });
         return importNotesDialog;
+    };
+    DeckPresenter.prototype.openExportNotesDialog = function () {
+        return this.openDialog(ExportNotesDialog);
+    };
+    DeckPresenter.prototype.openClearDataDialog = function () {
+        var clearDataDialog = this.openDialog(ClearDataDialog);
+        clearDataDialog.onDataClear.addHandler(function () {
+            clearDataDialog.remove();
+        });
+        return clearDataDialog;
     };
     DeckPresenter.prototype.openDialog = function (dialog) {
         this.exitCardPresenter();

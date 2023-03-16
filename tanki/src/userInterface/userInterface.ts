@@ -13,6 +13,8 @@ import jishoWithHistory from "../jishoWithHistory.js";
 import { CardRenderer } from "./CardRenderer.js";
 import { ModalDialog } from "./modalDialogs/ModalDialog.js";
 import { EditNoteTypeDialog } from "./modalDialogs/EditNoteTypeDialog.js";
+import { ExportNotesDialog } from "./modalDialogs/ExportNotesDialog.js";
+import { ClearDataDialog } from "./modalDialogs/ClearDataDialog.js";
 
 export class TankiInterface extends Component {
     private deckPresenter: DeckPresenter;
@@ -87,9 +89,6 @@ class DeckPresenter extends Component {
                 new Elm("button").class("createNote")
                     .append("Create Note")
                     .on("click", () => this.openCreateNoteDialog()),
-                new Elm("button").class("importNotes")
-                    .append("Import Notes")
-                    .on("click", () => this.openImportNotesDialog()),
                 new Elm("button").class("manageNotes")
                     .append("Manage Notes")
                     .on("click", () => this.openDialog(ManageNotesDialog)),
@@ -118,6 +117,17 @@ class DeckPresenter extends Component {
                         }
                         this.deck.database.endUndoLogGroup();
                     })
+            ),
+            new Elm().append(
+                new Elm("button").class("importNotes")
+                    .append("Import Notes")
+                    .on("click", () => this.openImportNotesDialog()),
+                new Elm("button").class("exportNotes")
+                    .append("Export Notes")
+                    .on("click", () => this.openExportNotesDialog()),
+                new Elm("button").class("clearData")
+                    .append("Clear Data")
+                    .on("click", () => this.openClearDataDialog()),
             ),
             new Elm().append(
                 new Elm("button").class("JishoWithHistory")
@@ -207,6 +217,19 @@ class DeckPresenter extends Component {
         });
 
         return importNotesDialog;
+    }
+
+    private openExportNotesDialog() {
+        return this.openDialog(ExportNotesDialog);
+    }
+
+    private openClearDataDialog() {
+        const clearDataDialog = this.openDialog(ClearDataDialog);
+        clearDataDialog.onDataClear.addHandler(() => {
+            clearDataDialog.remove();
+        });
+
+        return clearDataDialog;
     }
 
     private openDialog<T extends ModalDialog>(dialog: new (deck: Deck) => T): T {
