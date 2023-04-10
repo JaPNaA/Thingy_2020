@@ -603,9 +603,13 @@ export class Card extends DatabaseObject {
 }
 
 export class ActivatedCard extends Card {
+    /** The absolute time the card is due, divided by 60e3 */
     public dueMinutes: number;
+    /** Interval to next show in minutes */
     public interval: number;
+    /** History of the number of times the card was marked wrong */
     public timesWrongHistory: number[];
+    /** Current learning interval */
     public learningInterval: Optional<number>;
 
     constructor(

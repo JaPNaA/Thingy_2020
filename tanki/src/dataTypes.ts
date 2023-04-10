@@ -91,6 +91,13 @@ export interface CardSchedulingSettingsData {
     learningStepsMinutes: number[];
     initialInterval: number;
     baseIntervalMultiplier: number;
+    /**
+     * When correctly answering a card that was due in one hour after waiting
+     * two hours,
+     *   - true: use 1h * intervalMultiplier (as scheduled)
+     *   - false: use 2h * intervalMultiplier (the actual time waited)
+     */
+    useScheduledInterval?: boolean;
 }
 
 export enum CardState {

@@ -101,7 +101,16 @@ export class Deck {
             }
         } else {
             if (result === 1) {
+                if (!schedulingSettings.useScheduledInterval) {
+                    const actualInterval = getCurrMinuteFloored() - mutCard.dueMinutes + mutCard.interval;
+                    mutCard.interval = actualInterval;
+                }
+
                 mutCard.interval *= schedulingSettings.baseIntervalMultiplier;
+
+                if (mutCard.interval < 1) {
+                    mutCard.interval = 1;
+                }
             } else {
                 mutCard.interval /= schedulingSettings.baseIntervalMultiplier;
             }
