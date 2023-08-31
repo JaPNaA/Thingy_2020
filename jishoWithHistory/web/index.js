@@ -592,7 +592,7 @@ Lookup.useProxy = false;
  * @param {string} url 
  */
 Lookup.getProxyUrl = function (url) {
-    return "https://stark-spire-77632.herokuapp.com/" + url;
+    return "https://qz3p3ftlcvynwwvj2krrqfqfzi0tmjqh.lambda-url.us-east-2.on.aws/" + url;
 };
 
 class ProxyWarning extends Component {
