@@ -36,6 +36,10 @@ body {
     margin: 8px 0;
 }
 
+.chapterDirectory.selected {
+    font-weight: bold;
+}
+
 .row {
     scroll-snap-align: start;
     display: block;

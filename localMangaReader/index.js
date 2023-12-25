@@ -302,12 +302,12 @@ class FileDisplay extends Component {
         this.currentChapter = undefined;
         resizeSubscribers.push(() => this.resizeHandler());
 
+        this.chapterSelectContainer = new ChapterSelectContainer(this);
+
         this.elm.append(
-            this.chapterSelectContainer = new Elm().class("chapterSelectContainer", "grayBox", "hidden").append(
-                new Elm("h1").append(createLocaleStringSpan('selectChapter')),
-                this.chapterSelectElm = new Elm().class("chapterSelect")
-            ),
-            this.chapterContainer = new Elm().class("chapterContainer")
+            this.chapterSelectContainer.createMirror(),
+            this.chapterContainer = new Elm().class("chapterContainer"),
+            this.chapterSelectContainer.createMirror()
         );
     }
 
@@ -323,33 +323,114 @@ class FileDisplay extends Component {
 
     /**
      * @param {ChapterFiles} chapter 
-     * @param {string | undefined} name
-     */
-    addChapter(chapter, name) {
-        this.chapters.push(chapter);
-        this.chapterSelectContainer.removeClass("hidden");
-
-        this.chapterSelectElm.append(
-            new Elm().class("chapterDirectory").append(name || "root")
-                .on("click", () => {
-                    this.setChapter(chapter);
-                }));
-    }
-
-    /**
-     * @param {ChapterFiles} chapter 
      */
     setChapter(chapter) {
         this.chapterContainer.clear();
         this.chapterContainer.append(chapter.elm);
         this.currentChapter = chapter;
+        this.chapterSelectContainer.setChapter(chapter);
         chapter.activate();
         main.scrollToChapter();
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     * @param {string | undefined} name
+     */
+    addChapter(chapter, name) {
+        this.chapterSelectContainer.setVisible();
+        this.chapters.push(chapter);
+        this.chapterSelectContainer.addChapter(chapter, name);
     }
 
     openOnlyChapterIfOnlyChapter() {
         if (this.chapters.length === 1) {
             this.setChapter(this.chapters[0]);
+        }
+    }
+}
+
+class ChapterSelectContainer {
+    /** @param {FileDisplay} parentFileDisplay */
+    constructor(parentFileDisplay) {
+        this.parentFileDisplay = parentFileDisplay;
+
+        /** @type {ChapterSelectContainerMirror[]} */
+        this.mirrors = [];
+    }
+
+    createMirror() {
+        const mirror = new ChapterSelectContainerMirror(this.parentFileDisplay);
+        this.mirrors.push(mirror);
+        return mirror;
+    }
+
+    setVisible() {
+        for (const elm of this.mirrors) { elm.setVisible(); }
+    }
+
+    /** @param {ChapterFiles} chapter */
+    setChapter(chapter) {
+        for (const elm of this.mirrors) { elm.setChapter(chapter); }
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     * @param {string | undefined} name
+     */
+    addChapter(chapter, name) {
+        for (const elm of this.mirrors) { elm.addChapter(chapter, name); }
+    }
+}
+
+class ChapterSelectContainerMirror extends Component {
+    /** @param {FileDisplay} parentFileDisplay */
+    constructor(parentFileDisplay) {
+        super("chapterSelectContainer");
+
+        this.parentFileDisplay = parentFileDisplay;
+        this.elm.class("chapterSelectContainer", "grayBox", "hidden").append(
+            new Elm("h1").append(createLocaleStringSpan('selectChapter')),
+            this.chapterSelectElm = new Elm().class("chapterSelect")
+        );
+
+        /** @type {Map<ChapterFiles, Elm>} */
+        this.chapters = new Map();
+        /** @type {null | ChapterFiles} */
+        this.lastSelectedChapter = null;
+    }
+
+    setVisible() {
+        this.elm.removeClass("hidden");
+    }
+
+    /**
+     * @param {ChapterFiles} chapter 
+     * @param {string | undefined} name
+     */
+    addChapter(chapter, name) {
+        const chapterElm = new Elm().class("chapterDirectory").append(name || "root")
+            .on("click", () => {
+                this.parentFileDisplay.setChapter(chapter);
+            });
+        this.chapters.set(chapter, chapterElm);
+        this.chapterSelectElm.append(chapterElm);
+    }
+
+    /** @param {ChapterFiles} chapter */
+    setChapter(chapter) {
+        if (this.lastSelectedChapter !== null) {
+            const lastSelectedChapter = this.chapters.get(this.lastSelectedChapter);
+            if (lastSelectedChapter) {
+                lastSelectedChapter.removeClass("selected");
+            }
+            this.lastSelectedChapter = null;
+        }
+
+        const newChapter = this.chapters.get(chapter);
+        if (newChapter) {
+            newChapter.class("selected");
+            this.lastSelectedChapter = chapter;
         }
     }
 }
