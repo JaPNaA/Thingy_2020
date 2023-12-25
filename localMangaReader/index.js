@@ -80,9 +80,16 @@ class ChapterFiles extends Component {
         super("chapter");
 
         this.directory = directory;
-        /** @type {(PageFile | null)[]} */
+        /**
+         * List of all pages in order
+         * @type {PageFile[]}
+         */
         this.pages = [];
-        /** @type {(PageFile | null)[]} */
+        /**
+         * The pages that the reader displays.
+         * May contain empty pages, but must contain all this.pages in order
+         * @type {(PageFile | null)[]}
+         */
         this.displayPages = [];
         /** @type {Elm[]} */
         this.rowElms = [];
@@ -261,6 +268,7 @@ class ChapterFiles extends Component {
         while (i >= 0 && nonNullDisplayPage === null) {
             nonNullDisplayPage = this.displayPages[i--];
         }
+        if (nonNullDisplayPage === null) { return -1; }
         return this.pages.indexOf(nonNullDisplayPage);
     }
 
@@ -359,6 +367,7 @@ class LoadableFile {
     loadFile() {
         if (this.loadedFile) { return this.loadedFile; }
         if (this.loadingPromise) { return this.loadingPromise; }
+        if (!this.loader) { throw new Error("No loader set"); }
         this.loadingPromise = this.loader();
         this.loadingPromise.then(blob => this.loadedFile = blob);
         return this.loadingPromise;
@@ -382,6 +391,7 @@ class FileDirectory {
     addBlob(path, file) {
         const pathParts = path.split("/");
         let fileName = pathParts.pop();
+        if (fileName === undefined) { throw new Error("Unknown error"); }
 
         /** @type {FileDirectory} */
         let currDirectory = this;
@@ -403,14 +413,17 @@ class FileDirectory {
     }
 }
 
+/** @typedef {{canvas: HTMLCanvasElement, X: CanvasRenderingContext2D, inUse: boolean}} CanvasPoolCanvas */
+
 class CanvasPool {
     constructor() {
-        /** @type {{canvas: HTMLCanvasElement, X: CanvasRenderingContext2D, inUse: boolean}[]} */
+        /** @type {CanvasPoolCanvas[]} */
         this._canvases = [];
     }
 
-    /** @param {({canvas: HTMLCanvasElement, X: CanvasRenderingContext2D}) => Promise<any>} f */
+    /** @param {(canvas: CanvasPoolCanvas) => Promise<any>} f */
     async useCanvas(f) {
+        /** @type {CanvasPoolCanvas | undefined} */
         let canvas;
         for (const existing of this._canvases) {
             if (!existing.inUse) {
@@ -423,14 +436,16 @@ class CanvasPool {
         }
 
         canvas.inUse = true;
-        await f(canvas)
+        await f(canvas);
         canvas.inUse = false;
     }
 
+    /** @returns {CanvasPoolCanvas} */
     _createCanvas() {
         const canvasElm = document.createElement("canvas");
         const newCanvas = {
             canvas: canvasElm,
+            /** @type {CanvasRenderingContext2D} */ // @ts-ignore
             X: canvasElm.getContext("2d"),
             inUse: false
         };
@@ -486,6 +501,7 @@ class Main {
                 await loadPDFJS();
                 /** @type {HTMLInputElement} */ // @ts-ignore
                 const input = this.pdfFileInput.elm;
+                if (!input.files || !input.files[0]) { return; }
                 const pdf = await pdfJS.getDocument(URL.createObjectURL(input.files[0])).promise;
 
                 const directory = new FileDirectory();
@@ -496,6 +512,7 @@ class Main {
                     directory.addBlob(i.toString(), new LoadableFile(async () => {
                         const page = await pdf.getPage(i);
                         const viewport = page.getViewport({ scale: 1.5 });
+                        /** @type {Promise<Blob>} */
                         let blob;
 
                         await canvasPool.useCanvas(async context => {
@@ -507,10 +524,14 @@ class Main {
                                 viewport: viewport
                             }).promise;
                             blob = new Promise(res => {
-                                context.canvas.toBlob(blob => res(blob));
+                                context.canvas.toBlob(blob => {
+                                    if (blob === null) { throw new Error("Cannot convert canvas to blob"); }
+                                    res(blob)
+                                });
                             });
                         });
 
+                        // @ts-ignore
                         return blob;
                     }))
                 }
@@ -544,7 +565,7 @@ class Main {
                 wideMode = this.wideViewCheckbox.getValue();
                 resizeHandler();
             });
-        
+
         this.leftToRightCheckbox = new InputElm().setType("checkbox")
             .on("change", () => {
                 // @ts-expect-error
@@ -588,6 +609,7 @@ class Main {
         let dirQue = [directory];
 
         while (dirQue.length > 0) {
+            /** @type {FileDirectory} */ // @ts-expect-error
             const currDir = dirQue.pop();
             let addedDir = false;
 
@@ -600,7 +622,7 @@ class Main {
                 } else {
                     if (addedDir) { continue; }
                     const chapterFiles = new ChapterFiles(currDir);
-                    this.fileDisplay.addChapter(chapterFiles, currDir.parentPath + currDir.name);
+                    this.fileDisplay.addChapter(chapterFiles, (currDir.parentPath || "") + currDir.name);
                     addedDir = true;
                 }
             }
@@ -628,6 +650,7 @@ class Main {
     }
 
     scrollToChapter() {
+        if (!this.fileDisplay.currentChapter) { return; }
         document.documentElement.scrollTop = this.fileDisplay.currentChapter.elm.elm.offsetTop;
     }
 
@@ -716,6 +739,7 @@ function sortStringsNumbered(items, mapper) {
     /** @type {[T, (string|number)[]][]} */
     const itemsAndStringSegs = [];
     for (const item of items) {
+        // @ts-ignore
         const segments = mapper(item).match(CLUSTER_REGEX)
             .map(match => NUMBER_REGEX.test(match) ? parseInt(match) : match);
         itemsAndStringSegs.push([item, segments]);
@@ -797,6 +821,7 @@ async function loadPDFJS() {
     await import("./libs/pdfjs-2.12.313-dist/build/pdf.js");
     delete window.exports;
     pdfJS = module.exports;
+    // @ts-ignore
     delete window.module;
 
     pdfJS.GlobalWorkerOptions.workerSrc = "./libs/pdfjs-2.12.313-dist/build/pdf.worker.js";
