@@ -97,8 +97,8 @@ class ChapterFiles extends Component {
         this.pagesPerRow = 2;
 
         this.pagesLoaded = 0;
-        this.pageLoadBufferMin = 2;
-        this.pageLoadBufferStep = 50;
+        this.pageLoadBufferMin = 4;
+        this.pageLoadBufferStep = 12;
         this.scrollLazyLoadTriggerTreshold = 0;
         this.pageHeight = 0;
 
@@ -124,6 +124,7 @@ class ChapterFiles extends Component {
         }
 
         this.updatePageHeight();
+        this.updateLazyLoadTriggerThreshold();
 
         if (portraitMode) {
             this.elm.class("portrait");
@@ -257,8 +258,15 @@ class ChapterFiles extends Component {
         }
 
         this.pagesLoaded = pagesToLoad;
-        this.scrollLazyLoadTriggerTreshold =
-            this.displayPages.indexOf(this.pages[pagesToLoad - 1]) / this.pagesPerRow * this.pageHeight + offset;
+        this.updateLazyLoadTriggerThreshold();
+    }
+
+    updateLazyLoadTriggerThreshold() {
+        if (this.pagesLoaded === 0) { this.scrollLazyLoadTriggerTreshold = 0; }
+        else {
+            this.scrollLazyLoadTriggerTreshold =
+                (this.displayPages.indexOf(this.pages[this.pagesLoaded - 1]) - this.pageLoadBufferMin) / this.pagesPerRow * this.pageHeight + this.elm.elm.offsetTop;
+        }
     }
 
     /** @param {number} displayPageIndex */
